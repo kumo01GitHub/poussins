@@ -44,6 +44,8 @@ See also:
 from __future__ import annotations
 
 from ..ast.formulas import Formula
+from ..environment.environment import Environment, Declaration
+from ..kernel.goal import ProofAssurance
 from .prop import Prop
 from .proof_base import ProofBase
 
@@ -73,6 +75,21 @@ class Theorem(ProofBase):
         self.name = name
         super().__init__(statement)
 
+    def qed(self, env: Environment):
+        # TODO: Add to Envirnonment and closed status should be checked in engine.
+        if not self.is_closed:
+            raise ValueError("Not proofed.")
+        
+        env.add(
+            declaration=Declaration(
+                name=self.name,
+                statement=self.statement,
+                assigment=self.engine.goal.assignment,
+                assurance=ProofAssurance.VERIFIED
+            )
+        )
+        print(f"Assignment: {self.engine.goal.assignment}")
+
 
 # Alias for Theorem.
 Lemma = Theorem
@@ -100,3 +117,10 @@ class Example(ProofBase):
         statement: Prop | Formula,
     ) -> None:
         super().__init__(statement)
+
+    def qed(self):
+        # TODO: Add to Envirnonment and closed status should be checked in engine.
+        if not self.is_closed:
+            raise ValueError("Not proofed.")
+
+        print(f"Assignment: {self.engine.goal.assignment}")

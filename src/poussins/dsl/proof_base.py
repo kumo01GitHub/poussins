@@ -24,6 +24,10 @@ functions for use in combinators or batch execution::
 from __future__ import annotations
 from abc import ABC
 
+from poussins.environment.declaration import Declaration
+
+from ..environment.environment import Environment
+
 from ..ast.formulas import Formula
 from ..ast.proof_terms import ProofTerm
 from ..kernel.proof_engine import ProofEngine
@@ -34,14 +38,13 @@ class ProofBase(ABC):
     def __init__(self, statement: Prop | Formula):
         self.__setattr__("engine", ProofEngine(Prop.to_formula(statement)))
 
+    @property
     def is_closed(self) -> bool:
         return self.engine.is_closed()
 
-    def qed(self):
-        # TODO: Add to Envirnonment and closed status should be checked in engine.
-        if not self.is_closed():
-            raise ValueError("Not proofed.")
-        print(f"Assignment: {self.engine.goal.assignment}")
+    @property
+    def statement(self) -> Formula:
+        return self.engine.goal.formula
 
     # ------------------------------------------------------------------
     # Primitive tactics

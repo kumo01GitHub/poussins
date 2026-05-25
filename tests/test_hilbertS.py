@@ -3,6 +3,7 @@ test_hilbertS.py: Minimal test for Hilbert-style proof closure using Theorem and
 """
 from poussins.dsl.prop import Prop
 from poussins.dsl.theorem import Theorem
+from poussins.environment.environment import Environment
 
 def test_hilbertS_close():
     A = Prop("A")
@@ -29,6 +30,6 @@ def test_hilbertS_close():
     th.exact("ha"); log_state("after exact ha")
     th.apply("hab"); log_state("after apply hab")
     th.exact("ha"); log_state("after exact ha")
-    th.qed()
+    th.qed(Environment()); log_state("after qed")
 
-    assert th.is_closed(), "Hilbert S proof should be closed"
+    assert th.is_closed, "Hilbert S proof should be closed"
