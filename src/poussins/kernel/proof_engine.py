@@ -5,11 +5,9 @@ from collections import deque
 from copy import deepcopy
 from typing import Optional
 
-from poussins.ast import *
-
+from ..ast import Formula, ProofTerm, PMetaVar, PLam, PApp, PAndI, PAndE1, PAndE2, POrIL, POrIR, POrE, PFalseE, PExE
 from .proof_state import ProofState
 from .goal import Goal, Context, ProofAssurance
-from ..ast import Formula, ProofTerm, PMetaVar
 
 
 class ProofEngine:
@@ -21,7 +19,7 @@ class ProofEngine:
 
     @staticmethod
     def _substitute_meta_var(closed_goal: Goal, term: ProofTerm) -> ProofTerm:
-        if not closed_goal.is_closed():
+        if not closed_goal.is_closed:
             return term
         elif isinstance(term, PMetaVar) and term.goal_id == closed_goal.id:
             return deepcopy(closed_goal.assignment)
@@ -57,7 +55,7 @@ class ProofEngine:
 
     
     def _close_sub_goals(self, closed_goal: Goal):
-        if not closed_goal.is_closed():
+        if not closed_goal.is_closed:
             raise ValueError("Cannot close sub-goals of an open goal.")
         else:
             self.state.goals.remove(closed_goal)
@@ -65,14 +63,14 @@ class ProofEngine:
         closed_goals: list[Goal] = []
         for goal in list(self.state.goals):
             goal.assignment = ProofEngine._substitute_meta_var(closed_goal, goal.assignment)
-            if goal.is_closed() and goal not in closed_goals:
+            if goal.is_closed and goal not in closed_goals:
                 closed_goals.append(goal)
 
         for closed_goal in closed_goals:
             self._close_sub_goals(closed_goal)
 
     def close_goal(self, assignment: ProofTerm):
-        current_goal = self.state.current_goal()
+        current_goal = self.state.current_goal
         if current_goal is None:
             raise ValueError("No active goal to close.")
         elif current_goal.assignment is not None:
@@ -85,7 +83,7 @@ class ProofEngine:
 
     def refine_goal(self, sub_goals: list[Goal], assignment: Optional[ProofTerm] = None):
         if assignment is not None:
-            self.state.current_goal().assignment = assignment
+            self.state.current_goal.assignment = assignment
         self.state.goals.extendleft(sub_goals[::-1])
 
     def rotate_left(self):
@@ -94,5 +92,6 @@ class ProofEngine:
     def rotate_right(self):
         self.state.goals.rotate(1)
 
+    @property
     def is_closed(self) -> bool:
-        return self.state.is_closed() and self.goal.is_closed()
+        return self.state.is_closed and self.goal.is_closed

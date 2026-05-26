@@ -1,4 +1,5 @@
-"""Prop: public-facing propositional formula DSL.
+"""
+Prop: public-facing propositional formula DSL.
 
 Wraps the internal Formula AST with Python operator overloads so that
 propositions can be written naturally in Python code:

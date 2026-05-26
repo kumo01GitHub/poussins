@@ -44,6 +44,7 @@ class Goal:
     def __post_init__(self):
         self.id = str(uuid4())
 
+    @property
     def is_closed(self) -> bool:
         if self.assignment is None:
             return False

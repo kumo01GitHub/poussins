@@ -3,6 +3,7 @@ Propositional logic example using poussins DSL.
 """
 
 from poussins.dsl import Lemma, Prop
+from poussins.environment.environment import Environment
 
 a, b, c = Prop("A"), Prop("B"), Prop("C")
 
@@ -15,4 +16,4 @@ hilbert_s.apply("habc")
 hilbert_s.exact("ha")
 hilbert_s.apply("hab")
 hilbert_s.exact("ha")
-hilbert_s.qed()
+hilbert_s.qed(Environment())

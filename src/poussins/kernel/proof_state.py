@@ -12,9 +12,11 @@ from .goal import Goal
 @dataclass
 class ProofState:
     goals: deque[Goal] = field(default_factory=deque)
-    
+
+    @property
     def current_goal(self) -> Optional[Goal]:
         return self.goals[0] if self.goals else None
-    
+
+    @property
     def is_closed(self) -> bool:
         return not self.goals

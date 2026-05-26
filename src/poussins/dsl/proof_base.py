@@ -40,7 +40,7 @@ class ProofBase(ABC):
 
     @property
     def is_closed(self) -> bool:
-        return self.engine.is_closed()
+        return self.engine.is_closed
 
     @property
     def statement(self) -> Formula:

@@ -12,7 +12,7 @@ from ..ast import Formula, FImpl, PMetaVar, PVar, PApp
 
 def intro(proof_engine: ProofEngine, hyp_name: str):
     """Introduce a new hypothesis."""
-    current_goal = proof_engine.state.current_goal()
+    current_goal = proof_engine.state.current_goal
     if current_goal is None:
         raise ValueError("No active goal to apply intro tactic.")
     elif not isinstance(current_goal.formula, FImpl):
@@ -37,7 +37,7 @@ def intro(proof_engine: ProofEngine, hyp_name: str):
 
 def exact(proof_engine: ProofEngine, hyp_name: str):
     """Close the current goal with a hypothesis."""
-    current_goal = proof_engine.state.current_goal()
+    current_goal = proof_engine.state.current_goal
     if current_goal is None:
         raise ValueError("No active goal to apply exact tactic.")
 
@@ -51,7 +51,7 @@ def exact(proof_engine: ProofEngine, hyp_name: str):
 
 
 def apply(proof_engine: ProofEngine, hyp_name: str):
-    current_goal = proof_engine.state.current_goal()
+    current_goal = proof_engine.state.current_goal
     if current_goal is None:
         raise ValueError("No active goal to apply apply tactic.")
 
