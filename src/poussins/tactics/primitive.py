@@ -18,19 +18,18 @@ def intro(proof_engine: ProofEngine, hyp_name: str):
     elif not isinstance(current_goal.formula, FImpl):
         raise ValueError("Intro tactic can only be applied to implications.")
 
-    sub_goal = Goal(
+    subgoal = Goal(
         formula=deepcopy(current_goal.formula.consequent),
         context=current_goal.context.add(
             { hyp_name: deepcopy(current_goal.formula.antecedent) }
-        ),
-        assignment=PMetaVar(goal_id=current_goal.id)
+        )
     )
     proof_engine.refine_goal(
-        [sub_goal],
+        [subgoal],
         assignment=PLam(
             var=hyp_name,
             dom=deepcopy(current_goal.formula.antecedent),
-            body=PMetaVar(goal_id=sub_goal.id)
+            body=PMetaVar(goal_id=subgoal.id)
         )
     )
 
@@ -63,8 +62,8 @@ def apply(proof_engine: ProofEngine, hyp_name: str):
     elif not isinstance(hyp, FImpl):
         raise ValueError(f"Hypothesis '{hyp_name}' is not an implication and cannot be applied.")
 
-    sub_goals, assignment = _apply(current_goal, hyp_name, hyp)
-    proof_engine.refine_goal(sub_goals=sub_goals, assignment=assignment)
+    subgoals, assignment = _apply(current_goal, hyp_name, hyp)
+    proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
 
 
 def _apply(
@@ -80,11 +79,11 @@ def _apply(
     if current_goal.formula == hyp:
         return goals, PVar(name=hyp_name)
     elif isinstance(hyp, FImpl):
-        sub_goal = Goal(
+        subgoal = Goal(
             formula=deepcopy(hyp.antecedent),
             context=current_goal.context
         )
-        sub_goals, assignment = _apply(current_goal, hyp_name, hyp.consequent, goals, idx + 1)
-        return [sub_goal] + sub_goals, PApp(fn=assignment, arg=PMetaVar(goal_id=sub_goal.id))
+        subgoals, assignment = _apply(current_goal, hyp_name, hyp.consequent, goals, idx + 1)
+        return [subgoal] + subgoals, PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
     else:
         raise ValueError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")

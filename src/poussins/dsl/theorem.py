@@ -78,7 +78,7 @@ class Theorem(ProofBase):
     def qed(self, env: Environment):
         # TODO: Add to Envirnonment and closed status should be checked in engine.
         if not self.is_closed:
-            raise ValueError("Not proofed.")
+            raise ValueError("Not proved.")
         
         env.add(
             declaration=Declaration(
@@ -121,6 +121,6 @@ class Example(ProofBase):
     def qed(self):
         # TODO: Add to Envirnonment and closed status should be checked in engine.
         if not self.is_closed:
-            raise ValueError("Not proofed.")
+            raise ValueError("Not proved.")
 
         print(f"Assignment: {self.engine.goal.assignment}")

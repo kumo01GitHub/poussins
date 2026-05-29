@@ -5,7 +5,10 @@ from collections import deque
 from copy import deepcopy
 from typing import Optional
 
-from ..ast import Formula, ProofTerm, PMetaVar, PLam, PApp, PAndI, PAndE1, PAndE2, POrIL, POrIR, POrE, PFalseE, PExE
+from ..ast import (
+    ProofTerm, PMetaVar, PVar, PLam, PApp, PAndI, PAndE1, PAndE2, POrIL, POrIR, PTrueI, POrE, PFalseE, PExI, PExE,
+    Formula, FImpl, FAnd, FOr, FTrue, FFalse, FExists
+)
 from .proof_state import ProofState
 from .goal import Goal, Context, ProofAssurance
 
@@ -16,6 +19,50 @@ class ProofEngine:
     def __init__(self, root_formula: Formula):
         self.goal = Goal(formula=root_formula, context=Context(hyps={}))
         self.state = ProofState(goals=deque([self.goal]))
+
+    @property
+    def is_closed(self) -> bool:
+        return self.state.is_closed and self.goal.is_closed
+
+    def close_goal(self, assignment: ProofTerm):
+        current_goal = self.state.current_goal
+        if current_goal is None:
+            raise ValueError("No active goal to close.")
+        elif current_goal.is_closed:
+            raise ValueError("Cannot close a closed goal.")
+        elif current_goal.assignment is not None:
+            raise ValueError("Current goal is already assigned a proof term.")
+        elif current_goal.formula != ProofEngine._infer_formula(assignment, current_goal.context):
+            raise ValueError("Assignment does not match the goal's formula.")
+        else:
+            current_goal.assignment = assignment
+            self._close_subgoals(current_goal)
+
+    def refine_goal(self, subgoals: list[Goal], assignment: ProofTerm):
+        current_goal = self.state.current_goal
+        if current_goal is None:
+            raise ValueError("No active goal to refine.")
+        elif current_goal.is_closed:
+            raise ValueError("Cannot refine a closed goal.")
+        elif current_goal.assignment is not None:
+            raise ValueError("Current goal is already assigned a proof term.")
+        elif not subgoals:
+            raise ValueError("Sub-goals cannot be empty when refining a goal.")
+        elif any(subgoal.assignment is not None for subgoal in subgoals):
+            raise ValueError("Sub-goals must not be assigned a proof term when refining a goal.")
+        elif assignment is None:
+            raise ValueError("Assignment cannot be None when refining a goal.")
+        else:
+            ProofEngine._ensure_meta_vars_have_subgoal(subgoals, assignment)
+
+        self.state.current_goal.assignment = assignment
+        self.state.goals.extendleft(subgoals[::-1])
+
+    def rotate_left(self):
+        self.state.goals.rotate(-1)
+
+    def rotate_right(self):
+        self.state.goals.rotate(1)
 
     @staticmethod
     def _substitute_meta_var(closed_goal: Goal, term: ProofTerm) -> ProofTerm:
@@ -53,8 +100,7 @@ class ProofEngine:
 
             return term
 
-    
-    def _close_sub_goals(self, closed_goal: Goal):
+    def _close_subgoals(self, closed_goal: Goal):
         if not closed_goal.is_closed:
             raise ValueError("Cannot close sub-goals of an open goal.")
         else:
@@ -67,31 +113,109 @@ class ProofEngine:
                 closed_goals.append(goal)
 
         for closed_goal in closed_goals:
-            self._close_sub_goals(closed_goal)
+            self._close_subgoals(closed_goal)
 
-    def close_goal(self, assignment: ProofTerm):
-        current_goal = self.state.current_goal
-        if current_goal is None:
-            raise ValueError("No active goal to close.")
-        elif current_goal.assignment is not None:
-            raise ValueError("Current goal is already assigned a proof term.")
-        elif assignment.has_meta_var:
-            raise ValueError("Cannot close goal with a proof term containing meta-variables.")
-        else:
-            current_goal.assignment = assignment
-            self._close_sub_goals(current_goal)
+    @staticmethod
+    def _infer_formula(term: ProofTerm, context: Context) -> Formula:
+        match term:
+            case PMetaVar(goal_id):
+                raise ValueError("Cannot infer formula of a meta-variable.")
+            case PVar(name):
+                formula = context.get(name)
+                if formula is None:
+                    raise ValueError(f"Variable {name} not found in context.")
+                return formula
+            case PLam(var, dom, body):
+                ctx = context.add({var: dom})
+                return FImpl(dom, ProofEngine._infer_formula(body, ctx))
+            case PApp(fn, arg):
+                fn_formula = ProofEngine._infer_formula(fn, context)
+                arg_formula = ProofEngine._infer_formula(arg, context)
+                if not isinstance(fn_formula, FImpl):
+                    raise ValueError("Cannot apply a non-function term.")
+                elif fn_formula.antecedent != arg_formula:
+                    raise ValueError("Argument formula does not match function's domain.")
+                else:
+                    return fn_formula.consequent
+            case PAndI(left, right):
+                left_formula = ProofEngine._infer_formula(left, context)
+                right_formula = ProofEngine._infer_formula(right, context)
+                return FAnd(left_formula, right_formula)
+            case PAndE1(inner):
+                inner_formula = ProofEngine._infer_formula(inner, context)
+                if not isinstance(inner_formula, FAnd):
+                    raise ValueError("PAndE1 expects conjunction.")
+                return inner_formula.left
+            case PAndE2(inner):
+                inner_formula = ProofEngine._infer_formula(inner, context)
+                if not isinstance(inner_formula, FAnd):
+                    raise ValueError("PAndE2 expects conjunction.")
+                return inner_formula.right
+            case POrIL(pf, right_type):
+                left_formula = ProofEngine._infer_formula(pf, context)
+                return FOr(left_formula, right_type)
+            case POrIR(left_type, pf):
+                right_formula = ProofEngine._infer_formula(pf, context)
+                return FOr(left_type, right_formula)
+            case PTrueI():
+                return FTrue()
+            case POrE(disj, left_var, left_branch, right_var, right_branch):
+                disj_formula = ProofEngine._infer_formula(disj, context)
+                if not isinstance(disj_formula, FOr):
+                    raise ValueError("POrE expects disjunction.")
+                left_ctx = context.add({left_var: disj_formula.left})
+                left_branch_formula = ProofEngine._infer_formula(left_branch, left_ctx)
+                right_ctx = context.add({right_var: disj_formula.right})
+                right_branch_formula = ProofEngine._infer_formula(right_branch, right_ctx)
+                if left_branch_formula != right_branch_formula:
+                    raise ValueError("Branches of POrE must yield the same formula.")
+                return left_branch_formula
+            case PFalseE(inner, conclusion):
+                inner_formula = ProofEngine._infer_formula(inner, context)
+                if not isinstance(inner_formula, FFalse):
+                    raise ValueError("PFalseE expects proof of False.")
+                return conclusion
+            case PExI(exists_var, body, witness, pf):
+                return FExists(exists_var, body)
+            case PExE(pf, prop_var, hyp_var, body):
+                pf_formula = ProofEngine._infer_formula(pf, context)
+                if not isinstance(pf_formula, FExists):
+                    raise ValueError("PExE expects proof of an existential.")
+                new_ctx = context.add({hyp_var: pf_formula.body})
+                return ProofEngine._infer_formula(body, new_ctx)
+            case _:
+                raise NotImplementedError(f"Unknown proof term: {term}")
 
-    def refine_goal(self, sub_goals: list[Goal], assignment: Optional[ProofTerm] = None):
-        if assignment is not None:
-            self.state.current_goal.assignment = assignment
-        self.state.goals.extendleft(sub_goals[::-1])
-
-    def rotate_left(self):
-        self.state.goals.rotate(-1)
-
-    def rotate_right(self):
-        self.state.goals.rotate(1)
-
-    @property
-    def is_closed(self) -> bool:
-        return self.state.is_closed and self.goal.is_closed
+    @staticmethod
+    def _ensure_meta_vars_have_subgoal(subgoals: list[Goal], assignment: ProofTerm):
+        match assignment:
+            case PMetaVar(goal_id):
+                if not any(goal.id == goal_id for goal in subgoals):
+                    raise ValueError(f"Meta-variable {goal_id} does not correspond to any sub-goal.")
+            case PLam(var, dom, body):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, body)
+            case PApp(fn, arg):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, fn)
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, arg)
+            case PAndI(left, right):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, left)
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, right)
+            case PAndE1(inner):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, inner)
+            case PAndE2(inner):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, inner)
+            case POrIL(pf, right_type):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, pf)
+            case POrIR(left_type, pf):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, pf)
+            case POrE(disj, left_var, left_branch, right_var, right_branch):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, disj)
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, left_branch)
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, right_branch)
+            case PFalseE(inner, conclusion):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, inner)
+            case PExI(exists_var, body, witness, pf):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, pf)
+            case PExE(pf, prop_var, hyp_var, body):
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, pf)
+                ProofEngine._ensure_meta_vars_have_subgoal(subgoals, body)
