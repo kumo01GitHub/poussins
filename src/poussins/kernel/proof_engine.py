@@ -51,7 +51,7 @@ class ProofEngine:
             raise ValueError("Sub-goals must not be assigned a proof term when refining a goal.")
         elif assignment is None:
             raise ValueError("Assignment cannot be None when refining a goal.")
-        elif not ProofEngine.has_all_meta_vars_subgoals(subgoals, assignment):
+        elif not ProofEngine._has_all_meta_vars_subgoals(subgoals, assignment):
             raise ValueError("Not all meta-variables in the assignment have corresponding sub-goals.")
 
         self.state.current_goal.assignment = assignment
@@ -186,44 +186,44 @@ class ProofEngine:
                 raise NotImplementedError(f"Unknown proof term: {term}")
 
     @staticmethod
-    def has_all_meta_vars_subgoals(subgoals: list[Goal], assignment: ProofTerm) -> bool:
+    def _has_all_meta_vars_subgoals(subgoals: list[Goal], assignment: ProofTerm) -> bool:
         match assignment:
             case PMetaVar(goal_id):
                 return any(goal.id == goal_id for goal in subgoals)
             case PLam(var, dom, body):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, body)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, body)
             case PApp(fn, arg):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, fn)
-                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, arg)
+                    ProofEngine._has_all_meta_vars_subgoals(subgoals, fn)
+                    and ProofEngine._has_all_meta_vars_subgoals(subgoals, arg)
                 )
             case PAndI(left, right):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, left)
-                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, right)
+                    ProofEngine._has_all_meta_vars_subgoals(subgoals, left)
+                    and ProofEngine._has_all_meta_vars_subgoals(subgoals, right)
                 )
             case PAndE1(inner):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, inner)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, inner)
             case PAndE2(inner):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, inner)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, inner)
             case POrIL(pf, right_type):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, pf)
             case POrIR(left_type, pf):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, pf)
             case POrE(disj, left_var, left_branch, right_var, right_branch):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, disj)
-                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, left_branch)
-                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, right_branch)
+                    ProofEngine._has_all_meta_vars_subgoals(subgoals, disj)
+                    and ProofEngine._has_all_meta_vars_subgoals(subgoals, left_branch)
+                    and ProofEngine._has_all_meta_vars_subgoals(subgoals, right_branch)
                 )
             case PFalseE(inner, conclusion):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, inner)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, inner)
             case PExI(exists_var, body, witness, pf):
-                return ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
+                return ProofEngine._has_all_meta_vars_subgoals(subgoals, pf)
             case PExE(pf, prop_var, hyp_var, body):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
-                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, body)
+                    ProofEngine._has_all_meta_vars_subgoals(subgoals, pf)
+                    and ProofEngine._has_all_meta_vars_subgoals(subgoals, body)
                 )
             case _:
                 return True
