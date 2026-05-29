@@ -21,7 +21,7 @@ class ProofEngine:
 
     @property
     def is_closed(self) -> bool:
-        return self.state.is_closed and self.goal.is_closed
+        return self.state.is_closed and self.goal.is_closed and self.goal.assurance == ProofAssurance.VERIFIED
 
     def close_goal(self, assignment: ProofTerm):
         current_goal = self.state.current_goal
@@ -35,6 +35,7 @@ class ProofEngine:
             raise ValueError("Assignment does not match the goal's formula.")
         else:
             current_goal.assignment = assignment
+            current_goal.assurance = ProofAssurance.VERIFIED
             self._close_subgoals(current_goal)
 
     def refine_goal(self, subgoals: list[Goal], assignment: ProofTerm):
@@ -109,6 +110,7 @@ class ProofEngine:
         for goal in list(self.state.goals):
             goal.assignment = ProofEngine._substitute_meta_var(closed_goal, goal.assignment)
             if goal.is_closed and goal not in closed_goals:
+                goal.assurance = ProofAssurance.VERIFIED
                 closed_goals.append(goal)
 
         for closed_goal in closed_goals:
