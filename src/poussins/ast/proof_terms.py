@@ -183,9 +183,9 @@ class POrE(ProofTerm):
     @property
     def has_meta_var(self) -> bool:
         return (
-            self.disj.has_meta_var or
-            self.left_branch.has_meta_var or
-            self.right_branch.has_meta_var
+            self.disj.has_meta_var
+            or self.left_branch.has_meta_var
+            or self.right_branch.has_meta_var
         )
 
 

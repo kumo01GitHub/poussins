@@ -194,13 +194,13 @@ class ProofEngine:
                 return ProofEngine.has_all_meta_vars_subgoals(subgoals, body)
             case PApp(fn, arg):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, fn) and
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, arg)
+                    ProofEngine.has_all_meta_vars_subgoals(subgoals, fn)
+                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, arg)
                 )
             case PAndI(left, right):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, left) and
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, right)
+                    ProofEngine.has_all_meta_vars_subgoals(subgoals, left)
+                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, right)
                 )
             case PAndE1(inner):
                 return ProofEngine.has_all_meta_vars_subgoals(subgoals, inner)
@@ -212,9 +212,9 @@ class ProofEngine:
                 return ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
             case POrE(disj, left_var, left_branch, right_var, right_branch):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, disj) and
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, left_branch) and
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, right_branch)
+                    ProofEngine.has_all_meta_vars_subgoals(subgoals, disj)
+                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, left_branch)
+                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, right_branch)
                 )
             case PFalseE(inner, conclusion):
                 return ProofEngine.has_all_meta_vars_subgoals(subgoals, inner)
@@ -222,8 +222,8 @@ class ProofEngine:
                 return ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
             case PExE(pf, prop_var, hyp_var, body):
                 return (
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, pf) and
-                    ProofEngine.has_all_meta_vars_subgoals(subgoals, body)
+                    ProofEngine.has_all_meta_vars_subgoals(subgoals, pf)
+                    and ProofEngine.has_all_meta_vars_subgoals(subgoals, body)
                 )
             case _:
                 return True
