@@ -83,7 +83,7 @@ def _apply(
             formula=deepcopy(hyp.antecedent),
             context=current_goal.context
         )
-        subgoals, assignment = _apply(current_goal, hyp_name, hyp.consequent, goals, idx + 1)
-        return [subgoal] + subgoals, PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
+        subgoals, assignment = _apply(current_goal, hyp_name, hyp.consequent, goals + [subgoal], idx + 1)
+        return subgoals, PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
     else:
         raise ValueError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")
