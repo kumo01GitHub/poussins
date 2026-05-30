@@ -36,7 +36,7 @@ class ProofEngine:
         else:
             current_goal.assignment = assignment
             current_goal.assurance = ProofAssurance.VERIFIED
-            self._close_subgoals(current_goal)
+            self._close_goals(current_goal)
 
     def refine_goal(self, subgoals: list[Goal], assignment: ProofTerm):
         current_goal = self.state.current_goal
@@ -100,7 +100,7 @@ class ProofEngine:
 
             return term
 
-    def _close_subgoals(self, closed_goal: Goal):
+    def _close_goals(self, closed_goal: Goal):
         if not closed_goal.is_closed:
             raise ValueError("Cannot close sub-goals of an open goal.")
         else:
@@ -114,7 +114,7 @@ class ProofEngine:
                 closed_goals.append(goal)
 
         for closed_goal in closed_goals:
-            self._close_subgoals(closed_goal)
+            self._close_goals(closed_goal)
 
     @staticmethod
     def _infer_formula(term: ProofTerm, context: Context) -> Formula:
