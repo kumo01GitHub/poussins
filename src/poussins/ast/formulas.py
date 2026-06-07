@@ -32,39 +32,57 @@ class FVar(Formula):
 
     name: str
 
+    def __str__(self) -> str:
+        return self.name
+
 
 @dataclass(frozen=True)
 class FImpl(Formula):
-    """Implication: antecedent -> consequent."""
+    """Implication: antecedent → consequent."""
 
     antecedent: Formula
     consequent: Formula
 
+    def __str__(self) -> str:
+        return f"({self.antecedent} → {self.consequent})"
+
 
 @dataclass(frozen=True)
 class FAnd(Formula):
-    """Conjunction: left /\\ right."""
+    """Conjunction: left ∧ right."""
 
     left: Formula
     right: Formula
+
+    def __str__(self) -> str:
+        return f"({self.left} ∧ {self.right})"
 
 
 @dataclass(frozen=True)
 class FOr(Formula):
-    """Disjunction: left \\/ right."""
+    """Disjunction: left ∨ right."""
 
     left: Formula
     right: Formula
+
+    def __str__(self) -> str:
+        return f"({self.left} ∨ {self.right})"
 
 
 @dataclass(frozen=True)
 class FTrue(Formula):
     """Logical true (top)."""
 
+    def __str__(self) -> str:
+        return "⊤"
+
 
 @dataclass(frozen=True)
 class FFalse(Formula):
     """Logical false (bottom)."""
+
+    def __str__(self) -> str:
+        return "⊥"
 
 
 @dataclass(frozen=True)
@@ -77,3 +95,6 @@ class FExists(Formula):
 
     var: str
     body: Formula
+
+    def __str__(self) -> str:
+        return f"∃{self.var}. {self.body}"
