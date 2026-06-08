@@ -46,10 +46,13 @@ class Goal:
 
     @property
     def is_closed(self) -> bool:
-        if self.assignment is None:
-            return False
-        else:
-            return not self.assignment.has_meta_var
+        return (
+            self.assignment is not None
+            and self.assurance in {
+                ProofAssurance.VERIFIED,
+                ProofAssurance.TRUSTED,
+            }
+        )
 
     def __eq__(self, other: Goal) -> bool:
         return self.id == other.id

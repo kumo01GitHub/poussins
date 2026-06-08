@@ -7,10 +7,10 @@ Inference rules covered:
     PLam      ->-I    ctx, x:A |- B  =>  ctx |- A -> B
     PApp      ->-E    ctx |- A -> B,  ctx |- A  =>  ctx |- B
     PAndI     /\\-I   ctx |- A,  ctx |- B  =>  ctx |- A /\\ B
-    PAndE1    /\\-E1  ctx |- A /\\ B  =>  ctx |- A
-    PAndE2    /\\-E2  ctx |- A /\\ B  =>  ctx |- B
-    POrIL     \\/-I1  ctx |- A  =>  ctx |- A \\/ B
-    POrIR     \\/-I2  ctx |- B  =>  ctx |- A \\/ B
+    PAndEL    /\\-EL  ctx |- A /\\ B  =>  ctx |- A
+    PAndER    /\\-ER  ctx |- A /\\ B  =>  ctx |- B
+    POrIL     \\/-IL  ctx |- A  =>  ctx |- A \\/ B
+    POrIR     \\/-IR  ctx |- B  =>  ctx |- A \\/ B
     POrE      \\/-E   ctx |- A \\/ B, ctx,h:A |- C, ctx,h:B |- C  =>  ctx |- C
     PTrueI    T-I     ctx |- True
     PFalseE   F-E     ctx |- False  =>  ctx |- A  (ex falso)
@@ -29,42 +29,38 @@ TODO:
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass
 
 from .formulas import Formula
 
 
 class ProofTerm(ABC):
-    @property
-    @abstractmethod
-    def has_meta_var(self) -> bool:
-        pass
+    """Abstract base class for proof terms."""
+    pass
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PMetaVar(ProofTerm):
     """Meta-variable (proof hole): represents an unresolved subgoal in the proof tree."""
 
     goal_id: str
 
-    @property
-    def has_meta_var(self) -> bool:
-        return True
+    def __str__(self) -> str:
+        return f"?{self.goal_id}"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PVar(ProofTerm):
     """Hypothesis variable: proves A when h : A is in context."""
 
     name: str
 
-    @property
-    def has_meta_var(self) -> bool:
-        return False
+    def __str__(self) -> str:
+        return self.name
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PLam(ProofTerm):
     """Implication introduction: abstracts over a hypothesis.
 
@@ -76,136 +72,127 @@ class PLam(ProofTerm):
     dom: Formula
     body: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.body.has_meta_var
+    def __str__(self) -> str:
+        return f"(→I λ{self.var}: {self.dom}. {self.body})"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PApp(ProofTerm):
     """Implication elimination (modus ponens)."""
 
     fn: ProofTerm
     arg: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.fn.has_meta_var or self.arg.has_meta_var
+    def __str__(self) -> str:
+        return f"(→E {self.fn}; {self.arg})"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PAndI(ProofTerm):
     """Conjunction introduction."""
 
     left: ProofTerm
     right: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.left.has_meta_var or self.right.has_meta_var
+    def __str__(self) -> str:
+        return f"(∧I {self.left}; {self.right})"
 
 
-@dataclass()
-class PAndE1(ProofTerm):
+@dataclass(frozen=True)
+class PAndEL(ProofTerm):
     """Conjunction elimination, left projection."""
 
     inner: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.inner.has_meta_var
+    def __str__(self) -> str:
+        return f"(∧EL {self.inner})"
 
 
-@dataclass()
-class PAndE2(ProofTerm):
+@dataclass(frozen=True)
+class PAndER(ProofTerm):
     """Conjunction elimination, right projection."""
 
     inner: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.inner.has_meta_var
+    def __str__(self) -> str:
+        return f"(∧ER {self.inner})"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class POrIL(ProofTerm):
     """Disjunction introduction, left.
 
-    right_type must be provided explicitly because type_check cannot
+    other_disjunct must be provided explicitly because type_check cannot
     infer the right disjunct from the proof term alone.
     """
 
-    pf: ProofTerm
-    right_type: Formula
+    proof: ProofTerm
+    other_disjunct: Formula
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.pf.has_meta_var
+    def __str__(self) -> str:
+        return f"(∨IL {self.proof} : _ ∨ {self.other_disjunct})"
 
-@dataclass()
+
+@dataclass(frozen=True)
 class POrIR(ProofTerm):
     """Disjunction introduction, right."""
 
-    left_type: Formula
-    pf: ProofTerm
+    other_disjunct: Formula
+    proof: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.pf.has_meta_var
+    def __str__(self) -> str:
+        return f"(∨IR {self.proof} : {self.other_disjunct} ∨ _)"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PTrueI(ProofTerm):
     """True introduction: proves FTrue unconditionally."""
 
-    @property
-    def has_meta_var(self) -> bool:
-        return False
+    def __str__(self) -> str:
+        return "⊤I"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class POrE(ProofTerm):
     """Disjunction elimination (case split).
 
     Given a proof of A \\/ B, and a proof of C assuming A (left branch),
     and a proof of C assuming B (right branch), concludes C.
 
-    left_var  : name bound in left_branch  (h : A)
-    right_var : name bound in right_branch (h : B)
+    left_hyp  : name bound in left_case  (h : A)
+    right_hyp : name bound in right_case (h : B)
     """
 
-    disj: ProofTerm
-    left_var: str
-    left_branch: ProofTerm
-    right_var: str
-    right_branch: ProofTerm
+    disj_proof: ProofTerm
+    left_hyp: str
+    left_case: ProofTerm
+    right_hyp: str
+    right_case: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
+    def __str__(self) -> str:
         return (
-            self.disj.has_meta_var
-            or self.left_branch.has_meta_var
-            or self.right_branch.has_meta_var
+            f"(∨E {self.disj_proof}; "
+            f"{self.left_hyp} ↦ {self.left_case}; "
+            f"{self.right_hyp} ↦ {self.right_case})"
         )
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PFalseE(ProofTerm):
     """False elimination (ex falso quodlibet): proves any formula from FFalse."""
 
     inner: ProofTerm
     conclusion: Formula
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.inner.has_meta_var
+    def __str__(self) -> str:
+        return f"(⊥E {self.inner} : {self.conclusion})"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PExI(ProofTerm):
     """Existential introduction (∃-I).
 
-    Proves FExists(exists_var, body) when pf proves body[witness/exists_var].
+    Proves FExists(exists_var, body) when proof proves body[witness/exists_var].
     Both exists_var and body must be provided because the type checker cannot
     infer them from the proof term alone.
     """
@@ -213,18 +200,17 @@ class PExI(ProofTerm):
     exists_var: str
     body: Formula
     witness: Formula
-    pf: ProofTerm
+    proof: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.pf.has_meta_var
+    def __str__(self) -> str:
+        return f"(∃I {self.exists_var} := {self.witness}; {self.proof} : ∃{self.exists_var}. {self.body})"
 
 
-@dataclass()
+@dataclass(frozen=True)
 class PExE(ProofTerm):
     """Existential elimination (∃-E).
 
-    Given pf : ∃x. P(x), introduces a fresh propositional variable prop_var
+    Given exists_proof : ∃x. P(x), introduces a fresh propositional variable prop_var
     and a hypothesis hyp_var : P[prop_var/x], then proves the conclusion C
     (which must not mention prop_var).
 
@@ -232,11 +218,10 @@ class PExE(ProofTerm):
     hyp_var   : proof-context name bound to P[prop_var/x]
     """
 
-    pf: ProofTerm
+    exists_proof: ProofTerm
     prop_var: str
     hyp_var: str
-    body: ProofTerm
+    case_proof: ProofTerm
 
-    @property
-    def has_meta_var(self) -> bool:
-        return self.pf.has_meta_var or self.body.has_meta_var
+    def __str__(self) -> str:
+        return f"(∃E {self.exists_proof}; {self.prop_var}, {self.hyp_var} ↦ {self.case_proof})"

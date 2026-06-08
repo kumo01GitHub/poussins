@@ -59,31 +59,23 @@ def apply(proof_engine: ProofEngine, hyp_name: str):
         raise ValueError(f"Hypothesis '{hyp_name}' not found in the current context.")
     elif hyp == current_goal.formula:
         exact(proof_engine, hyp_name)
+        return
     elif not isinstance(hyp, FImpl):
         raise ValueError(f"Hypothesis '{hyp_name}' is not an implication and cannot be applied.")
 
-    subgoals, assignment = _apply(current_goal, hyp_name, hyp)
-    proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
-
-
-def _apply(
-        current_goal: Goal,
-        hyp_name: str,
-        hyp: Formula,
-        goals: list[Goal] = None,
-        idx: int = 0
-    ) -> tuple[list[Goal], ProofTerm]:
-    if goals is None:
-        goals = []
-
-    if current_goal.formula == hyp:
-        return goals, PVar(name=hyp_name)
-    elif isinstance(hyp, FImpl):
+    subgoals: list[Goal] = []
+    assignment: ProofTerm = PVar(name=hyp_name)
+    current_formula: Formula = hyp
+    while isinstance(current_formula, FImpl):
         subgoal = Goal(
-            formula=deepcopy(hyp.antecedent),
+            formula=deepcopy(current_formula.antecedent),
             context=current_goal.context
         )
-        subgoals, assignment = _apply(current_goal, hyp_name, hyp.consequent, goals + [subgoal], idx + 1)
-        return subgoals, PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
-    else:
+        subgoals.append(subgoal)
+        assignment = PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
+        current_formula = current_formula.consequent
+
+    if current_goal.formula != current_formula:
         raise ValueError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")
+
+    proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
