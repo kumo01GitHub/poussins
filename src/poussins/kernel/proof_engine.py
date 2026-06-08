@@ -19,7 +19,7 @@ class ProofEngine:
 
     @property
     def is_closed(self) -> bool:
-        return self.state.is_closed and self.goal.is_closed and self.goal.assurance == ProofAssurance.VERIFIED
+        return self.state.is_closed and self.goal.is_closed
 
     def close_goal(self, assignment: ProofTerm):
         current_goal = self.state.current_goal

@@ -13,5 +13,5 @@ from poussins.kernel.goal import ProofAssurance
 class Declaration:
     name: str
     statement: Formula
-    assigment: Optional[Formula]
+    assignment: Optional[Formula]
     assurance: ProofAssurance

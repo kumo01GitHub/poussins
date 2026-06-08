@@ -76,7 +76,6 @@ class Theorem(ProofBase):
         super().__init__(statement)
 
     def qed(self, env: Environment):
-        # TODO: Add to Envirnonment and closed status should be checked in engine.
         if not self.is_closed:
             raise ValueError("Not proved.")
         
@@ -84,8 +83,8 @@ class Theorem(ProofBase):
             declaration=Declaration(
                 name=self.name,
                 statement=self.statement,
-                assigment=self.engine.goal.assignment,
-                assurance=ProofAssurance.VERIFIED
+                assignment=self.engine.goal.assignment,
+                assurance=self.engine.goal.assurance
             )
         )
         print(f"Assignment: {self.engine.goal.assignment}")
@@ -119,7 +118,6 @@ class Example(ProofBase):
         super().__init__(statement)
 
     def qed(self):
-        # TODO: Add to Envirnonment and closed status should be checked in engine.
         if not self.is_closed:
             raise ValueError("Not proved.")
 

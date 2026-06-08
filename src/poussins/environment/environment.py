@@ -14,8 +14,8 @@ class Environment:
     declarations: dict[str, Declaration] = field(default_factory=dict)
 
     def add(self, declaration: Declaration, name: Optional[str]=None):
-        if declaration.assurance == ProofAssurance.VERIFIED and declaration.assigment is None:
-            raise ValueError("Verified declaration must have an assigment.")
+        if declaration.assurance == ProofAssurance.VERIFIED and declaration.assignment is None:
+            raise ValueError("Verified declaration must have an assignment.")
 
         key = name if name is not None else declaration.name
         self.declarations[key] = declaration
