@@ -3,12 +3,10 @@
 
 from collections import deque
 
-from ..errors.kernel_error import KernelTypeError, KernelStateError, KernelValueError
-
-from ..ast import ProofTerm, Formula
-from ..ast.ops import collect_meta_var_ids, substitute_meta_var
-from .proof_state import ProofState
+from poussins.ast import ProofTerm, Formula, collect_meta_var_ids, substitute_meta_var
+from poussins.errors import KernelStateError, KernelValueError
 from .goal import Goal, Context, ProofAssurance
+from .proof_state import ProofState
 from .typecheck import infer_formula, check_formula
 
 

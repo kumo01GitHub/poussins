@@ -1,4 +1,5 @@
-"""ProofTerm AST nodes for propositional logic (natural deduction).
+"""
+ProofTerm AST nodes for propositional logic (natural deduction).
 
 Each node corresponds to one natural deduction inference rule.
 

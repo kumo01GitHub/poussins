@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from ..errors.kernel_error import KernelTypeError
-
-from ..ast import (
+from poussins.ast import (
     ProofTerm,
     PMetaVar,
     PVar,
@@ -29,6 +27,7 @@ from ..ast import (
     FExists,
     FVar,
 )
+from poussins.errors import KernelTypeError
 from .goal import Context
 
 

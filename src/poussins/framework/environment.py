@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-from ..errors.framework_error import FrameworkError
-
+from poussins.errors import FrameworkError
+from poussins.kernel.goal import ProofAssurance
 from .declaration import Declaration
-from ..kernel.goal import ProofAssurance
 
 
 @dataclass

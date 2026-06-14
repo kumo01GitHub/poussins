@@ -19,13 +19,16 @@ Prop is immutable.  The underlying Formula is accessible via .formula.
 from __future__ import annotations
 from dataclasses import dataclass
 
-from ..ast.formulas import (
+from poussins.ast import (
     Formula,
     FVar,
     FTrue,
     FFalse,
     FExists,
-    FAnd, FImpl, FOr)
+    FAnd,
+    FImpl,
+    FOr
+)
 
 
 @dataclass(frozen=True)

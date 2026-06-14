@@ -1,4 +1,6 @@
-"""Public DSL layer: Prop, Axiom, Theorem, Example, and aliases."""
+"""
+Public DSL layer: Prop, Axiom, Theorem, Example, and aliases.
+"""
 
 from .prop import Prop
 from .axiom import Axiom

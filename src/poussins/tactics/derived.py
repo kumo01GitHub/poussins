@@ -1,8 +1,8 @@
 """
 """
 
-from .primitive import intro
-from ..kernel.proof_engine import ProofEngine
+from poussins.kernel.proof_engine import ProofEngine
+from poussins.tactics import intro
 
 
 def intros(proof_engine: ProofEngine, hyp_names: list[str]):

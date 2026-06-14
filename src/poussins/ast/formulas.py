@@ -1,4 +1,5 @@
-"""Formula AST nodes for propositional logic.
+"""
+Formula AST nodes for propositional logic.
 
 Defined in this module:
 - FVar, FImpl, FAnd, FOr, FTrue, FFalse, FExists

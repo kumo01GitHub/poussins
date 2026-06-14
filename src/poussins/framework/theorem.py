@@ -43,9 +43,9 @@ See also:
 
 from __future__ import annotations
 
-from ..ast.formulas import Formula
+from poussins.ast import Formula
+from poussins.errors import FrameworkError
 from .environment import Environment, Declaration
-from ..errors.framework_error import FrameworkError
 from .prop import Prop
 from .proof_driver import ProofDriver
 

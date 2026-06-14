@@ -24,12 +24,10 @@ functions for use in combinators or batch execution::
 from __future__ import annotations
 from abc import ABC
 
-from ..ast.formulas import Formula
-from ..ast.proof_terms import ProofTerm
-from ..kernel.goal import ProofAssurance
-from ..kernel.proof_engine import ProofEngine
-from ..tactics.primitive import intro, exact, apply
-from ..tactics.derived import intros
+from poussins.ast import Formula, ProofTerm
+from poussins.kernel.goal import ProofAssurance
+from poussins.kernel.proof_engine import ProofEngine
+from poussins.tactics import intro, exact, apply, intros
 from .prop import Prop
 
 

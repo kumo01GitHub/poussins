@@ -1,4 +1,5 @@
-"""Formula kernel: AST nodes and proof terms for propositional logic."""
+"""
+"""
 
 from .formulas import (
     Formula,
@@ -10,6 +11,7 @@ from .formulas import (
     FFalse,
     FExists,
 )
+from .ops import collect_meta_var_ids, substitute_meta_var
 from .proof_terms import (
     ProofTerm,
     PMetaVar,
@@ -54,4 +56,7 @@ __all__ = [
     "PFalseE",
     "PExI",
     "PExE",
+    # Operations on AST
+    "collect_meta_var_ids",
+    "substitute_meta_var",
 ]

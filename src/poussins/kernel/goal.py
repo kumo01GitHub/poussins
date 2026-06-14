@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from uuid import uuid4
 
-from ..ast.proof_terms import ProofTerm, Formula
+from poussins.ast import ProofTerm, Formula
 
 
 class ProofAssurance(str, Enum):

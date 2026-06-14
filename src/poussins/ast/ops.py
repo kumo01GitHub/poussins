@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from ..ast import (
+from .proof_terms import (
     ProofTerm,
     PMetaVar,
     PVar,
