@@ -1,10 +1,11 @@
-"""Command-line entrypoint wiring for poussins."""
-
-
+"""
+Command-line entrypoint wiring for poussins.
+"""
 import argparse
 from .prove import run_prove
 from .step import run_step
 from .lean import run_lean2py, run_py2lean
+
 
 def main():
     parser = argparse.ArgumentParser(description="poussins command line")

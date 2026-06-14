@@ -1,5 +1,7 @@
 
-"""Batch proof execution subcommand for poussins CLI."""
+"""
+Batch proof execution subcommand for poussins CLI.
+"""
 
 
 def run_prove(filepath: str):

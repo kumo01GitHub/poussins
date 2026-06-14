@@ -27,7 +27,6 @@ TODO:
 - Add PRefl once FEq and a Term AST are introduced.
 - Add oracle proof terms (PRing, PSimp, POmega) via reflection.
 """
-
 from __future__ import annotations
 
 from abc import ABC

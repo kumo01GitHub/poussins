@@ -1,3 +1,6 @@
+"""
+Tactic-related errors.
+"""
 from .proof_error import ProofError
 
 

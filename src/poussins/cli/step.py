@@ -1,5 +1,8 @@
 
-"""Step-by-step proof execution subcommand for poussins CLI."""
+"""
+Step-by-step proof execution subcommand for poussins CLI.
+"""
+
 
 def run_step(filepath: str, theorem: str | None = None):
     """

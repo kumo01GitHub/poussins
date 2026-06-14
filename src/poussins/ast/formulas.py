@@ -17,7 +17,6 @@ TODO:
   The current FExists is second-order (quantifies over propositional variables).
 - Add FEq with a dedicated Term AST (arithmetic milestone).
 """
-
 from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass

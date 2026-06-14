@@ -1,5 +1,6 @@
-"""Functional operations over ProofTerm AST nodes."""
-
+"""
+Functional operations over ProofTerm AST nodes.
+"""
 from __future__ import annotations
 
 from copy import deepcopy

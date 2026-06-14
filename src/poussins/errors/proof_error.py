@@ -1,3 +1,6 @@
+"""
+Base class for proof errors.
+"""
 from abc import ABC
 
 

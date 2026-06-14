@@ -1,3 +1,6 @@
+"""
+Framework-level errors.
+"""
 from .proof_error import ProofError
 
 

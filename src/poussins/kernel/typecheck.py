@@ -1,7 +1,6 @@
 """
 Kernel-level proof term inference and type checking.
 """
-
 from __future__ import annotations
 
 from .goal import Context

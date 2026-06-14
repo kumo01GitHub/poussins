@@ -2,8 +2,7 @@
 Propositional logic example using poussins DSL.
 """
 
-from poussins.framework import Lemma, Prop
-from poussins.framework.environment import Environment
+from poussins import Lemma, Prop, Environment
 
 a, b, c = Prop("A"), Prop("B"), Prop("C")
 

@@ -1,4 +1,5 @@
-"""Theorem, Lemma, Example: proof-carrying DSL objects.
+"""
+Theorem, Lemma, Example: proof-carrying DSL objects.
 
 Usage pattern::
 
@@ -40,7 +41,6 @@ See also:
     proof_driver.py  for ProofDriver (method delegation layer).
     axiom.py       for Axiom (no-proof declarations).
 """
-
 from __future__ import annotations
 
 from .environment import Environment, Declaration

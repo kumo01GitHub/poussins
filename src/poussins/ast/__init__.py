@@ -1,6 +1,5 @@
 """
 """
-
 from .formulas import (
     Formula,
     FVar,

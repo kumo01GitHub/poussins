@@ -1,6 +1,6 @@
 """
+Derived tactics.
 """
-
 from ..kernel import ProofEngine
 from ..tactics import intro
 

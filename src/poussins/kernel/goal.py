@@ -1,6 +1,6 @@
 """
+Kernel-level components of the proof system, including the core data structures and proof engine.
 """
-
 from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass, field

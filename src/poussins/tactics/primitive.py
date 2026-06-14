@@ -1,6 +1,6 @@
 """
+Primitive tactics: intro, exact, apply.
 """
-
 from copy import deepcopy
 
 from ..ast import (

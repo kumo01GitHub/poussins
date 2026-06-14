@@ -15,7 +15,6 @@ propositions can be written naturally in Python code:
 
 Prop is immutable.  The underlying Formula is accessible via .formula.
 """
-
 from __future__ import annotations
 from dataclasses import dataclass
 

@@ -1,10 +1,11 @@
-"""ProofBase: tactic methods for proof-carrying DSL objects (Theorem, Example).
+"""
+ProofDriver: tactic methods for proof-carrying DSL objects (Theorem, Example).
 
 This abstract base class provides method-style tactic access on top of the underlying
 ProofEngine. The logic of each tactic lives in ``tactics/primitive.py``
 and ``tactics/derived.py``; this module only delegates to those functions.
 
-Classes that inherit ProofBase must implement the ``engine`` property.
+Classes that inherit ProofDriver must implement the ``engine`` property.
 
 Usage::
 
@@ -20,7 +21,6 @@ functions for use in combinators or batch execution::
     intro(th.engine, "h")
     exact(th.engine, "h")
 """
-
 from __future__ import annotations
 from abc import ABC
 

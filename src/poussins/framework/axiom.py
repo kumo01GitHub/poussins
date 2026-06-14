@@ -1,6 +1,8 @@
-"""Axiom: a named proposition accepted without proof."""
-
+"""
+Axiom: a named proposition accepted without proof.
+"""
 from __future__ import annotations
+
 
 class Axiom:
     """A named proposition accepted without proof.

@@ -1,6 +1,6 @@
 """
+Kernel-level components of the proof system, including the core data structures and proof engine.
 """
-
 from collections import deque
 
 from .goal import Goal, Context, ProofAssurance
