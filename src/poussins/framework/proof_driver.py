@@ -28,6 +28,8 @@ from ..ast.formulas import Formula
 from ..ast.proof_terms import ProofTerm
 from ..kernel.goal import ProofAssurance
 from ..kernel.proof_engine import ProofEngine
+from ..tactics.primitive import intro, exact, apply
+from ..tactics.derived import intros
 from .prop import Prop
 
 
@@ -56,19 +58,17 @@ class ProofDriver(ABC):
     # ------------------------------------------------------------------
 
     def intro(self, name: str) -> None:
-        from ..tactics.primitive import intro
         intro(self.engine, name)
 
     def exact(self, term_or_hyp: ProofTerm | str) -> None:
-        from ..tactics.primitive import exact
         exact(self.engine, term_or_hyp)
 
     def apply(self, term_or_hyp: ProofTerm | str) -> None:
-        from ..tactics.primitive import apply
         apply(self.engine, term_or_hyp)
 
     # ------------------------------------------------------------------
     # Derived tactics
     # ------------------------------------------------------------------
 
-    # TODO: add derived tactics here
+    def intros(self, hyp_names: list[str]) -> None:
+        intros(self.engine, hyp_names)

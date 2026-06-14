@@ -9,9 +9,7 @@ a, b, c = Prop("A"), Prop("B"), Prop("C")
 
 hilbert_s = Lemma("HilbertS", ((a >> (b >> c)) >> ((a >> b) >> (a >> c))).formula)
 
-hilbert_s.intro("habc")
-hilbert_s.intro("hab")
-hilbert_s.intro("ha")
+hilbert_s.intros(["habc", "hab", "ha"])
 hilbert_s.apply("habc")
 hilbert_s.exact("ha")
 hilbert_s.apply("hab")
