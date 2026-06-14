@@ -57,12 +57,9 @@ class ProofEngine:
                     substituted = substitute_meta_var(goal.assignment, closed_goal.id, closed_goal.assignment)
                     self.state.goals[idx].assignment = substituted
 
-                    try:
-                        if check_formula(substituted, goal.formula, goal.context):
-                            self.state.goals[idx].assurance = ProofAssurance.VERIFIED
-                            closed_goals.append(self.state.goals[idx])
-                    except KernelTypeError:
-                        pass
+                    if check_formula(substituted, goal.formula, goal.context):
+                        self.state.goals[idx].assurance = ProofAssurance.VERIFIED
+                        closed_goals.append(self.state.goals[idx])
 
             for goal in list(self.state.goals):
                 if goal.is_closed:

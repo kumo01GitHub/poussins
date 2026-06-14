@@ -153,4 +153,7 @@ def infer_formula(term: ProofTerm, context: Context) -> Formula:
 
 def check_formula(term: ProofTerm, expected: Formula, context: Context) -> bool:
     """Return True when term checks against expected formula in context."""
-    return infer_formula(term, context) == expected
+    try:
+        return infer_formula(term, context) == expected
+    except KernelTypeError:
+        return False
