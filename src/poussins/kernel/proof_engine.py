@@ -3,6 +3,8 @@
 
 from collections import deque
 
+from ..errors.kernel_error import KernelTypeError, KernelStateError, KernelValueError
+
 from ..ast import ProofTerm, Formula
 from ..ast.ops import collect_meta_var_ids, substitute_meta_var
 from .proof_state import ProofState
@@ -24,13 +26,13 @@ class ProofEngine:
     def close_goal(self, assignment: ProofTerm):
         current_goal = self.state.current_goal
         if current_goal is None:
-            raise ValueError("No active goal to close.")
+            raise KernelStateError("No active goal to close.")
         elif current_goal.is_closed:
-            raise ValueError("Cannot close a closed goal.")
+            raise KernelStateError("Cannot close a closed goal.")
         elif current_goal.assignment is not None:
-            raise ValueError("Current goal is already assigned a proof term.")
+            raise KernelStateError("Current goal is already assigned a proof term.")
         elif current_goal.formula != infer_formula(assignment, current_goal.context):
-            raise ValueError("Assignment does not match the goal's formula.")
+            raise KernelStateError("Assignment does not match the goal's formula.")
         else:
             current_goal.assignment = assignment
             current_goal.assurance = ProofAssurance.VERIFIED
@@ -59,7 +61,7 @@ class ProofEngine:
                         if check_formula(substituted, goal.formula, goal.context):
                             self.state.goals[idx].assurance = ProofAssurance.VERIFIED
                             closed_goals.append(self.state.goals[idx])
-                    except ValueError:
+                    except KernelTypeError:
                         pass
 
             for goal in list(self.state.goals):
@@ -70,22 +72,22 @@ class ProofEngine:
     def refine_goal(self, subgoals: list[Goal], assignment: ProofTerm):
         current_goal = self.state.current_goal
         if current_goal is None:
-            raise ValueError("No active goal to refine.")
+            raise KernelStateError("No active goal to refine.")
         elif current_goal.is_closed:
-            raise ValueError("Cannot refine a closed goal.")
+            raise KernelStateError("Cannot refine a closed goal.")
         elif current_goal.assignment is not None:
-            raise ValueError("Current goal is already assigned a proof term.")
+            raise KernelStateError("Current goal is already assigned a proof term.")
         elif not subgoals:
-            raise ValueError("Sub-goals cannot be empty when refining a goal.")
+            raise KernelValueError("Sub-goals cannot be empty when refining a goal.")
         elif any(subgoal.assignment is not None for subgoal in subgoals):
-            raise ValueError("Sub-goals must not be assigned a proof term when refining a goal.")
+            raise KernelValueError("Sub-goals must not be assigned a proof term when refining a goal.")
         elif assignment is None:
-            raise ValueError("Assignment cannot be None when refining a goal.")
+            raise KernelValueError("Assignment cannot be None when refining a goal.")
 
         subgoal_ids = {goal.id for goal in subgoals}
         meta_var_ids = collect_meta_var_ids(assignment)
         if not meta_var_ids.issubset(subgoal_ids):
-            raise ValueError("Not all meta-variables in the assignment have corresponding sub-goals.")
+            raise KernelValueError("Not all meta-variables in the assignment have corresponding sub-goals.")
 
         self.state.current_goal.assignment = assignment
         self.state.goals.extendleft(subgoals[::-1])

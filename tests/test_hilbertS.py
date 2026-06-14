@@ -1,9 +1,9 @@
 """
 test_hilbertS.py: Minimal test for Hilbert-style proof closure using Theorem and tactics.
 """
-from poussins.dsl.prop import Prop
-from poussins.dsl.theorem import Theorem
-from poussins.environment.environment import Environment
+from poussins.framework.prop import Prop
+from poussins.framework.theorem import Theorem
+from poussins.framework.environment import Environment
 
 def test_hilbertS_close():
     A = Prop("A")

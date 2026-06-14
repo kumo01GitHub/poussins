@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ..errors.kernel_error import KernelTypeError
+
 from ..ast import (
     ProofTerm,
     PMetaVar,
@@ -57,7 +59,7 @@ def _subst_formula_var(formula: Formula, var_name: str, replacement: Formula) ->
                 return formula
             return FExists(bound_var, _subst_formula_var(body, var_name, replacement))
         case _:
-            raise ValueError(f"Unknown formula: {formula}")
+            raise NotImplementedError(f"Unknown formula: {formula}")
 
 
 def _contains_formula_var(formula: Formula, var_name: str) -> bool:
@@ -76,18 +78,18 @@ def _contains_formula_var(formula: Formula, var_name: str) -> bool:
                 return False
             return _contains_formula_var(body, var_name)
         case _:
-            raise ValueError(f"Unknown formula: {formula}")
+            raise NotImplementedError(f"Unknown formula: {formula}")
 
 
 def infer_formula(term: ProofTerm, context: Context) -> Formula:
     """Infer the formula proven by a proof term in the given context."""
     match term:
         case PMetaVar(_):
-            raise ValueError("Cannot infer formula of a meta-variable.")
+            raise KernelTypeError("Cannot infer formula of a meta-variable.")
         case PVar(name):
             formula = context.get(name)
             if formula is None:
-                raise ValueError(f"Variable {name} not found in context.")
+                raise KernelTypeError(f"Variable {name} not found in context.")
             return formula
         case PLam(var, dom, body):
             return FImpl(dom, infer_formula(body, context.add({var: dom})))
@@ -95,21 +97,21 @@ def infer_formula(term: ProofTerm, context: Context) -> Formula:
             fn_formula = infer_formula(fn, context)
             arg_formula = infer_formula(arg, context)
             if not isinstance(fn_formula, FImpl):
-                raise ValueError("Cannot apply a non-function term.")
+                raise KernelTypeError("Cannot apply a non-function term.")
             if fn_formula.antecedent != arg_formula:
-                raise ValueError("Argument formula does not match function's domain.")
+                raise KernelTypeError("Argument formula does not match function's domain.")
             return fn_formula.consequent
         case PAndI(left, right):
             return FAnd(infer_formula(left, context), infer_formula(right, context))
         case PAndEL(inner):
             inner_formula = infer_formula(inner, context)
             if not isinstance(inner_formula, FAnd):
-                raise ValueError("PAndEL expects conjunction.")
+                raise KernelTypeError("PAndEL expects conjunction.")
             return inner_formula.left
         case PAndER(inner):
             inner_formula = infer_formula(inner, context)
             if not isinstance(inner_formula, FAnd):
-                raise ValueError("PAndER expects conjunction.")
+                raise KernelTypeError("PAndER expects conjunction.")
             return inner_formula.right
         case POrIL(proof, other_disjunct):
             return FOr(infer_formula(proof, context), other_disjunct)
@@ -120,33 +122,33 @@ def infer_formula(term: ProofTerm, context: Context) -> Formula:
         case POrE(disj_proof, left_hyp, left_case, right_hyp, right_case):
             disj_formula = infer_formula(disj_proof, context)
             if not isinstance(disj_formula, FOr):
-                raise ValueError("POrE expects disjunction.")
+                raise KernelTypeError("POrE expects disjunction.")
             left_formula = infer_formula(left_case, context.add({left_hyp: disj_formula.left}))
             right_formula = infer_formula(right_case, context.add({right_hyp: disj_formula.right}))
             if left_formula != right_formula:
-                raise ValueError("Branches of POrE must yield the same formula.")
+                raise KernelTypeError("Branches of POrE must yield the same formula.")
             return left_formula
         case PFalseE(inner, conclusion):
             if not isinstance(infer_formula(inner, context), FFalse):
-                raise ValueError("PFalseE expects proof of False.")
+                raise KernelTypeError("PFalseE expects proof of False.")
             return conclusion
         case PExI(exists_var, body, witness, proof):
             expected_pf_formula = _subst_formula_var(body, exists_var, witness)
             actual_pf_formula = infer_formula(proof, context)
             if actual_pf_formula != expected_pf_formula:
-                raise ValueError("PExI witness/body mismatch.")
+                raise KernelTypeError("PExI witness/body mismatch.")
             return FExists(exists_var, body)
         case PExE(exists_proof, prop_var, hyp_var, case_proof):
             pf_formula = infer_formula(exists_proof, context)
             if not isinstance(pf_formula, FExists):
-                raise ValueError("PExE expects proof of an existential.")
+                raise KernelTypeError("PExE expects proof of an existential.")
             hyp_formula = _subst_formula_var(pf_formula.body, pf_formula.var, FVar(prop_var))
             conclusion = infer_formula(case_proof, context.add({hyp_var: hyp_formula}))
             if _contains_formula_var(conclusion, prop_var):
-                raise ValueError("PExE conclusion must not contain the witness variable.")
+                raise KernelTypeError("PExE conclusion must not contain the witness variable.")
             return conclusion
         case _:
-            raise ValueError(f"Unknown proof term: {term}")
+            raise NotImplementedError(f"Unknown proof term: {term}")
 
 
 def check_formula(term: ProofTerm, expected: Formula, context: Context) -> bool:

@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+from ..errors.framework_error import FrameworkError
+
 from .declaration import Declaration
 from ..kernel.goal import ProofAssurance
 
@@ -15,7 +17,7 @@ class Environment:
 
     def add(self, declaration: Declaration, name: Optional[str]=None):
         if declaration.assurance == ProofAssurance.VERIFIED and declaration.assignment is None:
-            raise ValueError("Verified declaration must have an assignment.")
+            raise FrameworkError("Verified declaration must have an assignment.")
 
         key = name if name is not None else declaration.name
         self.declarations[key] = declaration

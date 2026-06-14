@@ -24,17 +24,14 @@ functions for use in combinators or batch execution::
 from __future__ import annotations
 from abc import ABC
 
-from poussins.environment.declaration import Declaration
-
-from ..environment.environment import Environment
-
 from ..ast.formulas import Formula
 from ..ast.proof_terms import ProofTerm
+from ..kernel.goal import ProofAssurance
 from ..kernel.proof_engine import ProofEngine
 from .prop import Prop
 
 
-class ProofBase(ABC):
+class ProofDriver(ABC):
     def __init__(self, statement: Prop | Formula):
         self.__setattr__("engine", ProofEngine(Prop.to_formula(statement)))
 
@@ -45,6 +42,14 @@ class ProofBase(ABC):
     @property
     def statement(self) -> Formula:
         return self.engine.goal.formula
+
+    @property
+    def assignment(self) -> ProofTerm:
+        return self.engine.goal.assignment
+
+    @property
+    def assurance(self) -> ProofAssurance:
+        return self.engine.goal.assurance
 
     # ------------------------------------------------------------------
     # Primitive tactics
