@@ -2,7 +2,7 @@
 
 
 import argparse
-from .batch import run_batch
+from .prove import run_prove
 from .step import run_step
 from .lean import run_lean2py, run_py2lean
 
@@ -11,9 +11,9 @@ def main():
     subparsers = parser.add_subparsers(dest="subcmd", required=True)
 
 
-    # batch
-    p_batch = subparsers.add_parser("batch", help="Batch proof execution (.py)")
-    p_batch.add_argument("filepath", help=".py file with theorems/lemmas")
+    # prove
+    p_prove = subparsers.add_parser("prove", help="Batch proof execution (.py)")
+    p_prove.add_argument("filepath", help=".py file with theorems/lemmas")
 
     # step
     p_step = subparsers.add_parser("step", help="Step-by-step proof execution")
@@ -32,8 +32,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.subcmd == "batch":
-        run_batch(args.filepath)
+    if args.subcmd == "prove":
+        run_prove(args.filepath)
     elif args.subcmd == "step":
         run_step(args.filepath, args.theorem)
     elif args.subcmd == "lean2py":

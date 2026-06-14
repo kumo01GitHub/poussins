@@ -2,7 +2,7 @@
 """Batch proof execution subcommand for poussins CLI."""
 
 
-def run_batch(filepath: str):
+def run_prove(filepath: str):
     """
     Run batch proof execution: import the file, collect all theorems/lemmas, and log their status.
     """
