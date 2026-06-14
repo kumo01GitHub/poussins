@@ -43,11 +43,11 @@ See also:
 
 from __future__ import annotations
 
-from poussins.ast import Formula
-from poussins.errors import FrameworkError
 from .environment import Environment, Declaration
 from .prop import Prop
 from .proof_driver import ProofDriver
+from ..ast import Formula
+from ..errors import FrameworkError
 
 
 class Theorem(ProofDriver):

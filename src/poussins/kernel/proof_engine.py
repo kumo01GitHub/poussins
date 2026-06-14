@@ -3,11 +3,11 @@
 
 from collections import deque
 
-from poussins.ast import ProofTerm, Formula, collect_meta_var_ids, substitute_meta_var
-from poussins.errors import KernelStateError, KernelValueError
 from .goal import Goal, Context, ProofAssurance
 from .proof_state import ProofState
 from .typecheck import infer_formula, check_formula
+from ..ast import ProofTerm, Formula, collect_meta_var_ids, substitute_meta_var
+from ..errors import KernelStateError, KernelValueError
 
 
 class ProofEngine:

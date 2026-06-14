@@ -3,7 +3,7 @@
 
 from copy import deepcopy
 
-from poussins.ast import (
+from ..ast import (
     Formula,
     FImpl,
     PMetaVar,
@@ -12,9 +12,8 @@ from poussins.ast import (
     PLam,
     ProofTerm
 )
-from poussins.errors.tactic_error import TacticError
-from poussins.kernel.proof_engine import ProofEngine
-from poussins.kernel.goal import Goal
+from ..errors.tactic_error import TacticError
+from ..kernel import ProofEngine, Goal
 
 
 def intro(proof_engine: ProofEngine, hyp_name: str):

@@ -24,11 +24,10 @@ functions for use in combinators or batch execution::
 from __future__ import annotations
 from abc import ABC
 
-from poussins.ast import Formula, ProofTerm
-from poussins.kernel.goal import ProofAssurance
-from poussins.kernel.proof_engine import ProofEngine
-from poussins.tactics import intro, exact, apply, intros
 from .prop import Prop
+from ..ast import Formula, ProofTerm
+from ..kernel import ProofAssurance, ProofEngine
+from ..tactics import intro, exact, apply, intros
 
 
 class ProofDriver(ABC):

@@ -1,8 +1,11 @@
-"""Kernel-level proof term inference and type checking."""
+"""
+Kernel-level proof term inference and type checking.
+"""
 
 from __future__ import annotations
 
-from poussins.ast import (
+from .goal import Context
+from ..ast import (
     ProofTerm,
     PMetaVar,
     PVar,
@@ -27,8 +30,7 @@ from poussins.ast import (
     FExists,
     FVar,
 )
-from poussins.errors import KernelTypeError
-from .goal import Context
+from ..errors import KernelTypeError
 
 
 def _subst_formula_var(formula: Formula, var_name: str, replacement: Formula) -> Formula:
