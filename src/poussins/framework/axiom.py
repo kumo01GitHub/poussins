@@ -3,23 +3,30 @@ Axiom: a named proposition accepted without proof.
 """
 from __future__ import annotations
 
+from .declaration import Declaration
+from .environment import Environment
+from .prop import Prop
+from ..ast import Formula
+from ..kernel import ProofAssurance
+
 
 class Axiom:
-    """A named proposition accepted without proof.
+    def __init__(
+            self, name: str, statement: Prop | Formula
+    ) -> None:
+        self.name = name
+        self.statement = Prop.to_formula(statement)
 
-    Axioms always have assurance TRUSTED.
+    @property
+    def assurance(self) -> ProofAssurance:
+        return ProofAssurance.TRUSTED
 
-    If *env* is provided the axiom is registered immediately, mirroring
-    Coq's ``Axiom foo : T.`` which registers into the global environment
-    on the same line.
-
-    Usage::
-
-        # declare and register in one step (Coq-style)
-        ax = Axiom("excluded_middle", p | ~p, env)
-
-        # declare only — useful for tests or composing declarations
-        ax = Axiom("excluded_middle", p | ~p)
-        env.register(ax.to_declaration())
-    """
-    pass
+    def declare(self, env: Environment):
+        env.add(
+            declaration=Declaration(
+                name=self.name,
+                statement=self.statement,
+                assignment=None,
+                assurance=self.assurance
+            )
+        )

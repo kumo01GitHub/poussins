@@ -6,8 +6,6 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from .declaration import Declaration
-from ..errors import FrameworkError
-from ..kernel import ProofAssurance
 
 
 @dataclass
