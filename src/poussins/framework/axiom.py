@@ -3,8 +3,7 @@ Axiom: a named proposition accepted without proof.
 """
 from __future__ import annotations
 
-from .declaration import Declaration
-from .environment import Environment
+from .environment import Declaration, Environment
 from .prop import Prop
 from ..ast import Formula
 from ..kernel import ProofAssurance

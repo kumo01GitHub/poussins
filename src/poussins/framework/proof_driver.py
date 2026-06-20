@@ -24,6 +24,7 @@ functions for use in combinators or batch execution::
 from __future__ import annotations
 from abc import ABC
 
+from .environment import Environment
 from .prop import Prop
 from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
@@ -33,6 +34,7 @@ from ..tactics import intro, exact, apply, intros, assumption, constructor
 class ProofDriver(ABC):
     def __init__(self, statement: Prop | Formula):
         self.__setattr__("engine", ProofEngine(Prop.to_formula(statement)))
+        self.__setattr__("env", Environment())
 
     @property
     def is_closed(self) -> bool:
@@ -50,6 +52,9 @@ class ProofDriver(ABC):
     def assurance(self) -> ProofAssurance:
         return self.engine.goal.assurance
 
+    def import_env(self, env: Environment):
+        self.env.update(env)
+
     # ------------------------------------------------------------------
     # Primitive tactics
     # ------------------------------------------------------------------
@@ -57,14 +62,14 @@ class ProofDriver(ABC):
     def intro(self, name: str) -> None:
         intro(self.engine, name)
 
-    def exact(self, term_or_hyp: ProofTerm | str) -> None:
-        exact(self.engine, term_or_hyp)
+    def exact(self, hyp_name: str) -> None:
+        exact(self.engine, hyp_name, self.env)
 
-    def apply(self, term_or_hyp: ProofTerm | str) -> None:
-        apply(self.engine, term_or_hyp)
+    def apply(self, hyp_name: str) -> None:
+        apply(self.engine, hyp_name, self.env)
 
-    def constructor(self) -> None:
-        constructor(self.engine)
+    def constructor(self, idx: int = 1) -> None:
+        constructor(self.engine, idx)
 
     # ------------------------------------------------------------------
     # Derived tactics
@@ -74,4 +79,4 @@ class ProofDriver(ABC):
         intros(self.engine, hyp_names)
 
     def assumption(self) -> None:
-        assumption(self.engine)
+        assumption(self.engine, self.env)

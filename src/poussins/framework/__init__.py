@@ -2,8 +2,7 @@
 Public DSL layer: Prop, Axiom, Theorem, Example, and aliases.
 """
 from .axiom import Axiom
-from .declaration import Declaration
-from .environment import Environment
+from .environment import Declaration, Environment
 from .proof_driver import ProofDriver
 from .prop import Prop
 from .theorem import (
@@ -19,8 +18,6 @@ from .theorem import (
 
 __all__ = [
     "Axiom",
-    "Declaration",
-    "Environment",
     "ProofDriver",
     "Prop",
     "Theorem",
@@ -31,4 +28,6 @@ __all__ = [
     "Remark",
     "Property",
     "Example",
+    "Declaration",
+    "Environment",
 ]

@@ -92,4 +92,3 @@ class ProofEngine:
 
     def rotate_right(self):
         self.state.goals.rotate(1)
-

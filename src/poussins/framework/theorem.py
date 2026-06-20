@@ -87,7 +87,6 @@ class Theorem(ProofDriver):
                 assurance=self.assurance
             )
         )
-        print(f"Assignment: {self.assignment}")
 
 
 # Alias for Theorem.
@@ -120,5 +119,3 @@ class Example(ProofDriver):
     def qed(self):
         if not self.is_closed:
             raise FrameworkError("Not proved.")
-
-        print(f"Assignment: {self.assignment}")
