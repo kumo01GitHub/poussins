@@ -70,5 +70,5 @@ class ProofDriver(ABC):
     def intros(self, hyp_names: list[str]) -> None:
         intros(self.engine, hyp_names)
 
-    def assumption(self, formula: Formula) -> None:
-        assumption(self.engine, formula)
+    def assumption(self) -> None:
+        assumption(self.engine)
