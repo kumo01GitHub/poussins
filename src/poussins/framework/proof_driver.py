@@ -28,7 +28,7 @@ from .environment import Environment
 from .prop import Prop
 from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
-from ..tactics import intro, exact, apply, intros, assumption, constructor
+from ..tactics import intro, exact, apply, intros, assumption, constructor, left, right
 
 
 class ProofDriver(ABC):
@@ -80,3 +80,9 @@ class ProofDriver(ABC):
 
     def assumption(self) -> None:
         assumption(self.engine, self.env)
+
+    def left(self) -> None:
+        left(self.engine)
+
+    def right(self) -> None:
+        right(self.engine)

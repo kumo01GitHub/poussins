@@ -22,5 +22,5 @@ def run_prove(filepath: str):
     try:
         spec.loader.exec_module(module)
     except Exception as e:
-        print(f"[poussins] Error executing {filepath}: {e}")
+        print(f"[poussins] Error executing {filepath}: {type(e).__name__}: {e}")
         return

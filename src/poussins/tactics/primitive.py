@@ -25,9 +25,9 @@ from ..framework import Environment
 from ..kernel import ProofEngine, Goal
 
 
-def intro(proof_engine: ProofEngine, hyp_name: str):
+def intro(engine: ProofEngine, hyp_name: str):
     """Introduce a new hypothesis."""
-    current_goal = proof_engine.state.current_goal
+    current_goal = engine.state.current_goal
     if current_goal is None:
         raise TacticError("No active goal to apply intro tactic.")
     elif not isinstance(current_goal.formula, FImpl):
@@ -39,7 +39,7 @@ def intro(proof_engine: ProofEngine, hyp_name: str):
             { hyp_name: deepcopy(current_goal.formula.antecedent) }
         )
     )
-    proof_engine.refine_goal(
+    engine.refine_goal(
         [subgoal],
         assignment=PLam(
             var=hyp_name,
@@ -49,33 +49,42 @@ def intro(proof_engine: ProofEngine, hyp_name: str):
     )
 
 
-def exact(proof_engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
+def exact(engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
     """Close the current goal with a hypothesis."""
-    current_goal = proof_engine.state.current_goal
+    current_goal = engine.state.current_goal
     if current_goal is None:
         raise TacticError("No active goal to apply exact tactic.")
 
     hyp = current_goal.context.get(hyp_name)
-    if hyp is None and env is not None:
+    if hyp is not None:
+        if hyp != current_goal.formula:
+            raise TacticError(f"Hypothesis '{hyp_name}' does not match the current goal formula.")
+
+        engine.close_goal(PVar(name=hyp_name))
+        return
+    else:
+        if env is None:
+            env = Environment()
         declaration = env.get(hyp_name)
         if declaration is not None:
-            hyp = declaration.statement
+            if declaration.statement != current_goal.formula:
+                raise TacticError(f"Declaration '{hyp_name}' does not match the current goal formula.")
 
-    if hyp is None:
-        raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
-    elif hyp != current_goal.formula:
-        raise TacticError(f"Hypothesis '{hyp_name}' does not match the current goal formula.")
+            engine.close_goal(declaration.assignment)
+            return
 
-    proof_engine.close_goal(PVar(name=hyp_name))
+    raise TacticError(f"Hypothesis or declaration '{hyp_name}' not found in the current context.")
 
 
-def apply(proof_engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
-    current_goal = proof_engine.state.current_goal
+def apply(engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
+    current_goal = engine.state.current_goal
     if current_goal is None:
         raise TacticError("No active goal to apply apply tactic.")
 
     hyp = current_goal.context.get(hyp_name)
-    if hyp is None and env is not None:
+    if hyp is None:
+        if env is None:
+            env = Environment()
         declaration = env.get(hyp_name)
         if declaration is not None:
             hyp = declaration.statement
@@ -83,7 +92,7 @@ def apply(proof_engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
     if hyp is None:
         raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
     elif hyp == current_goal.formula:
-        exact(proof_engine, hyp_name, env)
+        exact(engine, hyp_name, env)
         return
     elif not isinstance(hyp, FImpl):
         raise TacticError(f"Hypothesis '{hyp_name}' is not an implication and cannot be applied.")
@@ -103,17 +112,17 @@ def apply(proof_engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
     if current_goal.formula != current_formula:
         raise TacticError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")
 
-    proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
+    engine.refine_goal(subgoals=subgoals, assignment=assignment)
 
 
-def constructor(proof_engine: ProofEngine, idx: int = 1):
+def constructor(engine: ProofEngine, idx: int = 1):
     """Apply the constructor tactic to split a conjunction goal into subgoals."""
-    current_goal = proof_engine.state.current_goal
+    current_goal = engine.state.current_goal
     if current_goal is None:
         raise TacticError("No active goal to apply constructor tactic.")
 
     if isinstance(current_goal.formula, FTrue):
-        proof_engine.close_goal(PTrueI)
+        engine.close_goal(PTrueI())
     elif isinstance(current_goal.formula, FAnd):
         left_subgoal = Goal(
             formula=deepcopy(current_goal.formula.left),
@@ -123,7 +132,7 @@ def constructor(proof_engine: ProofEngine, idx: int = 1):
             formula=deepcopy(current_goal.formula.right),
             context=current_goal.context
         )
-        proof_engine.refine_goal(
+        engine.refine_goal(
             [left_subgoal, right_subgoal],
             assignment=PAndI(
                 left=PMetaVar(goal_id=left_subgoal.id),
@@ -136,7 +145,7 @@ def constructor(proof_engine: ProofEngine, idx: int = 1):
                 formula=deepcopy(current_goal.formula.left),
                 context=current_goal.context
             )
-            proof_engine.refine_goal(
+            engine.refine_goal(
                 [subgoal],
                 assignment=POrIL(
                     proof=PMetaVar(goal_id=subgoal.id),
@@ -148,7 +157,7 @@ def constructor(proof_engine: ProofEngine, idx: int = 1):
                 formula=deepcopy(current_goal.formula.right),
                 context=current_goal.context
             )
-            proof_engine.refine_goal(
+            engine.refine_goal(
                 [subgoal],
                 assignment=POrIR(
                     other_disjunct=deepcopy(current_goal.formula.left),

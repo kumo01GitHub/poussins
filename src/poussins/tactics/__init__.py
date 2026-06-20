@@ -2,7 +2,7 @@
 Public tactic API.
 """
 from .primitive import intro, exact, apply, constructor
-from .derived import intros, assumption
+from .derived import intros, assumption, left, right
 
 __all__ = [
     # Primitive tactics
@@ -13,4 +13,6 @@ __all__ = [
     # Derived tactics
     "intros",
     "assumption",
+    "left",
+    "right",
 ]
