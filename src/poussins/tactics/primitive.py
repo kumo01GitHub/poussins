@@ -5,12 +5,14 @@ from copy import deepcopy
 
 from ..ast import (
     Formula,
+    FAnd,
     FImpl,
+    ProofTerm,
     PMetaVar,
     PVar,
     PApp,
     PLam,
-    ProofTerm
+    PAndI,
 )
 from ..errors.tactic_error import TacticError
 from ..kernel import ProofEngine, Goal
@@ -85,3 +87,28 @@ def apply(proof_engine: ProofEngine, hyp_name: str):
         raise TacticError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")
 
     proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
+
+
+def split(proof_engine: ProofEngine):
+    """Split a conjunction goal into two sub-goals."""
+    current_goal = proof_engine.state.current_goal
+    if current_goal is None:
+        raise TacticError("No active goal to apply split tactic.")
+    elif not isinstance(current_goal.formula, FAnd):
+        raise TacticError("Split tactic can only be applied to conjunctions.")
+
+    left_subgoal = Goal(
+        formula=deepcopy(current_goal.formula.left),
+        context=current_goal.context
+    )
+    right_subgoal = Goal(
+        formula=deepcopy(current_goal.formula.right),
+        context=current_goal.context
+    )
+    proof_engine.refine_goal(
+        [left_subgoal, right_subgoal],
+        assignment=PAndI(
+            left=PMetaVar(goal_id=left_subgoal.id),
+            right=PMetaVar(goal_id=right_subgoal.id)
+        )
+    )

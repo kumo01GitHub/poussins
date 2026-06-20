@@ -27,7 +27,7 @@ from abc import ABC
 from .prop import Prop
 from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
-from ..tactics import intro, exact, apply, intros, assumption
+from ..tactics import intro, exact, apply, intros, assumption, split
 
 
 class ProofDriver(ABC):
@@ -62,6 +62,9 @@ class ProofDriver(ABC):
 
     def apply(self, term_or_hyp: ProofTerm | str) -> None:
         apply(self.engine, term_or_hyp)
+
+    def split(self) -> None:
+        split(self.engine)
 
     # ------------------------------------------------------------------
     # Derived tactics
