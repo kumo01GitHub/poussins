@@ -89,13 +89,13 @@ def apply(proof_engine: ProofEngine, hyp_name: str):
     proof_engine.refine_goal(subgoals=subgoals, assignment=assignment)
 
 
-def split(proof_engine: ProofEngine):
-    """Split a conjunction goal into two sub-goals."""
+def constructor(proof_engine: ProofEngine):
+    """Apply the constructor tactic to split a conjunction goal into subgoals."""
     current_goal = proof_engine.state.current_goal
     if current_goal is None:
-        raise TacticError("No active goal to apply split tactic.")
+        raise TacticError("No active goal to apply constructor tactic.")
     elif not isinstance(current_goal.formula, FAnd):
-        raise TacticError("Split tactic can only be applied to conjunctions.")
+        raise TacticError("Constructor tactic can only be applied to conjunctions.")
 
     left_subgoal = Goal(
         formula=deepcopy(current_goal.formula.left),
