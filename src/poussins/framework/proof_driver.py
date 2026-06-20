@@ -27,7 +27,7 @@ from abc import ABC
 from .prop import Prop
 from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
-from ..tactics import intro, exact, apply, intros
+from ..tactics import intro, exact, apply, intros, assumption
 
 
 class ProofDriver(ABC):
@@ -69,3 +69,6 @@ class ProofDriver(ABC):
 
     def intros(self, hyp_names: list[str]) -> None:
         intros(self.engine, hyp_names)
+
+    def assumption(self, formula: Formula) -> None:
+        assumption(self.engine, formula)
