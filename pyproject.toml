@@ -1,6 +1,6 @@
 [project]
 name = "poussins"
-version = "0.0.1"
+version = "0.0.2"
 description = "A proof assistant running on Python."
 readme = "README.md"
 requires-python = ">=3.11"

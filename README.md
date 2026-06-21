@@ -14,3 +14,13 @@ uv run pytest
 # Lint
 uv run ruff check .
 ```
+
+## Release
+
+```bash
+# Build
+uv run -m build
+
+# Upload
+uv run -m twine upload dist/*
+```
