@@ -29,15 +29,16 @@ from .prop import Prop
 from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
 from ..tactics import (
-    intro,
-    exact,
     apply,
-    exfalso,
-    intros,
-    assumption,
     constructor,
     left,
-    right
+    right,
+    exact,
+    assumption,
+    intro,
+    intros,
+    exfalso,
+    trivial,
 )
 
 
@@ -97,3 +98,6 @@ class ProofDriver(ABC):
 
     def exfalso(self):
         exfalso(self.engine)
+
+    def trivial(self):
+        trivial(self.engine, self.env)

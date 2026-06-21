@@ -5,7 +5,7 @@ from .apply import apply
 from .constructor import constructor, left, right
 from .exact import exact, assumption
 from .intro import intro, intros
-from .logic import exfalso
+from .logic import exfalso, trivial
 
 __all__ = [
     "apply",
@@ -17,4 +17,5 @@ __all__ = [
     "intro",
     "intros",
     "exfalso",
+    "trivial",
 ]

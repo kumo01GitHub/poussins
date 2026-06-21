@@ -1,10 +1,10 @@
 """
 Propositional logic example using poussins DSL.
 """
-from poussins import Example, FFalse, Prop
+from poussins import Example, Prop
 
 
-example = Example(Prop(FFalse()) >> Prop("A"))
+example = Example(Prop.bot() >> Prop("A"))
 print(f"Statement: {example.statement}")
 example.intro("hfalse")
 example.exfalso()
