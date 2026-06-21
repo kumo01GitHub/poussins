@@ -52,7 +52,12 @@ from .tactics import (
     intro,
     exact,
     apply,
+    constructor,
+    exfalso,
     intros,
+    assumption,
+    left,
+    right,
 )
 
 __all__ = [
@@ -104,5 +109,10 @@ __all__ = [
     "intro",
     "exact",
     "apply",
+    "constructor",
+    "exfalso",
     "intros",
+    "assumption",
+    "left",
+    "right",
 ]
