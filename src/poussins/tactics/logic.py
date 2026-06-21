@@ -39,13 +39,13 @@ def trivial(engine: ProofEngine, env: Optional[Environment]):
         engine.close_goal(PTrueI())
         return
     else:
-        for k, v in current_goal.context.hyps.items():
+        for k, v in current_goal.context.items():
             if v == current_goal.formula:
                 engine.close_goal(PVar(name=k))
                 return
         if env is None:
             env = Environment()
-        for k, v in env.declarations.items():
+        for k, v in env.items():
             if v.statement == current_goal.formula:
                 engine.close_goal(v.assignment)
                 return

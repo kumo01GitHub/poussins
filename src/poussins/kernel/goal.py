@@ -31,6 +31,15 @@ class Context:
         new_hyps = dict(self.hyps)
         new_hyps.update(additional_hyps)
         return Context(hyps=new_hyps)
+    
+    def delete(self, name: str) -> Context:
+        new_hyps = dict(self.hyps)
+        if name in new_hyps:
+            del new_hyps[name]
+        return Context(hyps=new_hyps)
+
+    def items(self):
+        return self.hyps.items()
 
 
 @dataclass

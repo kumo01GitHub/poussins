@@ -43,3 +43,6 @@ class Environment:
 
     def update(self, other: Environment):
         self.declarations.update(other.declarations)
+
+    def items(self):
+        return self.declarations.items()

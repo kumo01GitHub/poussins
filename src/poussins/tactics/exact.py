@@ -41,13 +41,13 @@ def assumption(engine: ProofEngine, env: Optional[Environment]):
     if current_goal is None:
         raise TacticError("No active goal to apply assumption tactic.")
 
-    for k, v in current_goal.context.hyps.items():
+    for k, v in current_goal.context.items():
         if v == current_goal.formula:
             exact(engine, k, env)
             return
     if env is None:
         env = Environment()
-    for k, v in env.declarations.items():
+    for k, v in env.items():
         if v.statement == current_goal.formula:
             exact(engine, k, env)
             return
