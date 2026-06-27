@@ -30,6 +30,7 @@ from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
 from ..tactics import (
     apply,
+    cases,
     constructor,
     left,
     right,
@@ -74,6 +75,9 @@ class ProofDriver(ABC):
 
     def apply(self, hyp_name: str):
         apply(self.engine, hyp_name, self.env)
+
+    def cases(self, hyp_name: str):
+        cases(self.engine, hyp_name)
 
     def constructor(self, idx: int = 1):
         constructor(self.engine, idx)

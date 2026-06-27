@@ -12,8 +12,7 @@ from .proof_terms import (
     PLam,
     PApp,
     PAndI,
-    PAndEL,
-    PAndER,
+    PAndE,
     POrIL,
     POrIR,
     PTrueI,
@@ -42,10 +41,11 @@ def collect_meta_var_ids(term: ProofTerm) -> set[str]:
             return collect_meta_var_ids(fn) | collect_meta_var_ids(arg)
         case PAndI(left, right):
             return collect_meta_var_ids(left) | collect_meta_var_ids(right)
-        case PAndEL(inner):
-            return collect_meta_var_ids(inner)
-        case PAndER(inner):
-            return collect_meta_var_ids(inner)
+        case PAndE(conj_proof, _, _, case_proof):
+            return (
+                collect_meta_var_ids(conj_proof)
+                | collect_meta_var_ids(case_proof)
+            )
         case POrIL(proof, _):
             return collect_meta_var_ids(proof)
         case POrIR(_, proof):
@@ -89,10 +89,13 @@ def substitute_meta_var(term: ProofTerm, goal_id: str, assignment: ProofTerm) ->
                 left=substitute_meta_var(left, goal_id, assignment),
                 right=substitute_meta_var(right, goal_id, assignment),
             )
-        case PAndEL(inner):
-            return PAndEL(substitute_meta_var(inner, goal_id, assignment))
-        case PAndER(inner):
-            return PAndER(substitute_meta_var(inner, goal_id, assignment))
+        case PAndE(conj_proof, left_hyp, right_hyp, case_proof):
+            return PAndE(
+                conj_proof=substitute_meta_var(conj_proof, goal_id, assignment),
+                left_hyp=left_hyp,
+                right_hyp=right_hyp,
+                case_proof=substitute_meta_var(case_proof, goal_id, assignment),
+            )
         case POrIL(proof, other_disjunct):
             return POrIL(substitute_meta_var(proof, goal_id, assignment), other_disjunct)
         case POrIR(other_disjunct, proof):

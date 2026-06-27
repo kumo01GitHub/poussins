@@ -11,8 +11,7 @@ from ..ast import (
     PLam,
     PApp,
     PAndI,
-    PAndEL,
-    PAndER,
+    PAndE,
     POrIL,
     POrIR,
     PTrueI,
@@ -103,16 +102,14 @@ def infer_formula(term: ProofTerm, context: Context) -> Formula:
             return fn_formula.consequent
         case PAndI(left, right):
             return FAnd(infer_formula(left, context), infer_formula(right, context))
-        case PAndEL(inner):
-            inner_formula = infer_formula(inner, context)
-            if not isinstance(inner_formula, FAnd):
-                raise KernelTypeError("PAndEL expects conjunction.")
-            return inner_formula.left
-        case PAndER(inner):
-            inner_formula = infer_formula(inner, context)
-            if not isinstance(inner_formula, FAnd):
-                raise KernelTypeError("PAndER expects conjunction.")
-            return inner_formula.right
+        case PAndE(conj_proof, left_hyp, right_hyp, case_proof):
+            conj_formula = infer_formula(conj_proof, context)
+            if not isinstance(conj_formula, FAnd):
+                raise KernelTypeError("PAndE expects proof of a conjunction.")
+            return infer_formula(case_proof, context.add({
+                left_hyp: conj_formula.left,
+                right_hyp: conj_formula.right
+            }))
         case POrIL(proof, other_disjunct):
             return FOr(infer_formula(proof, context), other_disjunct)
         case POrIR(other_disjunct, proof):

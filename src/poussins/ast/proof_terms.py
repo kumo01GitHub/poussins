@@ -8,8 +8,7 @@ Inference rules covered:
     PLam      ->-I    ctx, x:A |- B  =>  ctx |- A -> B
     PApp      ->-E    ctx |- A -> B,  ctx |- A  =>  ctx |- B
     PAndI     /\\-I   ctx |- A,  ctx |- B  =>  ctx |- A /\\ B
-    PAndEL    /\\-EL  ctx |- A /\\ B  =>  ctx |- A
-    PAndER    /\\-ER  ctx |- A /\\ B  =>  ctx |- B
+    PAndE     /\\-E   ctx |- A /\\ B,  ctx, h_l:A, h_r:B |- C  =>  ctx |- C
     POrIL     \\/-IL  ctx |- A  =>  ctx |- A \\/ B
     POrIR     \\/-IR  ctx |- B  =>  ctx |- A \\/ B
     POrE      \\/-E   ctx |- A \\/ B, ctx,h:A |- C, ctx,h:B |- C  =>  ctx |- C
@@ -99,23 +98,16 @@ class PAndI(ProofTerm):
 
 
 @dataclass(frozen=True)
-class PAndEL(ProofTerm):
-    """Conjunction elimination, left projection."""
+class PAndE(ProofTerm):
+    """Conjunction elimination."""
 
-    inner: ProofTerm
-
-    def __str__(self) -> str:
-        return f"(∧EL {self.inner})"
-
-
-@dataclass(frozen=True)
-class PAndER(ProofTerm):
-    """Conjunction elimination, right projection."""
-
-    inner: ProofTerm
+    conj_proof: ProofTerm
+    left_hyp: str
+    right_hyp: str
+    case_proof: ProofTerm
 
     def __str__(self) -> str:
-        return f"(∧ER {self.inner})"
+        return f"(∧E {self.conj_proof}; {self.left_hyp}, {self.right_hyp} ↦ {self.case_proof})"
 
 
 @dataclass(frozen=True)
