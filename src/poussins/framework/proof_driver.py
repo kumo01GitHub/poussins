@@ -34,6 +34,7 @@ from ..tactics import (
     constructor,
     left,
     right,
+    split,
     exact,
     assumption,
     intro,
@@ -87,6 +88,9 @@ class ProofDriver(ABC):
 
     def right(self):
         right(self.engine)
+
+    def split(self):
+        split(self.engine)
 
     def exact(self, hyp_name: str):
         exact(self.engine, hyp_name, self.env)

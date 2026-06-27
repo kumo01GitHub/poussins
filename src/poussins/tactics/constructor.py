@@ -78,3 +78,13 @@ def left(engine: ProofEngine):
 
 def right(engine: ProofEngine):
     constructor(engine, idx=2)
+
+
+def split(engine: ProofEngine):
+    current_goal = engine.state.current_goal
+    if current_goal is None:
+        raise TacticError("No active goal to apply constructor tactic.")
+    elif not isinstance(current_goal.formula, FAnd):
+        raise TacticError("Split tactic can only be applied to conjunctions.")
+
+    constructor(engine)
