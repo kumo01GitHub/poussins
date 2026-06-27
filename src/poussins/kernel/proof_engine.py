@@ -3,6 +3,8 @@ Kernel-level components of the proof system, including the core data structures 
 """
 from collections import deque
 
+from poussins.ast.ops import has_meta_var
+
 from .goal import Goal, Context, ProofAssurance
 from .proof_state import ProofState
 from .typecheck import infer_formula, check_formula
@@ -54,6 +56,9 @@ class ProofEngine:
 
                     substituted = substitute_meta_var(goal.assignment, closed_goal.id, closed_goal.assignment)
                     self.state.goals[idx].assignment = substituted
+
+                    if has_meta_var(substituted):
+                        continue
 
                     if check_formula(substituted, goal.formula, goal.context):
                         self.state.goals[idx].assurance = ProofAssurance.VERIFIED
