@@ -2,6 +2,7 @@
 Public package exports for poussins.
 """
 from .ast import (
+    LogicalSide,
     Formula,
     FVar,
     FImpl,
@@ -61,6 +62,7 @@ from .tactics import (
 
 __all__ = [
     # AST
+    "LogicalSide",
     "Formula",
     "FVar",
     "FImpl",

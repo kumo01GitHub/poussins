@@ -1,5 +1,6 @@
 """
 """
+from .constants import LogicalSide
 from .formulas import (
     Formula,
     FVar,
@@ -29,6 +30,8 @@ from .proof_terms import (
 )
 
 __all__ = [
+    # Constants
+    "LogicalSide",
     # Formula AST
     "Formula",
     "FVar",

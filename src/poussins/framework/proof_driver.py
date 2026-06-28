@@ -23,10 +23,11 @@ functions for use in combinators or batch execution::
 """
 from __future__ import annotations
 from abc import ABC
+from typing import Optional
 
 from .environment import Environment
 from .prop import Prop
-from ..ast import Formula, ProofTerm
+from ..ast import LogicalSide, Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
 from ..tactics import (
     apply,
@@ -77,11 +78,11 @@ class ProofDriver(ABC):
     def apply(self, hyp_name: str):
         apply(self.engine, hyp_name, self.env)
 
-    def cases(self, hyp_name: str):
-        cases(self.engine, hyp_name)
+    def cases(self, hyp_name: str, left_name: Optional[str] = None, right_name: Optional[str] = None):
+        cases(self.engine, hyp_name, left_name, right_name)
 
-    def constructor(self, idx: int = 1):
-        constructor(self.engine, idx)
+    def constructor(self, side: LogicalSide = LogicalSide.LEFT):
+        constructor(self.engine, side)
 
     def left(self):
         left(self.engine)
