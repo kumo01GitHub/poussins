@@ -11,6 +11,7 @@ from .ast import (
     FFalse,
     FExists,
     collect_meta_var_ids,
+    has_meta_var,
     substitute_meta_var,
     ProofTerm,
     PMetaVar,
@@ -85,6 +86,7 @@ __all__ = [
     "PExI",
     "PExE",
     "collect_meta_var_ids",
+    "has_meta_var",
     "substitute_meta_var",
     # Errors
     "KernelStateError",

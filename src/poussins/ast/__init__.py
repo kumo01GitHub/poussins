@@ -10,7 +10,7 @@ from .formulas import (
     FFalse,
     FExists,
 )
-from .ops import collect_meta_var_ids, substitute_meta_var
+from .ops import collect_meta_var_ids, has_meta_var, substitute_meta_var
 from .proof_terms import (
     ProofTerm,
     PMetaVar,
@@ -55,5 +55,6 @@ __all__ = [
     "PExE",
     # Operations on AST
     "collect_meta_var_ids",
+    "has_meta_var",
     "substitute_meta_var",
 ]

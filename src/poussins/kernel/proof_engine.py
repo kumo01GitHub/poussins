@@ -3,12 +3,10 @@ Kernel-level components of the proof system, including the core data structures 
 """
 from collections import deque
 
-from poussins.ast.ops import has_meta_var
-
 from .goal import Goal, Context, ProofAssurance
 from .proof_state import ProofState
 from .typecheck import infer_formula, check_formula
-from ..ast import ProofTerm, Formula, collect_meta_var_ids, substitute_meta_var
+from ..ast import ProofTerm, Formula, collect_meta_var_ids, has_meta_var, substitute_meta_var
 from ..errors import KernelStateError, KernelValueError
 
 
