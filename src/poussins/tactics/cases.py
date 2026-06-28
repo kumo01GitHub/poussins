@@ -3,7 +3,8 @@
 from copy import deepcopy
 from typing import Optional
 
-from ..ast import LogicalSide, FAnd, FOr, PMetaVar, PAndE, POrE, PVar
+from .constants import TacticSide
+from ..ast import FAnd, FOr, PMetaVar, PAndE, POrE, PVar
 from ..errors import TacticError
 from ..kernel import Goal, ProofEngine
 
@@ -19,9 +20,9 @@ def cases(engine: ProofEngine, hyp_name: str, left_name: Optional[str] = None, r
         raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
 
     if left_name is None:
-        left_name = f"{hyp_name}{LogicalSide.LEFT.symbol}"
+        left_name = f"{hyp_name}{TacticSide.LEFT.symbol}"
     if right_name is None:
-        right_name = f"{hyp_name}{LogicalSide.RIGHT.symbol}"
+        right_name = f"{hyp_name}{TacticSide.RIGHT.symbol}"
 
     if isinstance(hyp, FAnd):
         subgoal = Goal(

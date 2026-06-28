@@ -27,7 +27,7 @@ from typing import Optional
 
 from .environment import Environment
 from .prop import Prop
-from ..ast import LogicalSide, Formula, ProofTerm
+from ..ast import Formula, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
 from ..tactics import (
     apply,
@@ -42,6 +42,7 @@ from ..tactics import (
     intros,
     exfalso,
     trivial,
+    TacticSide,
 )
 
 
@@ -81,7 +82,7 @@ class ProofDriver(ABC):
     def cases(self, hyp_name: str, left_name: Optional[str] = None, right_name: Optional[str] = None):
         cases(self.engine, hyp_name, left_name, right_name)
 
-    def constructor(self, side: LogicalSide = LogicalSide.LEFT):
+    def constructor(self, side: TacticSide = TacticSide.LEFT):
         constructor(self.engine, side)
 
     def left(self):

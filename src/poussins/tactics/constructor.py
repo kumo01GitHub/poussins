@@ -3,8 +3,8 @@ Constructor tactic: splits conjunction goals into subgoals, and handles disjunct
 """
 from copy import deepcopy
 
+from .constants import TacticSide
 from ..ast import (
-    LogicalSide,
     FTrue,
     FAnd,
     FOr,
@@ -18,7 +18,7 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofEngine
 
 
-def constructor(engine: ProofEngine, side: LogicalSide = LogicalSide.LEFT):
+def constructor(engine: ProofEngine, side: TacticSide = TacticSide.LEFT):
     """Apply the constructor tactic to split a conjunction goal into subgoals."""
     current_goal = engine.state.current_goal
     if current_goal is None:
@@ -43,7 +43,7 @@ def constructor(engine: ProofEngine, side: LogicalSide = LogicalSide.LEFT):
             )
         )
     elif isinstance(current_goal.formula, FOr):
-        if side == LogicalSide.LEFT:
+        if side == TacticSide.LEFT:
             subgoal = Goal(
                 formula=deepcopy(current_goal.formula.left),
                 context=current_goal.context
@@ -55,7 +55,7 @@ def constructor(engine: ProofEngine, side: LogicalSide = LogicalSide.LEFT):
                     other_disjunct=deepcopy(current_goal.formula.right)
                 )
             )
-        elif side == LogicalSide.RIGHT:
+        elif side == TacticSide.RIGHT:
             subgoal = Goal(
                 formula=deepcopy(current_goal.formula.right),
                 context=current_goal.context
@@ -74,11 +74,11 @@ def constructor(engine: ProofEngine, side: LogicalSide = LogicalSide.LEFT):
 
 
 def left(engine: ProofEngine):
-    constructor(engine, LogicalSide.LEFT)
+    constructor(engine, TacticSide.LEFT)
 
 
 def right(engine: ProofEngine):
-    constructor(engine, LogicalSide.RIGHT)
+    constructor(engine, TacticSide.RIGHT)
 
 
 def split(engine: ProofEngine):
