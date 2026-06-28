@@ -23,7 +23,7 @@ functions for use in combinators or batch execution::
 """
 from __future__ import annotations
 from abc import ABC
-from typing import Optional
+from typing import Any, Optional
 
 from .environment import Environment
 from .prop import Prop
@@ -79,8 +79,8 @@ class ProofDriver(ABC):
     def apply(self, hyp_name: str):
         apply(self.engine, hyp_name, self.env)
 
-    def cases(self, hyp_name: str, left_name: Optional[str] = None, right_name: Optional[str] = None):
-        cases(self.engine, hyp_name, left_name, right_name)
+    def cases(self, hyp_name: str, pattern: Optional[tuple[Any, Any]] = None):
+        cases(self.engine, hyp_name, pattern)
 
     def constructor(self, side: TacticSide = TacticSide.LEFT):
         constructor(self.engine, side)

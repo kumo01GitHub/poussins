@@ -1,7 +1,7 @@
 """
 """
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, Any
 
 from .constants import TacticSide
 from ..ast import FAnd, FOr, PMetaVar, PAndE, POrE, PVar
@@ -9,7 +9,7 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofEngine
 
 
-def cases(engine: ProofEngine, hyp_name: str, left_name: Optional[str] = None, right_name: Optional[str] = None):
+def cases(engine: ProofEngine, hyp_name: str, pattern: Optional[tuple[Any, Any]] = None):
     """Apply the cases tactic to perform case analysis on a disjunction hypothesis."""
     current_goal = engine.state.current_goal
     if current_goal is None:
@@ -19,10 +19,10 @@ def cases(engine: ProofEngine, hyp_name: str, left_name: Optional[str] = None, r
     if hyp is None:
         raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
 
-    if left_name is None:
-        left_name = f"{hyp_name}{TacticSide.LEFT.symbol}"
-    if right_name is None:
-        right_name = f"{hyp_name}{TacticSide.RIGHT.symbol}"
+    left_name, right_name = pattern if pattern is not None else (
+        f"{hyp_name}{TacticSide.LEFT.symbol}",
+        f"{hyp_name}{TacticSide.RIGHT.symbol}"
+    )
 
     if isinstance(hyp, FAnd):
         subgoal = Goal(
