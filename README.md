@@ -19,8 +19,8 @@ uv run ruff check .
 
 ```bash
 # Build
-uv run -m build
+uv build
 
-# Upload
-uv run -m twine upload dist/*
+# Publish
+uv publish
 ```
