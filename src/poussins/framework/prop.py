@@ -26,11 +26,7 @@ from ..ast import (
     Sort,
     Expr,
     EVar,
-    EConst,
     EApp,
-    ENat,
-    EPropVar,
-    EPred,
     EEq,
     ETop,
     EBot,
@@ -48,7 +44,7 @@ class Prop:
         if isinstance(expr, Expr):
             object.__setattr__(self, "expr", expr)
         else:
-            object.__setattr__(self, "expr", EPropVar(expr))
+            object.__setattr__(self, "expr", EVar(expr))
 
     # ------------------------------------------------------------------
     # Factory helpers
@@ -77,7 +73,7 @@ class Prop:
     @classmethod
     def pred(cls, name: str, *args: Expr) -> Prop:
         """Predicate application: name(args...)."""
-        return cls(EPred(name, args))
+        return cls(EApp(name, args))
 
     @classmethod
     def eq(cls, left: Expr, right: Expr) -> Prop:
@@ -89,8 +85,8 @@ class Prop:
         return EVar(name)
 
     @staticmethod
-    def const(name: str, sort: Sort) -> Expr:
-        return EConst(name, sort)
+    def const(name: str) -> Expr:
+        return EApp(name, ())
 
     @staticmethod
     def fn(name: str, *args: Expr) -> Expr:
@@ -98,7 +94,13 @@ class Prop:
 
     @staticmethod
     def nat(value: int) -> Expr:
-        return ENat(value)
+        if value < 0:
+            raise ValueError("Natural number literals must be non-negative.")
+
+        term: Expr = EApp("zero", ())
+        for _ in range(value):
+            term = EApp("succ", (term,))
+        return term
 
     @staticmethod
     def succ(term: Expr) -> Expr:

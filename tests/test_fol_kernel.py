@@ -11,10 +11,7 @@ from poussins import (
     PForallE,
     PRefl,
     PVar,
-    PredicateSymbol,
-    EConst,
     EApp,
-    ENat,
     EVar,
     intro,
 )
@@ -25,6 +22,16 @@ from poussins.tactics import cases, trivial
 
 NAT = "Nat"
 PROP = "Prop"
+
+
+def nat_lit(value: int):
+    if value < 0:
+        raise ValueError("Natural number literals must be non-negative.")
+
+    term = EApp("zero", ())
+    for _ in range(value):
+        term = EApp("succ", (term,))
+    return term
 
 
 def test_forall_intro_then_refl_closes_goal():
@@ -39,14 +46,17 @@ def test_forall_intro_then_refl_closes_goal():
 
 
 def test_forall_elim_substitutes_witness_term():
-    ctx = Context(
-        hyp_ctx={"h": EForall("n", NAT, EEq(EVar("n"), EVar("n")))},
-        term_ctx={},
-    ).add_sorts({"Nat": NAT})
+    ctx = Environment.with_nat_prelude().extend_context(
+        Context(
+            hyp_ctx={"h": EForall("n", NAT, EEq(EVar("n"), EVar("n")))},
+            term_ctx={},
+        )
+    )
+    two = nat_lit(2)
 
-    inferred = infer_expr(PForallE(PVar("h"), ENat(2)), ctx)
+    inferred = infer_expr(PForallE(PVar("h"), two), ctx)
 
-    assert inferred == EEq(ENat(2), ENat(2))
+    assert inferred == EEq(two, two)
 
 
 def test_cases_destructs_existential_hypothesis():
@@ -65,15 +75,17 @@ def test_cases_destructs_existential_hypothesis():
 
 
 def test_sort_mismatch_is_rejected():
-    ctx = Context(hyp_ctx={}, term_ctx={"x": NAT}).add_sorts({"Nat": NAT, "Prop": PROP})
+    ctx = Environment.with_nat_prelude().extend_context(
+        Context(hyp_ctx={}, term_ctx={"x": NAT}).add_sorts({"Prop": PROP})
+    ).add_fn_symbols({"p": FunctionSymbol("p", (), PROP)})
 
     with pytest.raises(KernelTypeError):
-        infer_expr(PRefl(EApp("succ", (EConst("p", PROP),))), ctx)
+        infer_expr(PRefl(EApp("succ", (EApp("p", ()),))), ctx)
 
 
 def test_user_defined_sort_requires_declaration():
     person = "Person"
-    term = EConst("alice", person)
+    term = EApp("alice", ())
 
     with pytest.raises(KernelTypeError):
         infer_expr(PRefl(term), Context(hyp_ctx={}, term_ctx={}))
@@ -81,8 +93,10 @@ def test_user_defined_sort_requires_declaration():
 
 def test_user_defined_sort_works_when_declared():
     person = "Person"
-    term = EConst("alice", person)
-    ctx = Context(hyp_ctx={}, term_ctx={}).add_sorts({"Person": person})
+    term = EApp("alice", ())
+    ctx = Context(hyp_ctx={}, term_ctx={}).add_sorts({"Person": person}).add_fn_symbols(
+        {"alice": FunctionSymbol("alice", (), person)}
+    )
 
     assert infer_expr(PRefl(term), ctx) == EEq(term, term)
 
@@ -90,7 +104,7 @@ def test_user_defined_sort_works_when_declared():
 def test_nat_symbols_are_provided_by_environment_prelude():
     env = Environment.with_nat_prelude()
     ctx = env.extend_context(Context(hyp_ctx={}, term_ctx={}))
-    term = EApp("succ", (ENat(0),))
+    term = EApp("succ", (nat_lit(0),))
 
     assert infer_expr(PRefl(term), ctx) == EEq(term, term)
 
@@ -99,10 +113,11 @@ def test_environment_add_dispatcher_accepts_multiple_entry_types():
     env = Environment()
     person = "Person"
     env.add(("Person", person))
+    env.add(FunctionSymbol("alice", (), person))
     env.add(FunctionSymbol("id_person", (person,), person))
-    env.add(PredicateSymbol("is_adult", (person,)))
+    env.add(FunctionSymbol("is_adult", (person,), "Prop"))
 
     ctx = env.extend_context(Context(hyp_ctx={}, term_ctx={}))
-    term = EApp("id_person", (EConst("alice", person),))
+    term = EApp("id_person", (EApp("alice", ()),))
 
     assert infer_expr(PRefl(term), ctx) == EEq(term, term)

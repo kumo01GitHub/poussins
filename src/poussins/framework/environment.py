@@ -13,7 +13,6 @@ from ..ast import (
     PTrueI,
     Sort,
     FunctionSymbol,
-    PredicateSymbol,
 )
 from ..errors import FrameworkError
 from ..kernel import ProofAssurance, Context
@@ -24,7 +23,6 @@ class DeclarationKind(str, Enum):
     AXIOM = "axiom"
     SORT = "sort"
     FUNCTION_SYMBOL = "function_symbol"
-    PREDICATE_SYMBOL = "predicate_symbol"
 
 
 @dataclass(frozen=True)
@@ -36,7 +34,6 @@ class Declaration:
     assurance: ProofAssurance = ProofAssurance.UNKNOWN
     sort: Optional[Sort] = None
     function_symbol: Optional[FunctionSymbol] = None
-    predicate_symbol: Optional[PredicateSymbol] = None
 
     @classmethod
     def theorem(
@@ -76,14 +73,6 @@ class Declaration:
             function_symbol=symbol,
         )
 
-    @classmethod
-    def predicate_decl(cls, symbol: PredicateSymbol) -> Declaration:
-        return cls(
-            name=symbol.name,
-            kind=DeclarationKind.PREDICATE_SYMBOL,
-            predicate_symbol=symbol,
-        )
-
     @property
     def has_statement(self) -> bool:
         return self.statement is not None
@@ -111,8 +100,8 @@ class Environment:
         env.add(FunctionSymbol("succ", (nat,), nat))
         env.add(FunctionSymbol("add", (nat, nat), nat))
         env.add(FunctionSymbol("mul", (nat, nat), nat))
-        env.add(PredicateSymbol("lt", (nat, nat)))
-        env.add(PredicateSymbol("le", (nat, nat)))
+        env.add(FunctionSymbol("lt", (nat, nat), "Prop"))
+        env.add(FunctionSymbol("le", (nat, nat), "Prop"))
         return env
 
     def add_declaration(self, declaration: Declaration, name: Optional[str] = None):
@@ -123,7 +112,7 @@ class Environment:
 
     def add(
         self,
-        entry: Declaration | FunctionSymbol | PredicateSymbol | tuple[str, Sort],
+        entry: Declaration | FunctionSymbol | tuple[str, Sort],
         name: Optional[str] = None,
     ):
         """Add an environment entry.
@@ -131,7 +120,6 @@ class Environment:
         Supported entries:
         - Declaration
         - FunctionSymbol
-        - PredicateSymbol
         - (name, Sort)
         """
         if isinstance(entry, Declaration):
@@ -139,9 +127,6 @@ class Environment:
             return
         if isinstance(entry, FunctionSymbol):
             self.add_declaration(Declaration.function_decl(entry), name=name)
-            return
-        if isinstance(entry, PredicateSymbol):
-            self.add_declaration(Declaration.predicate_decl(entry), name=name)
             return
         if isinstance(entry, tuple) and len(entry) == 2 and isinstance(entry[1], Sort):
             sort_name, sort = entry
@@ -161,13 +146,9 @@ class Environment:
     def add_function(self, symbol: FunctionSymbol):
         self.add_declaration(Declaration.function_decl(symbol))
 
-    def add_predicate(self, symbol: PredicateSymbol):
-        self.add_declaration(Declaration.predicate_decl(symbol))
-
     def extend_context(self, context: Context) -> Context:
         sorts: dict[str, Sort] = {}
         fn_symbols: dict[str, FunctionSymbol] = {}
-        pred_symbols: dict[str, PredicateSymbol] = {}
 
         for declaration in self.declarations.values():
             match declaration.kind:
@@ -177,13 +158,10 @@ class Environment:
                 case DeclarationKind.FUNCTION_SYMBOL:
                     if declaration.function_symbol is not None:
                         fn_symbols[declaration.name] = declaration.function_symbol
-                case DeclarationKind.PREDICATE_SYMBOL:
-                    if declaration.predicate_symbol is not None:
-                        pred_symbols[declaration.name] = declaration.predicate_symbol
                 case _:
                     pass
 
-        return context.add_sorts(sorts).add_fn_symbols(fn_symbols).add_pred_symbols(pred_symbols)
+        return context.add_sorts(sorts).add_fn_symbols(fn_symbols)
 
     def update(self, other: Environment):
         self.declarations.update(other.declarations)

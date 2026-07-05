@@ -2,7 +2,7 @@
 Intro tactic: introduces a new hypothesis for an implication goal, generating a subgoal for the consequent."""
 from copy import deepcopy
 
-from ..ast import EImp, EForall, Expr, EVar, EApp, EEq, EPred, EAnd, EOr, EExists, PLam, PMetaVar, PForallI
+from ..ast import EImp, EForall, Expr, EVar, EApp, EEq, EAnd, EOr, EExists, PLam, PMetaVar, PForallI
 from ..errors import TacticError
 from ..kernel import Goal, ProofEngine
 
@@ -19,8 +19,8 @@ def _subst_term_in_term(term: Expr, var_name: str, replacement: Expr) -> Expr:
 
 def _subst_term_in_expr(formula: Expr, var_name: str, replacement: Expr) -> Expr:
     match formula:
-        case EPred(name, args):
-            return EPred(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
+        case EApp(name, args):
+            return EApp(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
         case EEq(left, right):
             return EEq(
                 _subst_term_in_term(left, var_name, replacement),

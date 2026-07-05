@@ -12,7 +12,6 @@ from ..ast import (
     Expr,
     Sort,
     FunctionSymbol,
-    PredicateSymbol,
 )
 
 
@@ -38,7 +37,6 @@ class Context:
     term_ctx: Dict[str, Sort] = field(default_factory=dict)
     sort_ctx: Dict[str, Sort] = field(default_factory=_default_sort_ctx)
     fn_symbols: Dict[str, FunctionSymbol] = field(default_factory=dict)
-    pred_symbols: Dict[str, PredicateSymbol] = field(default_factory=dict)
 
     def get(self, name: str) -> Optional[Expr]:
         return self.hyp_ctx.get(name)
@@ -51,7 +49,6 @@ class Context:
             term_ctx=self.term_ctx,
             sort_ctx=self.sort_ctx,
             fn_symbols=self.fn_symbols,
-            pred_symbols=self.pred_symbols,
         )
 
     def delete(self, name: str) -> Context:
@@ -63,7 +60,6 @@ class Context:
             term_ctx=self.term_ctx,
             sort_ctx=self.sort_ctx,
             fn_symbols=self.fn_symbols,
-            pred_symbols=self.pred_symbols,
         )
 
     def items(self):
@@ -80,7 +76,6 @@ class Context:
             term_ctx=new_terms,
             sort_ctx=self.sort_ctx,
             fn_symbols=self.fn_symbols,
-            pred_symbols=self.pred_symbols,
         )
 
     def add_sorts(self, sorts: Dict[str, Sort]) -> Context:
@@ -91,7 +86,6 @@ class Context:
             term_ctx=self.term_ctx,
             sort_ctx=new_sorts,
             fn_symbols=self.fn_symbols,
-            pred_symbols=self.pred_symbols,
         )
 
     def is_declared_sort(self, sort: Sort) -> bool:
@@ -105,18 +99,6 @@ class Context:
             term_ctx=self.term_ctx,
             sort_ctx=self.sort_ctx,
             fn_symbols=new_symbols,
-            pred_symbols=self.pred_symbols,
-        )
-
-    def add_pred_symbols(self, symbols: Dict[str, PredicateSymbol]) -> Context:
-        new_symbols = dict(self.pred_symbols)
-        new_symbols.update(symbols)
-        return Context(
-            hyp_ctx=self.hyp_ctx,
-            term_ctx=self.term_ctx,
-            sort_ctx=self.sort_ctx,
-            fn_symbols=self.fn_symbols,
-            pred_symbols=new_symbols,
         )
 
 

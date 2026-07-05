@@ -4,11 +4,7 @@ from .expr import (
     Sort,
     Expr,
     EVar,
-    EConst,
     EApp,
-    ENat,
-    EPropVar,
-    EPred,
     EEq,
     EImp,
     EAnd,
@@ -18,7 +14,6 @@ from .expr import (
     EForall,
     EExists,
     FunctionSymbol,
-    PredicateSymbol,
 )
 from .ops import collect_meta_var_ids, has_meta_var, substitute_meta_var
 from .proof_terms import (
@@ -47,11 +42,7 @@ __all__ = [
     "Expr",
     # Expr AST
     "EVar",
-    "EConst",
     "EApp",
-    "ENat",
-    "EPropVar",
-    "EPred",
     "EEq",
     "EImp",
     "EAnd",
@@ -61,7 +52,6 @@ __all__ = [
     "EForall",
     "EExists",
     "FunctionSymbol",
-    "PredicateSymbol",
     # ProofTerm AST
     "ProofTerm",
     "PMetaVar",

@@ -28,17 +28,12 @@ from ..ast import (
     EOr,
     ETop,
     EBot,
-    EPropVar,
-    EPred,
     EEq,
     EForall,
     EExists,
     EVar,
-    EConst,
     EApp,
-    ENat,
     FunctionSymbol,
-    PredicateSymbol,
     Sort,
 )
 from ..errors import KernelTypeError
@@ -46,10 +41,6 @@ from ..errors import KernelTypeError
 
 def _resolve_fn_symbol(context: Context, name: str) -> FunctionSymbol | None:
     return context.fn_symbols.get(name)
-
-
-def _resolve_pred_symbol(context: Context, name: str) -> PredicateSymbol | None:
-    return context.pred_symbols.get(name)
 
 
 def _ensure_declared_sort(sort, context: Context):
@@ -64,15 +55,6 @@ def infer_term_sort(term: Expr, context: Context):
             if sort is None:
                 raise KernelTypeError(f"Unknown term variable '{name}'.")
             _ensure_declared_sort(sort, context)
-            return sort
-        case EConst(name, sort):
-            _ensure_declared_sort(sort, context)
-            symbol = _resolve_fn_symbol(context, name)
-            if symbol is not None:
-                if symbol.arg_sorts:
-                    raise KernelTypeError(f"'{name}' is a function symbol and requires arguments.")
-                if symbol.result_sort != sort:
-                    raise KernelTypeError(f"Constant '{name}' sort does not match declared symbol sort.")
             return sort
         case EApp(name, args):
             symbol = _resolve_fn_symbol(context, name)
@@ -92,8 +74,6 @@ def infer_term_sort(term: Expr, context: Context):
                         f"expected {expected_sort}, got {actual_sort}."
                     )
             return symbol.result_sort
-        case ENat(_):
-            return "Nat"
         case _:
             raise NotImplementedError(f"Unknown term: {term}")
 
@@ -102,22 +82,18 @@ def _subst_term_in_term(term: Expr, var_name: str, replacement: Expr) -> Expr:
     match term:
         case EVar(name):
             return replacement if name == var_name else term
-        case EConst(_, _):
-            return term
         case EApp(name, args):
             return EApp(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
-        case ENat(_):
-            return term
         case _:
             raise NotImplementedError(f"Unknown term: {term}")
 
 
 def _subst_term_in_expr(formula: Expr, var_name: str, replacement: Expr) -> Expr:
     match formula:
-        case EPropVar(_):
+        case EVar(_):
             return formula
-        case EPred(name, args):
-            return EPred(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
+        case EApp(name, args):
+            return EApp(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
         case EEq(left, right):
             return EEq(
                 _subst_term_in_term(left, var_name, replacement),
@@ -154,8 +130,6 @@ def _contains_term_var_in_term(term: Expr, var_name: str) -> bool:
     match term:
         case EVar(name):
             return name == var_name
-        case EConst(_, _) | ENat(_):
-            return False
         case EApp(_, args):
             return any(_contains_term_var_in_term(arg, var_name) for arg in args)
         case _:
@@ -164,9 +138,9 @@ def _contains_term_var_in_term(term: Expr, var_name: str) -> bool:
 
 def _contains_term_var(formula: Expr, var_name: str) -> bool:
     match formula:
-        case EPropVar(_):
+        case EVar(_):
             return False
-        case EPred(_, args):
+        case EApp(_, args):
             return any(_contains_term_var_in_term(arg, var_name) for arg in args)
         case EEq(left, right):
             return _contains_term_var_in_term(left, var_name) or _contains_term_var_in_term(right, var_name)
@@ -186,22 +160,24 @@ def _contains_term_var(formula: Expr, var_name: str) -> bool:
 
 def _ensure_well_formed_expr(formula: Expr, context: Context):
     match formula:
-        case EPropVar(_):
+        case EVar(_):
             return
-        case EPred(name, args):
-            symbol = _resolve_pred_symbol(context, name)
+        case EApp(name, args):
+            symbol = _resolve_fn_symbol(context, name)
             if symbol is None:
-                raise KernelTypeError(f"Unknown predicate symbol '{name}'.")
+                raise KernelTypeError(f"Unknown symbol '{name}'.")
+            if symbol.result_sort != "Prop":
+                raise KernelTypeError(f"Symbol '{name}' must return Prop in proposition position.")
             if len(args) != len(symbol.arg_sorts):
                 raise KernelTypeError(
-                    f"Predicate '{name}' expects {len(symbol.arg_sorts)} arguments, got {len(args)}."
+                    f"Symbol '{name}' expects {len(symbol.arg_sorts)} arguments, got {len(args)}."
                 )
             for idx, (arg, expected_sort) in enumerate(zip(args, symbol.arg_sorts, strict=True)):
                 _ensure_declared_sort(expected_sort, context)
                 actual_sort = infer_term_sort(arg, context)
                 if actual_sort != expected_sort:
                     raise KernelTypeError(
-                        f"Predicate '{name}' argument {idx + 1} sort mismatch: "
+                        f"Symbol '{name}' argument {idx + 1} sort mismatch: "
                         f"expected {expected_sort}, got {actual_sort}."
                     )
             return
@@ -335,9 +311,9 @@ def check_expr(term: ProofTerm, expected: Expr, context: Context) -> bool:
 
 def _expr_alpha_eq(left: Expr, right: Expr) -> bool:
     match left, right:
-        case EPropVar(left_name), EPropVar(right_name):
+        case EVar(left_name), EVar(right_name):
             return left_name == right_name
-        case EPred(left_name, left_args), EPred(right_name, right_args):
+        case EApp(left_name, left_args), EApp(right_name, right_args):
             return left_name == right_name and left_args == right_args
         case EEq(left_l, left_r), EEq(right_l, right_r):
             return left_l == right_l and left_r == right_r

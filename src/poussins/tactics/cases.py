@@ -11,7 +11,6 @@ from ..ast import (
     Expr,
     EVar,
     EApp,
-    EPred,
     EEq,
     EImp,
     PMetaVar,
@@ -36,8 +35,8 @@ def _subst_term_in_term(term: Expr, var_name: str, replacement: Expr) -> Expr:
 
 def _subst_term_in_expr(formula: Expr, var_name: str, replacement: Expr) -> Expr:
     match formula:
-        case EPred(name, args):
-            return EPred(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
+        case EApp(name, args):
+            return EApp(name, tuple(_subst_term_in_term(arg, var_name, replacement) for arg in args))
         case EEq(left, right):
             return EEq(
                 _subst_term_in_term(left, var_name, replacement),

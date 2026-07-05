@@ -26,15 +26,6 @@ class EVar(Expr):
 
 
 @dataclass(frozen=True)
-class EConst(Expr):
-    name: str
-    sort: Sort
-
-    def __str__(self) -> str:
-        return self.name
-
-
-@dataclass(frozen=True)
 class EApp(Expr):
     name: str
     args: tuple[Expr, ...]
@@ -42,56 +33,6 @@ class EApp(Expr):
     def __init__(self, name: str, args: list[Expr] | tuple[Expr, ...]):
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "args", tuple(args))
-
-    def __str__(self) -> str:
-        rendered_args = ", ".join(str(arg) for arg in self.args)
-        return f"{self.name}({rendered_args})"
-
-
-@dataclass(frozen=True)
-class ENat(Expr):
-    value: int
-
-    def __post_init__(self):
-        if self.value < 0:
-            raise ValueError("Natural number literals must be non-negative.")
-
-    @property
-    def sort(self) -> Sort:
-        return "Nat"
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-
-@dataclass(frozen=True)
-class EPropVar(Expr):
-    """Atomic proposition by name."""
-
-    name: str
-
-    @property
-    def sort(self) -> Sort:
-        return "Prop"
-
-    def __str__(self) -> str:
-        return self.name
-
-
-@dataclass(frozen=True)
-class EPred(Expr):
-    """Predicate application that yields Prop."""
-
-    name: str
-    args: tuple[Expr, ...]
-
-    def __init__(self, name: str, args: list[Expr] | tuple[Expr, ...]):
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "args", tuple(args))
-
-    @property
-    def sort(self) -> Sort:
-        return "Prop"
 
     def __str__(self) -> str:
         if not self.args:
@@ -202,13 +143,3 @@ class FunctionSymbol:
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "arg_sorts", tuple(arg_sorts))
         object.__setattr__(self, "result_sort", result_sort)
-
-
-@dataclass(frozen=True)
-class PredicateSymbol:
-    name: str
-    arg_sorts: tuple[Sort, ...]
-
-    def __init__(self, name: str, arg_sorts: list[Sort] | tuple[Sort, ...]):
-        object.__setattr__(self, "name", name)
-        object.__setattr__(self, "arg_sorts", tuple(arg_sorts))
