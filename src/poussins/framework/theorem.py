@@ -70,7 +70,7 @@ class Theorem(ProofDriver):
     def __init__(
         self,
         name: str,
-        statement: Prop
+        statement: Prop | Formula,
     ) -> None:
         self.name = name
         super().__init__(statement)
