@@ -6,7 +6,7 @@ from poussins import Lemma, Prop, Environment
 
 a, b, c = Prop("A"), Prop("B"), Prop("C")
 
-hilbert_s = Lemma("HilbertS", ((a >> (b >> c)) >> ((a >> b) >> (a >> c))).formula)
+hilbert_s = Lemma("HilbertS", (a >> (b >> c)) >> ((a >> b) >> (a >> c)))
 print(f"{hilbert_s.name}: {hilbert_s.statement}")
 
 hilbert_s.intros(["habc", "hab", "ha"])
