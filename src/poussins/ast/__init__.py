@@ -1,14 +1,24 @@
 """
 """
-from .formulas import (
-    Formula,
-    FVar,
-    FImpl,
-    FAnd,
-    FOr,
-    FTrue,
-    FFalse,
-    FExists,
+from .expr import (
+    Sort,
+    Expr,
+    EVar,
+    EConst,
+    EApp,
+    ENat,
+    EPropVar,
+    EPred,
+    EEq,
+    EImp,
+    EAnd,
+    EOr,
+    ETop,
+    EBot,
+    EForall,
+    EExists,
+    FunctionSymbol,
+    PredicateSymbol,
 )
 from .ops import collect_meta_var_ids, has_meta_var, substitute_meta_var
 from .proof_terms import (
@@ -24,20 +34,34 @@ from .proof_terms import (
     POrE,
     PTrueI,
     PFalseE,
+    PForallI,
+    PForallE,
     PExI,
     PExE,
+    PRefl,
 )
 
 __all__ = [
-    # Formula AST
-    "Formula",
-    "FVar",
-    "FImpl",
-    "FAnd",
-    "FOr",
-    "FTrue",
-    "FFalse",
-    "FExists",
+    # Sort AST
+    "Sort",
+    "Expr",
+    # Expr AST
+    "EVar",
+    "EConst",
+    "EApp",
+    "ENat",
+    "EPropVar",
+    "EPred",
+    "EEq",
+    "EImp",
+    "EAnd",
+    "EOr",
+    "ETop",
+    "EBot",
+    "EForall",
+    "EExists",
+    "FunctionSymbol",
+    "PredicateSymbol",
     # ProofTerm AST
     "ProofTerm",
     "PMetaVar",
@@ -51,8 +75,11 @@ __all__ = [
     "POrE",
     "PTrueI",
     "PFalseE",
+    "PForallI",
+    "PForallE",
     "PExI",
     "PExE",
+    "PRefl",
     # Operations on AST
     "collect_meta_var_ids",
     "has_meta_var",

@@ -4,7 +4,7 @@ Logic tactics: exfalso.
 from copy import deepcopy
 from typing import Optional
 
-from ..ast import FTrue, FFalse, PMetaVar, PTrueI, PFalseE, PVar
+from ..ast import ETop, EBot, PMetaVar, PTrueI, PFalseE, PVar
 from ..errors import TacticError
 from ..framework import Environment
 from ..kernel import ProofEngine, Goal
@@ -17,7 +17,7 @@ def exfalso(engine: ProofEngine):
         raise TacticError("No active goal to apply exfalso tactic.")
 
     subgoal = Goal(
-        formula=FFalse(),
+        formula=EBot(),
         context=current_goal.context
     )
     engine.refine_goal(
@@ -35,7 +35,7 @@ def trivial(engine: ProofEngine, env: Optional[Environment]):
     if current_goal is None:
         raise TacticError("No active goal to apply trivial tactic.")
 
-    if isinstance(current_goal.formula, FTrue):
+    if isinstance(current_goal.formula, ETop):
         engine.close_goal(PTrueI())
         return
     else:
@@ -46,7 +46,7 @@ def trivial(engine: ProofEngine, env: Optional[Environment]):
         if env is None:
             env = Environment()
         for k, v in env.items():
-            if v.statement == current_goal.formula:
+            if v.has_statement and v.statement == current_goal.formula and v.assignment is not None:
                 engine.close_goal(v.assignment)
                 return
 

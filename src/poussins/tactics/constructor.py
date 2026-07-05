@@ -5,9 +5,9 @@ from copy import deepcopy
 
 from .constants import TacticSide
 from ..ast import (
-    FTrue,
-    FAnd,
-    FOr,
+    ETop,
+    EAnd,
+    EOr,
     PMetaVar,
     PTrueI,
     PAndI,
@@ -24,9 +24,9 @@ def constructor(engine: ProofEngine, side: TacticSide = TacticSide.LEFT):
     if current_goal is None:
         raise TacticError("No active goal to apply constructor tactic.")
 
-    if isinstance(current_goal.formula, FTrue):
+    if isinstance(current_goal.formula, ETop):
         engine.close_goal(PTrueI())
-    elif isinstance(current_goal.formula, FAnd):
+    elif isinstance(current_goal.formula, EAnd):
         left_subgoal = Goal(
             formula=deepcopy(current_goal.formula.left),
             context=current_goal.context
@@ -42,7 +42,7 @@ def constructor(engine: ProofEngine, side: TacticSide = TacticSide.LEFT):
                 right=PMetaVar(goal_id=right_subgoal.id)
             )
         )
-    elif isinstance(current_goal.formula, FOr):
+    elif isinstance(current_goal.formula, EOr):
         if side == TacticSide.LEFT:
             subgoal = Goal(
                 formula=deepcopy(current_goal.formula.left),
@@ -85,7 +85,7 @@ def split(engine: ProofEngine):
     current_goal = engine.state.current_goal
     if current_goal is None:
         raise TacticError("No active goal to apply constructor tactic.")
-    elif not isinstance(current_goal.formula, FAnd):
+    elif not isinstance(current_goal.formula, EAnd):
         raise TacticError("Split tactic can only be applied to conjunctions.")
 
     constructor(engine)

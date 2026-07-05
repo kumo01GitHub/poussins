@@ -46,7 +46,7 @@ from __future__ import annotations
 from .environment import Environment, Declaration
 from .prop import Prop
 from .proof_driver import ProofDriver
-from ..ast import Formula
+from ..ast import Expr
 from ..errors import FrameworkError
 
 
@@ -79,12 +79,12 @@ class Theorem(ProofDriver):
         if not self.is_closed:
             raise FrameworkError("Not proved.")
 
-        env.add(
-            declaration=Declaration(
+        env.add_declaration(
+            Declaration.theorem(
                 name=self.name,
                 statement=self.statement,
                 assignment=self.assignment,
-                assurance=self.assurance
+                assurance=self.assurance,
             )
         )
 
@@ -112,7 +112,7 @@ class Example(ProofDriver):
     """
     def __init__(
         self,
-        statement: Prop | Formula,
+        statement: Prop | Expr,
     ) -> None:
         super().__init__(statement)
 

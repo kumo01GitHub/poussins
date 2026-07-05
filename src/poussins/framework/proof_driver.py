@@ -27,7 +27,7 @@ from typing import Any, Optional
 
 from .environment import Environment
 from .prop import Prop
-from ..ast import Formula, ProofTerm
+from ..ast import Expr, ProofTerm
 from ..kernel import ProofAssurance, ProofEngine
 from ..tactics import (
     apply,
@@ -49,16 +49,19 @@ from ..tactics import (
 class ProofDriver(ABC):
     """Abstract base class for proof-carrying DSL objects."""
 
-    def __init__(self, statement: Prop | Formula):
-        self.__setattr__("engine", ProofEngine(Prop.to_formula(statement)))
-        self.__setattr__("env", Environment())
+    def __init__(self, statement: Prop | Expr):
+        env = Environment.with_nat_prelude()
+        engine = ProofEngine(Prop.to_expr(statement))
+        engine.goal.context = env.extend_context(engine.goal.context)
+        self.__setattr__("engine", engine)
+        self.__setattr__("env", env)
 
     @property
     def is_closed(self) -> bool:
         return self.engine.is_closed
 
     @property
-    def statement(self) -> Formula:
+    def statement(self) -> Expr:
         return self.engine.goal.formula
 
     @property
@@ -71,6 +74,8 @@ class ProofDriver(ABC):
 
     def import_env(self, env: Environment):
         self.env.update(env)
+        for goal in [self.engine.goal, *list(self.engine.state.goals)]:
+            goal.context = self.env.extend_context(goal.context)
 
     # ------------------------------------------------------------------
     # Tactic methods: these delegate to the corresponding functions

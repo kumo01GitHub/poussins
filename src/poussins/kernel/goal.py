@@ -7,7 +7,19 @@ from dataclasses import dataclass, field
 from typing import Dict, Optional
 from uuid import uuid4
 
-from ..ast import ProofTerm, Formula
+from ..ast import (
+    ProofTerm,
+    Expr,
+    Sort,
+    FunctionSymbol,
+    PredicateSymbol,
+)
+
+
+def _default_sort_ctx() -> Dict[str, Sort]:
+    return {
+        "Prop": "Prop",
+    }
 
 
 class ProofAssurance(str, Enum):
@@ -22,30 +34,96 @@ class ProofAssurance(str, Enum):
 
 @dataclass(frozen=True)
 class Context:
-    hyps: Dict[str, Formula]
+    hyp_ctx: Dict[str, Expr]
+    term_ctx: Dict[str, Sort] = field(default_factory=dict)
+    sort_ctx: Dict[str, Sort] = field(default_factory=_default_sort_ctx)
+    fn_symbols: Dict[str, FunctionSymbol] = field(default_factory=dict)
+    pred_symbols: Dict[str, PredicateSymbol] = field(default_factory=dict)
 
-    def get(self, name: str) -> Optional[Formula]:
-        return self.hyps.get(name)
+    def get(self, name: str) -> Optional[Expr]:
+        return self.hyp_ctx.get(name)
 
-    def add(self, additional_hyps: Dict[str, Formula]) -> Context:
-        new_hyps = dict(self.hyps)
+    def add(self, additional_hyps: Dict[str, Expr]) -> Context:
+        new_hyps = dict(self.hyp_ctx)
         new_hyps.update(additional_hyps)
-        return Context(hyps=new_hyps)
-    
+        return Context(
+            hyp_ctx=new_hyps,
+            term_ctx=self.term_ctx,
+            sort_ctx=self.sort_ctx,
+            fn_symbols=self.fn_symbols,
+            pred_symbols=self.pred_symbols,
+        )
+
     def delete(self, name: str) -> Context:
-        new_hyps = dict(self.hyps)
+        new_hyps = dict(self.hyp_ctx)
         if name in new_hyps:
             del new_hyps[name]
-        return Context(hyps=new_hyps)
+        return Context(
+            hyp_ctx=new_hyps,
+            term_ctx=self.term_ctx,
+            sort_ctx=self.sort_ctx,
+            fn_symbols=self.fn_symbols,
+            pred_symbols=self.pred_symbols,
+        )
 
     def items(self):
-        return self.hyps.items()
+        return self.hyp_ctx.items()
+
+    def get_term_sort(self, name: str) -> Optional[Sort]:
+        return self.term_ctx.get(name)
+
+    def add_terms(self, additional_terms: Dict[str, Sort]) -> Context:
+        new_terms = dict(self.term_ctx)
+        new_terms.update(additional_terms)
+        return Context(
+            hyp_ctx=self.hyp_ctx,
+            term_ctx=new_terms,
+            sort_ctx=self.sort_ctx,
+            fn_symbols=self.fn_symbols,
+            pred_symbols=self.pred_symbols,
+        )
+
+    def add_sorts(self, sorts: Dict[str, Sort]) -> Context:
+        new_sorts = dict(self.sort_ctx)
+        new_sorts.update(sorts)
+        return Context(
+            hyp_ctx=self.hyp_ctx,
+            term_ctx=self.term_ctx,
+            sort_ctx=new_sorts,
+            fn_symbols=self.fn_symbols,
+            pred_symbols=self.pred_symbols,
+        )
+
+    def is_declared_sort(self, sort: Sort) -> bool:
+        return any(declared_sort == sort for declared_sort in self.sort_ctx.values())
+
+    def add_fn_symbols(self, symbols: Dict[str, FunctionSymbol]) -> Context:
+        new_symbols = dict(self.fn_symbols)
+        new_symbols.update(symbols)
+        return Context(
+            hyp_ctx=self.hyp_ctx,
+            term_ctx=self.term_ctx,
+            sort_ctx=self.sort_ctx,
+            fn_symbols=new_symbols,
+            pred_symbols=self.pred_symbols,
+        )
+
+    def add_pred_symbols(self, symbols: Dict[str, PredicateSymbol]) -> Context:
+        new_symbols = dict(self.pred_symbols)
+        new_symbols.update(symbols)
+        return Context(
+            hyp_ctx=self.hyp_ctx,
+            term_ctx=self.term_ctx,
+            sort_ctx=self.sort_ctx,
+            fn_symbols=self.fn_symbols,
+            pred_symbols=new_symbols,
+        )
 
 
 @dataclass
 class Goal:
     id: str = field(init=False)
-    formula: Formula
+    formula: Expr
     context: Context
     assignment: Optional[ProofTerm] = None
     assurance: ProofAssurance = ProofAssurance.UNKNOWN

@@ -4,7 +4,7 @@ Kernel-level components of the proof system, including the core data structures 
 from .goal import Goal, Context, ProofAssurance
 from .proof_engine import ProofEngine
 from .proof_state import ProofState
-from .typecheck import infer_formula, check_formula
+from .typecheck import infer_expr, check_expr
 
 __all__ = [
     "Goal",
@@ -12,6 +12,6 @@ __all__ = [
     "ProofAssurance",
     "ProofEngine",
     "ProofState",
-    "infer_formula",
-    "check_formula",
+    "infer_expr",
+    "check_expr",
 ]

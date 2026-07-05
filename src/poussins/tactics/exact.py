@@ -26,9 +26,11 @@ def exact(engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
         if env is None:
             env = Environment()
         declaration = env.get(hyp_name)
-        if declaration is not None:
+        if declaration is not None and declaration.has_statement:
             if declaration.statement != current_goal.formula:
                 raise TacticError(f"Declaration '{hyp_name}' does not match the current goal formula.")
+            if declaration.assignment is None:
+                raise TacticError(f"Declaration '{hyp_name}' has no proof assignment.")
 
             engine.close_goal(declaration.assignment)
             return
@@ -48,7 +50,7 @@ def assumption(engine: ProofEngine, env: Optional[Environment]):
     if env is None:
         env = Environment()
     for k, v in env.items():
-        if v.statement == current_goal.formula:
+        if v.has_statement and v.statement == current_goal.formula and v.assignment is not None:
             exact(engine, k, env)
             return
 

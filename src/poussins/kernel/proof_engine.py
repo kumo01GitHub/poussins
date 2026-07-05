@@ -5,16 +5,16 @@ from collections import deque
 
 from .goal import Goal, Context, ProofAssurance
 from .proof_state import ProofState
-from .typecheck import infer_formula, check_formula
-from ..ast import ProofTerm, Formula, collect_meta_var_ids, has_meta_var, substitute_meta_var
+from .typecheck import infer_expr, check_expr
+from ..ast import ProofTerm, Expr, collect_meta_var_ids, has_meta_var, substitute_meta_var
 from ..errors import KernelStateError, KernelValueError
 
 
 class ProofEngine:
     """Proof engine: manages the proof state and applies inference rules to manipulate goals."""
 
-    def __init__(self, root_formula: Formula):
-        self.goal = Goal(formula=root_formula, context=Context(hyps={}))
+    def __init__(self, root_formula: Expr):
+        self.goal = Goal(formula=root_formula, context=Context(hyp_ctx={}, term_ctx={}))
         self.state = ProofState(goals=deque([self.goal]))
 
     @property
@@ -29,7 +29,7 @@ class ProofEngine:
             raise KernelStateError("Cannot close a closed goal.")
         elif current_goal.assignment is not None:
             raise KernelStateError("Current goal is already assigned a proof term.")
-        elif current_goal.formula != infer_formula(assignment, current_goal.context):
+        elif current_goal.formula != infer_expr(assignment, current_goal.context):
             raise KernelStateError("Assignment does not match the goal's formula.")
         else:
             current_goal.assignment = assignment
@@ -58,7 +58,7 @@ class ProofEngine:
                     if has_meta_var(substituted):
                         continue
 
-                    if check_formula(substituted, goal.formula, goal.context):
+                    if check_expr(substituted, goal.formula, goal.context):
                         self.state.goals[idx].assurance = ProofAssurance.VERIFIED
                         closed_goals.append(self.state.goals[idx])
 

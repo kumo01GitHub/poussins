@@ -4,7 +4,7 @@ Apply tactic: applies a hypothesis or a theorem to the current goal, generating 
 from copy import deepcopy
 from typing import Optional
 
-from ..ast import Formula, FImpl, ProofTerm, PApp, PMetaVar, PVar
+from ..ast import Expr, EImp, ProofTerm, PApp, PMetaVar, PVar
 from ..errors import TacticError
 from ..framework import Environment
 from ..kernel import ProofEngine, Goal
@@ -23,21 +23,26 @@ def apply(engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
         if env is None:
             env = Environment()
         declaration = env.get(hyp_name)
-        if declaration is not None and declaration.statement == current_goal.formula:
+        if (
+            declaration is not None
+            and declaration.has_statement
+            and declaration.statement == current_goal.formula
+            and declaration.assignment is not None
+        ):
             engine.close_goal(declaration.assignment)
             return
-        elif declaration is not None:
+        elif declaration is not None and declaration.has_statement:
             hyp = declaration.statement
 
     if hyp is None:
         raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
-    elif not isinstance(hyp, FImpl):
+    elif not isinstance(hyp, EImp):
         raise TacticError(f"Hypothesis '{hyp_name}' is not an implication and cannot be applied.")
 
     subgoals: list[Goal] = []
     assignment: ProofTerm = PVar(name=hyp_name)
-    current_formula: Formula = hyp
-    while isinstance(current_formula, FImpl):
+    current_formula: Expr = hyp
+    while isinstance(current_formula, EImp):
         subgoal = Goal(
             formula=deepcopy(current_formula.antecedent),
             context=current_goal.context

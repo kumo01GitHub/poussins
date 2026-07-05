@@ -18,8 +18,11 @@ from .proof_terms import (
     PTrueI,
     POrE,
     PFalseE,
+    PForallI,
+    PForallE,
     PExI,
     PExE,
+    PRefl,
 )
 
 
@@ -60,10 +63,16 @@ def collect_meta_var_ids(term: ProofTerm) -> set[str]:
             )
         case PFalseE(inner, _):
             return collect_meta_var_ids(inner)
-        case PExI(_, _, _, proof):
+        case PForallI(_, _, body):
+            return collect_meta_var_ids(body)
+        case PForallE(forall_proof, _):
+            return collect_meta_var_ids(forall_proof)
+        case PExI(_, _, _, _, proof):
             return collect_meta_var_ids(proof)
         case PExE(exists_proof, _, _, case_proof):
             return collect_meta_var_ids(exists_proof) | collect_meta_var_ids(case_proof)
+        case PRefl(_):
+            return set()
         case _:
             raise NotImplementedError(f"Unknown proof term: {term}")
 
@@ -115,19 +124,33 @@ def substitute_meta_var(term: ProofTerm, goal_id: str, assignment: ProofTerm) ->
                 inner=substitute_meta_var(inner, goal_id, assignment),
                 conclusion=conclusion,
             )
-        case PExI(exists_var, body, witness, proof):
+        case PForallI(var, sort, body):
+            return PForallI(
+                var=var,
+                sort=sort,
+                body=substitute_meta_var(body, goal_id, assignment),
+            )
+        case PForallE(forall_proof, witness):
+            return PForallE(
+                forall_proof=substitute_meta_var(forall_proof, goal_id, assignment),
+                witness=witness,
+            )
+        case PExI(exists_var, sort, body, witness, proof):
             return PExI(
                 exists_var=exists_var,
+                sort=sort,
                 body=body,
                 witness=witness,
                 proof=substitute_meta_var(proof, goal_id, assignment),
             )
-        case PExE(exists_proof, prop_var, hyp_var, case_proof):
+        case PExE(exists_proof, witness_var, hyp_var, case_proof):
             return PExE(
                 exists_proof=substitute_meta_var(exists_proof, goal_id, assignment),
-                prop_var=prop_var,
+                witness_var=witness_var,
                 hyp_var=hyp_var,
                 case_proof=substitute_meta_var(case_proof, goal_id, assignment),
             )
+        case PRefl(_):
+            return term
         case _:
             raise NotImplementedError(f"Unknown proof term: {term}")
