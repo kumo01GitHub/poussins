@@ -1,133 +1,175 @@
 """
-Functional operations over ProofTerm AST nodes.
+AST operation utilities for expression traversal, substitution, and analysis.
 """
 from __future__ import annotations
-
-from copy import deepcopy
-
-from .proof_terms import (
-    ProofTerm,
-    PMetaVar,
-    PVar,
-    PLam,
-    PApp,
-    PAndI,
-    PAndE,
-    POrIL,
-    POrIR,
-    PTrueI,
-    POrE,
-    PFalseE,
-    PExI,
-    PExE,
+from .expr import (
+    Expr,
+    ESort,
+    EVar,
+    EConst,
+    EPi,
+    ELam,
+    EApp,
+    EMatch,
+    EMetaVar,
 )
 
 
-def has_meta_var(term: ProofTerm) -> bool:
-    """Return True when the proof term contains at least one meta-variable."""
-    return bool(collect_meta_var_ids(term))
+def has_meta_var(expr: Expr) -> bool:
+    """
+    Check if the expression contains any meta-variables (holes).
+    """
+    match expr:
+        case EMetaVar(_):
+            return True
+        case ESort(_) | EVar(_) | EConst(_):
+            return False
+        case EPi(_, domain, body) | ELam(_, domain, body):
+            return has_meta_var(domain) or has_meta_var(body)
+        case EApp(fn, arg):
+            return has_meta_var(fn) or has_meta_var(arg)
+        case EMatch(_, discriminee, motive, cases):
+            return (
+                has_meta_var(discriminee)
+                or has_meta_var(motive)
+                or any(has_meta_var(c) for c in cases)
+            )
+        case _:
+            raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
-def collect_meta_var_ids(term: ProofTerm) -> set[str]:
-    """Collect all meta-variable ids appearing in a proof term."""
-    match term:
-        case PMetaVar(goal_id):
+def substitute_meta_var(expr: Expr, target_goal_id: str, replacement: Expr) -> Expr:
+    """
+    Substitute all occurrences of the meta-variable with the given goal_id in the expression with the replacement expression.
+    """
+    match expr:
+        case EMetaVar(goal_id):
+            return replacement if goal_id == target_goal_id else expr
+        case ESort(_) | EVar(_) | EConst(_):
+            return expr
+        case EPi(var, domain, body):
+            return EPi(
+                var,
+                substitute_meta_var(domain, target_goal_id, replacement),
+                substitute_meta_var(body, target_goal_id, replacement)
+            )
+        case ELam(var, domain, body):
+            return ELam(
+                var,
+                substitute_meta_var(domain, target_goal_id, replacement),
+                substitute_meta_var(body, target_goal_id, replacement)
+            )
+        case EApp(fn, arg):
+            return EApp(
+                substitute_meta_var(fn, target_goal_id, replacement),
+                substitute_meta_var(arg, target_goal_id, replacement)
+            )
+        case EMatch(inductive_name, discriminee, motive, cases):
+            return EMatch(
+                inductive_name,
+                substitute_meta_var(discriminee, target_goal_id, replacement),
+                substitute_meta_var(motive, target_goal_id, replacement),
+                tuple(substitute_meta_var(c, target_goal_id, replacement) for c in cases)
+            )
+        case _:
+            raise NotImplementedError(f"Unknown expression node: {expr}")
+
+
+def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
+    """
+    Substitute all occurrences of the variable with the given name in the expression with the replacement expression.
+    """
+    replacement_fvs = collect_free_vars(replacement)
+
+    def subst(e: Expr) -> Expr:
+        match e:
+            case EVar(name):
+                return replacement if name == var_name else e
+            case ESort(_) | EConst(_) | EMetaVar(_):
+                return e
+                
+            case EPi(var, domain, body):
+                new_domain = subst(domain)
+                if var == var_name: 
+                    return EPi(var, new_domain, body)
+
+                if var in replacement_fvs:
+                    new_var = var + "_"
+                    while new_var in replacement_fvs or new_var == var_name:
+                        new_var += "_"
+                    alpha_body = substitute_expr_var(body, var, EVar(new_var))
+                    return EPi(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
+                
+                return EPi(var, new_domain, subst(body))
+
+            case ELam(var, domain, body):
+                new_domain = subst(domain)
+                if var == var_name: 
+                    return ELam(var, new_domain, body)
+
+                if var in replacement_fvs:
+                    new_var = var + "_"
+                    while new_var in replacement_fvs or new_var == var_name:
+                        new_var += "_"
+                    alpha_body = substitute_expr_var(body, var, EVar(new_var))
+                    return ELam(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
+                
+                return ELam(var, new_domain, subst(body))
+
+            case EApp(fn, arg):
+                return EApp(subst(fn), subst(arg))
+            case EMatch(inductive_name, discriminee, motive, cases):
+                return EMatch(
+                    inductive_name,
+                    subst(discriminee),
+                    subst(motive),
+                    tuple(subst(c) for c in cases)
+                )
+            case _:
+                raise NotImplementedError(f"Unknown expression node: {e}")
+
+    return subst(expr)
+
+
+def collect_meta_var_ids(expr: Expr) -> set[str]:
+    """
+    Collect all unique meta-variable goal IDs present in the expression.
+    """
+    match expr:
+        case EMetaVar(goal_id):
             return {goal_id}
-        case PVar(_):
+        case ESort(_) | EVar(_) | EConst(_):
             return set()
-        case PLam(_, _, body):
-            return collect_meta_var_ids(body)
-        case PApp(fn, arg):
+        case EPi(_, domain, body) | ELam(_, domain, body):
+            return collect_meta_var_ids(domain) | collect_meta_var_ids(body)
+        case EApp(fn, arg):
             return collect_meta_var_ids(fn) | collect_meta_var_ids(arg)
-        case PAndI(left, right):
-            return collect_meta_var_ids(left) | collect_meta_var_ids(right)
-        case PAndE(conj_proof, _, _, case_proof):
-            return (
-                collect_meta_var_ids(conj_proof)
-                | collect_meta_var_ids(case_proof)
-            )
-        case POrIL(proof, _):
-            return collect_meta_var_ids(proof)
-        case POrIR(_, proof):
-            return collect_meta_var_ids(proof)
-        case PTrueI():
+        case EMatch(_, discriminee, motive, cases):
+            ids = collect_meta_var_ids(discriminee) | collect_meta_var_ids(motive)
+            for c in cases:
+                ids |= collect_meta_var_ids(c)
+            return ids
+        case _:
+            raise NotImplementedError(f"Unknown expression node: {expr}")
+
+
+def collect_free_vars(expr: Expr) -> set[str]:
+    """
+    Collect all free variable names present in the expression.
+    """
+    match expr:
+        case EVar(name):
+            return {name}
+        case ESort(_) | EConst(_) | EMetaVar(_):
             return set()
-        case POrE(disj_proof, _, left_case, _, right_case):
-            return (
-                collect_meta_var_ids(disj_proof)
-                | collect_meta_var_ids(left_case)
-                | collect_meta_var_ids(right_case)
-            )
-        case PFalseE(inner, _):
-            return collect_meta_var_ids(inner)
-        case PExI(_, _, _, proof):
-            return collect_meta_var_ids(proof)
-        case PExE(exists_proof, _, _, case_proof):
-            return collect_meta_var_ids(exists_proof) | collect_meta_var_ids(case_proof)
+        case EPi(var, domain, body) | ELam(var, domain, body):
+            return collect_free_vars(domain) | (collect_free_vars(body) - {var})
+        case EApp(fn, arg):
+            return collect_free_vars(fn) | collect_free_vars(arg)
+        case EMatch(_, discriminee, motive, cases):
+            fvs = collect_free_vars(discriminee) | collect_free_vars(motive)
+            for c in cases:
+                fvs |= collect_free_vars(c)
+            return fvs
         case _:
-            raise NotImplementedError(f"Unknown proof term: {term}")
-
-
-def substitute_meta_var(term: ProofTerm, goal_id: str, assignment: ProofTerm) -> ProofTerm:
-    """Recursively replace goal_id meta-variable with assignment in term."""
-    match term:
-        case PMetaVar(current_goal_id):
-            if current_goal_id == goal_id:
-                return deepcopy(assignment)
-            return term
-        case PVar(_):
-            return term
-        case PLam(var, dom, body):
-            return PLam(var, dom, substitute_meta_var(body, goal_id, assignment))
-        case PApp(fn, arg):
-            return PApp(
-                fn=substitute_meta_var(fn, goal_id, assignment),
-                arg=substitute_meta_var(arg, goal_id, assignment),
-            )
-        case PAndI(left, right):
-            return PAndI(
-                left=substitute_meta_var(left, goal_id, assignment),
-                right=substitute_meta_var(right, goal_id, assignment),
-            )
-        case PAndE(conj_proof, left_hyp, right_hyp, case_proof):
-            return PAndE(
-                conj_proof=substitute_meta_var(conj_proof, goal_id, assignment),
-                left_hyp=left_hyp,
-                right_hyp=right_hyp,
-                case_proof=substitute_meta_var(case_proof, goal_id, assignment),
-            )
-        case POrIL(proof, other_disjunct):
-            return POrIL(substitute_meta_var(proof, goal_id, assignment), other_disjunct)
-        case POrIR(other_disjunct, proof):
-            return POrIR(other_disjunct, substitute_meta_var(proof, goal_id, assignment))
-        case PTrueI():
-            return term
-        case POrE(disj_proof, left_hyp, left_case, right_hyp, right_case):
-            return POrE(
-                disj_proof=substitute_meta_var(disj_proof, goal_id, assignment),
-                left_hyp=left_hyp,
-                left_case=substitute_meta_var(left_case, goal_id, assignment),
-                right_hyp=right_hyp,
-                right_case=substitute_meta_var(right_case, goal_id, assignment),
-            )
-        case PFalseE(inner, conclusion):
-            return PFalseE(
-                inner=substitute_meta_var(inner, goal_id, assignment),
-                conclusion=conclusion,
-            )
-        case PExI(exists_var, body, witness, proof):
-            return PExI(
-                exists_var=exists_var,
-                body=body,
-                witness=witness,
-                proof=substitute_meta_var(proof, goal_id, assignment),
-            )
-        case PExE(exists_proof, prop_var, hyp_var, case_proof):
-            return PExE(
-                exists_proof=substitute_meta_var(exists_proof, goal_id, assignment),
-                prop_var=prop_var,
-                hyp_var=hyp_var,
-                case_proof=substitute_meta_var(case_proof, goal_id, assignment),
-            )
-        case _:
-            raise NotImplementedError(f"Unknown proof term: {term}")
+            raise NotImplementedError(f"Unknown expression node: {expr}")

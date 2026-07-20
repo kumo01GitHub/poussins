@@ -1,36 +1,44 @@
-"""
-Intro tactic: introduces a new hypothesis for an implication goal, generating a subgoal for the consequent."""
-from copy import deepcopy
+from __future__ import annotations
 
-from ..ast import FImpl, PLam, PMetaVar
+from ..ast import ELam, EPi, EMetaVar, EVar, substitute_expr_var  
 from ..errors import TacticError
-from ..kernel import Goal, ProofEngine
+from ..kernel import ProofManager, Goal, whnf
 
 
-def intro(engine: ProofEngine, hyp_name: str):
-    """Introduce a new hypothesis."""
-    current_goal = engine.state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goal to apply intro tactic.")
-    elif not isinstance(current_goal.formula, FImpl):
-        raise TacticError("Intro tactic can only be applied to implications.")
+def intro(manager: ProofManager, var_name: str) -> None:
+    """
+    Intro tactic: Introduce a new variable for the current goal if it is a product type (EPi).
+    """
+    if manager.is_closed:
+        raise TacticError("intro failed: No active goals remain.")
 
-    subgoal = Goal(
-        formula=deepcopy(current_goal.formula.consequent),
-        context=current_goal.context.add(
-            { hyp_name: deepcopy(current_goal.formula.antecedent) }
-        )
+    state = manager.current_state
+    current_goal = state.current_goal
+    assert current_goal is not None
+
+    goal_expr = whnf(current_goal.statement, state.metavars)
+    if not isinstance(goal_expr, EPi):
+        raise TacticError(f"intro failed: Current goal is not a product type (EPi). Found: {goal_expr}")
+
+    if var_name in current_goal.context:
+        raise TacticError(f"intro failed: Identifier '{var_name}' already exists in the local context.")
+
+    new_subgoal_statement = substitute_expr_var(
+        expr=goal_expr.body,
+        var_name=goal_expr.var,
+        replacement=EVar(var_name)
     )
-    engine.refine_goal(
-        [subgoal],
-        assignment=PLam(
-            var=hyp_name,
-            dom=deepcopy(current_goal.formula.antecedent),
-            body=PMetaVar(goal_id=subgoal.id)
-        )
+
+    extended_context = current_goal.context | {var_name: goal_expr.domain}
+    new_subgoal = Goal(statement=new_subgoal_statement, context=extended_context)
+
+    assignment = ELam(
+        var=var_name,
+        domain=goal_expr.domain,
+        body=EMetaVar(new_subgoal.id)
     )
 
-
-def intros(engine: ProofEngine, hyp_names: list[str]):
-    for hyp_name in hyp_names:
-        intro(engine, hyp_name)
+    try:
+        manager.refine_goal(assignment, [new_subgoal])
+    except Exception as e:
+        raise TacticError(f"intro failed during kernel verification: {e}") from e

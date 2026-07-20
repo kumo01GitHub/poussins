@@ -1,67 +1,22 @@
 """
-Kernel-level components of the proof system, including the core data structures and proof engine.
+Kernel-level definition of a single proof subgoal and local context.
 """
 from __future__ import annotations
-from enum import Enum
 from dataclasses import dataclass, field
-from typing import Dict, Optional
 from uuid import uuid4
 
-from ..ast import ProofTerm, Formula
-
-
-class ProofAssurance(str, Enum):
-    """Verification assurance axis."""
-
-    UNKNOWN = "unknown"
-    VERIFIED = "verified"
-    TRUSTED = "trusted"
-    ADMITTED = "admitted"
-    INVALID = "invalid"
+from ..ast.expr import Expr
 
 
 @dataclass(frozen=True)
-class Context:
-    hyps: Dict[str, Formula]
-
-    def get(self, name: str) -> Optional[Formula]:
-        return self.hyps.get(name)
-
-    def add(self, additional_hyps: Dict[str, Formula]) -> Context:
-        new_hyps = dict(self.hyps)
-        new_hyps.update(additional_hyps)
-        return Context(hyps=new_hyps)
-    
-    def delete(self, name: str) -> Context:
-        new_hyps = dict(self.hyps)
-        if name in new_hyps:
-            del new_hyps[name]
-        return Context(hyps=new_hyps)
-
-    def items(self):
-        return self.hyps.items()
-
-
-@dataclass
 class Goal:
-    id: str = field(init=False)
-    formula: Formula
-    context: Context
-    assignment: Optional[ProofTerm] = None
-    assurance: ProofAssurance = ProofAssurance.UNKNOWN
+    """A single proof subgoal, consisting of a statement and a local context."""
 
-    def __post_init__(self):
-        self.id = str(uuid4())
+    id: str = field(default_factory=lambda: str(uuid4()), init=False)
+    statement: Expr
+    context: dict[str, Expr]
 
-    @property
-    def is_closed(self) -> bool:
-        return (
-            self.assignment is not None
-            and self.assurance in {
-                ProofAssurance.VERIFIED,
-                ProofAssurance.TRUSTED,
-            }
-        )
-
-    def __eq__(self, other: Goal) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Goal):
+            return False
         return self.id == other.id

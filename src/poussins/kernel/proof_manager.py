@@ -1,0 +1,46 @@
+"""
+Kernel-level components of the proof system, including the core data structures and proof engine.
+This module acts as the central coordinator, holding both ProofEngine and ProofSession,
+and provides a safe platform for tactics to execute and mutate the proof state.
+"""
+from __future__ import annotations
+from typing import final
+
+from .proof_engine import ProofEngine
+from .proof_session import ProofSession
+from .proof_state import ProofState
+from .goal import Goal
+from ..ast import Expr
+from ..environment import Environment
+
+
+@final
+class ProofManager:
+    def __init__(self, statement: Expr, env: Environment):
+        self.engine = ProofEngine(env)
+        initial_state = self.engine.create_initial_state(statement)
+        self.session = ProofSession(initial_state)
+
+    @property
+    def current_state(self) -> ProofState:
+        """Return the current proof state (the last state in the history)."""
+        return self.session.current_state
+
+    @property
+    def is_closed(self) -> bool:
+        """Check if the proof session is closed (i.e., no active goals remain)."""
+        return self.session.is_closed
+
+    def close_goal(self, assignment: Expr):
+        """Close the current goal by providing an assignment that satisfies the goal's statement."""
+        next_state = self.engine.close_goal(self.current_state, assignment)
+        self.session.update_state(next_state)
+
+    def refine_goal(self, assignment: Expr, subgoals: list[Goal]):
+        """Refine the current goal by providing an assignment that splits it into new subgoals."""
+        next_state = self.engine.refine_goal(self.current_state, assignment, subgoals)
+        self.session.update_state(next_state)
+
+    def undo(self) -> None:
+        """Undo the last proof state, reverting to the previous state in the history stack."""
+        self.session.undo()

@@ -1,17 +1,19 @@
 """
 Kernel-level components of the proof system, including the core data structures and proof engine.
 """
-from .goal import Goal, Context, ProofAssurance
+from .goal import Goal
 from .proof_engine import ProofEngine
+from .proof_manager import ProofManager
+from .proof_session import ProofSession
 from .proof_state import ProofState
-from .typecheck import infer_formula, check_formula
+from .typecheck import infer_type, whnf
 
 __all__ = [
     "Goal",
-    "Context",
-    "ProofAssurance",
     "ProofEngine",
+    "ProofManager",
+    "ProofSession",
     "ProofState",
-    "infer_formula",
-    "check_formula",
+    "infer_type",
+    "whnf",
 ]
