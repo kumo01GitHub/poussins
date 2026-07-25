@@ -29,12 +29,14 @@ class Theorem(ProofScript):
         self,
         name: str,
         statement: Prop | Expr,
-        env: Environment
+        env: Environment,
+        level_params: tuple[str, ...] = ()
     ) -> None:
         self.name = name
+        self.level_params = level_params
         super().__init__(Prop.to_expr(statement), env)
 
-    def qed(self, env: Environment) -> None:
+    def qed(self) -> None:
         """
         Verify that the proof is closed, extract the final proof term,
         and register it into the given environment.
@@ -42,20 +44,23 @@ class Theorem(ProofScript):
         if not self.is_closed:
             raise FrameworkError(f"Theorem '{self.name}' cannot be closed: The proof is not finished.")
 
-        final_proof_term = self.manager.current_state.metavars[list(self.manager.current_state.metavars.keys())[0]].assignment
-        if final_proof_term is None:
-            final_proof_term = self.manager.current_state.metavars[list(self.manager.current_state.metavars.keys())[-1]].assignment
+        proof_term = self.manager.current_proof_term
+        if proof_term is None:
+            raise FrameworkError(f"Theorem '{self.name}' internal error: Failed to extract a valid proof term.")
 
-        # TODO: Consider other declaration types, params...
-        env.add(
-            declaration=ConstantDeclaration(
-                name=self.name,
-                level_params=(),
-                type=self.statement,
-                value=final_proof_term
-            )
+        declaration = ConstantDeclaration(
+            name=self.name,
+            level_params=self.level_params,
+            type=self.statement,
+            value=proof_term
         )
-        print(f"Theorem '{self.name}' successfully proved and registered. ✨")
+
+        try:
+            self.env.add(declaration)
+        except ValueError as e:
+            raise FrameworkError(f"Failed to register theorem: {e}")
+
+        print(f"Theorem '{self.name}' successfully proved and registered as {proof_term}. ✨")
 
 
 # Stylistic aliases for Theorem.
@@ -85,4 +90,8 @@ class Example(ProofScript):
         """Verify the anonymity proof is complete."""
         if not self.is_closed:
             raise FrameworkError("Example cannot be verified: The proof is not finished.")
+
+        if self.manager.current_proof_term is None:
+            raise FrameworkError("Example internal error: Failed to extract a valid proof term.")
+
         print("Example successfully verified! Q.E.D. 🎉")

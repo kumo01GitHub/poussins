@@ -42,6 +42,19 @@ def whnf(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
             return expr
 
 
+def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
+    """
+    Fully instantiate the expression by recursively replacing all meta-variables with their assignments.
+    """
+    current = expr
+    while True:
+        next_term = instantiate_meta(current, metavars)
+        if next_term == current:
+            break
+        current = next_term
+    return current
+
+
 def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> Expr:
     """Infer the type (which is also an Expr) of the given expression."""
     expr = instantiate_meta(expr, metavars)

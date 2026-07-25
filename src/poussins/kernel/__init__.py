@@ -6,7 +6,7 @@ from .proof_engine import ProofEngine
 from .proof_manager import ProofManager
 from .proof_session import ProofSession
 from .proof_state import ProofState
-from .typecheck import infer_type, whnf
+from .typecheck import infer_type, whnf, instantiate
 
 __all__ = [
     "Goal",
@@ -16,4 +16,5 @@ __all__ = [
     "ProofState",
     "infer_type",
     "whnf",
+    "instantiate",
 ]

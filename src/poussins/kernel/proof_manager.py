@@ -10,6 +10,7 @@ from .proof_engine import ProofEngine
 from .proof_session import ProofSession
 from .proof_state import ProofState
 from .goal import Goal
+from .typecheck import instantiate
 from ..ast import Expr
 from ..environment import Environment
 
@@ -20,6 +21,7 @@ class ProofManager:
         self.engine = ProofEngine(env)
         initial_state = self.engine.create_initial_state(statement)
         self.session = ProofSession(initial_state)
+        self.root_metavar_id = initial_state.current_goal.id if initial_state.current_goal else None
 
     @property
     def current_state(self) -> ProofState:
@@ -30,6 +32,19 @@ class ProofManager:
     def is_closed(self) -> bool:
         """Check if the proof session is closed (i.e., no active goals remain)."""
         return self.session.is_closed
+
+    @property
+    def current_proof_term(self) -> Expr:
+        """Return the current proof term by instantiating the root metavariable with its assignment."""
+        if self.root_metavar_id is None:
+            return None
+
+        metavars = self.current_state.metavars
+        root_metavar = metavars.get(self.root_metavar_id)
+        if root_metavar is None or root_metavar.assignment is None:
+            return None
+
+        return instantiate(root_metavar.assignment, metavars)
 
     def close_goal(self, assignment: Expr):
         """Close the current goal by providing an assignment that satisfies the goal's statement."""
