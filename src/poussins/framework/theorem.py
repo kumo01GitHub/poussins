@@ -46,6 +46,7 @@ class Theorem(ProofScript):
         if final_proof_term is None:
             final_proof_term = self.manager.current_state.metavars[list(self.manager.current_state.metavars.keys())[-1]].assignment
 
+        # TODO: Consider other declaration types, params...
         env.add(
             declaration=ConstantDeclaration(
                 name=self.name,
