@@ -1,6 +1,6 @@
 from poussins import Lemma, Prop, Environment
 from poussins.ast.expr import ESort, EVar
-from poussins.ast.universe import UnivLevelSucc, UnivLevelZero
+from poussins.ast.universe import UnivLevelZero
 from poussins.environment import ConstantDeclaration 
 
 env = Environment()
