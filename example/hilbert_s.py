@@ -5,15 +5,15 @@ from poussins.environment import ConstantDeclaration
 
 env = Environment()
 
-type_sort = ESort(UnivLevelSucc(UnivLevelZero()))
+prop_sort = ESort(UnivLevelZero())
 
-env.add(ConstantDeclaration(name="P", level_params=(), type=type_sort, value=EVar("P")))
-env.add(ConstantDeclaration(name="Q", level_params=(), type=type_sort, value=EVar("Q")))
-env.add(ConstantDeclaration(name="R", level_params=(), type=type_sort, value=EVar("R")))
+env.add(ConstantDeclaration(name="P", level_params=(), type=prop_sort, value=EVar("P")))
+env.add(ConstantDeclaration(name="Q", level_params=(), type=prop_sort, value=EVar("Q")))
+env.add(ConstantDeclaration(name="R", level_params=(), type=prop_sort, value=EVar("R")))
 
-P, Q, R = Prop("P"), Prop("Q"), Prop("R")
+p, q, r = Prop("P"), Prop("Q"), Prop("R")
 
-hilbert_s = Lemma("HilbertS", ((P >> (Q >> R)) >> ((P >> Q) >> (P >> R))), env)
+hilbert_s = Lemma("HilbertS", ((p >> (q >> r)) >> ((p >> q) >> (p >> r))), env)
 print(f"{hilbert_s.name}: {hilbert_s.statement}")
 
 hilbert_s.intro("hPQR")
