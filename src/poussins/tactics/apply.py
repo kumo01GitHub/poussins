@@ -1,19 +1,19 @@
 from __future__ import annotations
-from ..ast import EApp, EPi, EMetaVar, Expr
-from ..ast.ops import substitute_expr_var  
+from ..ast import (
+    EApp, EPi, EMetaVar, Expr,
+    substitute_expr_var
+)
 from ..kernel import (
     ProofManager,
     Goal,
-    infer_type, whnf
+    infer_type, whnf, is_alpha_eq
 )
 from ..errors import TacticError
 
 
 def apply(manager: ProofManager, expr: Expr) -> None:
     """
-    Apply tactic: Apply a theorem or a hypothesis expression (Expr) to the current goal.
-    It matches the conclusion of the expression's type with the current goal,
-    and generates new subgoals for each of the expression's premises.
+    Apply tactic: Apply a theorem or lemma to the current goal, generating subgoals as necessary.
     """
     if manager.is_closed:
         raise TacticError("apply failed: No active goals remain.")
@@ -27,15 +27,12 @@ def apply(manager: ProofManager, expr: Expr) -> None:
     except Exception as e:
         raise TacticError(f"apply failed: Could not infer type of the given expression: {e}")
 
-    premises: list[Expr] = []
     implicit_subgoals: list[Goal] = []
-    
+
     current_type = whnf(expr_type, state.metavars)
     assignment = expr
 
     while isinstance(current_type, EPi):
-        premises.append(current_type.domain)
-        
         new_goal = Goal(statement=current_type.domain, context=current_goal.context)
         implicit_subgoals.append(new_goal)
 
@@ -52,7 +49,6 @@ def apply(manager: ProofManager, expr: Expr) -> None:
 
     conclusion = current_type
 
-    from ..kernel.typecheck import is_alpha_eq
     if not is_alpha_eq(whnf(conclusion, state.metavars), whnf(current_goal.statement, state.metavars)):
         raise TacticError(
             f"apply failed: Type mismatch.\n"
