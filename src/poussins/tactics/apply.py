@@ -4,8 +4,7 @@ from ..ast import (
     substitute_expr_var
 )
 from ..kernel import (
-    ProofManager,
-    Goal,
+    ProofManager, Goal,
     infer_type, whnf, is_alpha_eq
 )
 from ..errors import TacticError
