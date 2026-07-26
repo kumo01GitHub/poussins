@@ -51,7 +51,7 @@ env.add(ConstantDeclaration(name="Q", level_params=(), type=prop_sort, value=ECo
 p, q = Prop("P"), Prop("Q")
 
 example = Example(p >> (q >> (p & q)), env)
-print(f"Statement: {example.statement}")
+print(f"Example: {example.statement}")
 
 example.intro("hP")
 example.intro("hQ")
@@ -60,3 +60,5 @@ example.exact("hP")
 example.exact("hQ")
 
 example.qed()
+print(f"Example has been successfully proved ✨:")
+print(f"    {example.manager.current_proof_term}")

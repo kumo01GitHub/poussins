@@ -60,8 +60,6 @@ class Theorem(ProofScript):
         except ValueError as e:
             raise FrameworkError(f"Failed to register theorem: {e}")
 
-        print(f"Theorem '{self.name}' successfully proved and registered as {proof_term}. ✨")
-
 
 # Stylistic aliases for Theorem.
 Lemma = Theorem
@@ -93,5 +91,3 @@ class Example(ProofScript):
 
         if self.manager.current_proof_term is None:
             raise FrameworkError("Example internal error: Failed to extract a valid proof term.")
-
-        print(f"Example successfully verified as {self.manager.current_proof_term}! Q.E.D. 🎉")

@@ -27,3 +27,5 @@ hilbert_s.apply("hPQ")
 hilbert_s.exact("hP")
 
 hilbert_s.qed()
+print(f"Theorem '{hilbert_s.name}' has been successfully proved ✨:")
+print(f"    {hilbert_s.manager.current_proof_term}")
