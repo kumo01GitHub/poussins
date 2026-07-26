@@ -18,6 +18,7 @@ from ..environment import Environment
 @final
 class ProofManager:
     def __init__(self, statement: Expr, env: Environment):
+        self.env = env
         self.engine = ProofEngine(env)
         initial_state = self.engine.create_initial_state(statement)
         self.session = ProofSession(initial_state)

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from ..ast import Expr, EVar
 from ..environment import Environment
 from ..kernel import ProofManager, ProofState
-from ..tactics import apply, exact, intro
+from ..tactics import apply, exact, intro, constructor
 
 
 class ProofScript(ABC):
@@ -48,3 +48,6 @@ class ProofScript(ABC):
     def exact(self, expr_or_name: Expr | str) -> None:
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
+
+    def constructor(self) -> None:
+        constructor(self.manager)

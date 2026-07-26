@@ -7,7 +7,10 @@ from .ast import (
     has_meta_var, substitute_meta_var, collect_meta_var_ids,
     substitute_expr_var, collect_free_vars
 )
-from .environment import Environment, Declaration
+from .environment import (
+    Environment, Declaration,
+    ConstantDeclaration, InductiveDeclaration, ConstructorDeclaration, QuotDeclaration
+)
 from .errors import (
     KernelStateError,
     KernelValueError,
@@ -28,8 +31,9 @@ from .framework import (
 )
 from .tactics import (
     apply,
-    intro,
-    exact
+    constructor,
+    exact,
+    intro
 )
 
 __all__ = [
@@ -57,6 +61,10 @@ __all__ = [
     # Environment
     "Environment",
     "Declaration",
+    "ConstantDeclaration",
+    "InductiveDeclaration",
+    "ConstructorDeclaration",
+    "QuotDeclaration",
     # Errors
     "KernelStateError",
     "KernelValueError",
@@ -79,4 +87,5 @@ __all__ = [
     "apply",
     "intro",
     "exact",
+    "constructor",
 ]

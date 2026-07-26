@@ -94,4 +94,4 @@ class Example(ProofScript):
         if self.manager.current_proof_term is None:
             raise FrameworkError("Example internal error: Failed to extract a valid proof term.")
 
-        print("Example successfully verified! Q.E.D. 🎉")
+        print(f"Example successfully verified as {self.manager.current_proof_term}! Q.E.D. 🎉")

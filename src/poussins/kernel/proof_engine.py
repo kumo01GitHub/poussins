@@ -14,7 +14,6 @@ from ..errors import KernelStateError, KernelValueError
 
 class ProofEngine:
     def __init__(self, env: Environment):
-        self.env = env
         self.global_context = {name: decl.type for name, decl in env.items()}
 
     def create_initial_state(self, statement: Expr) -> ProofState:
@@ -36,12 +35,11 @@ class ProofEngine:
         candidate_metavars = state.metavars | {
             current_goal.id: MetaVar(statement=current_goal.statement, assignment=assignment)
         }
-
         inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
         final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+        remaining_goals = [g for g in state.goals[1:] if not final_metavars[g.id].is_assigned]
 
-        new_goals = state.goals[1:]
-        return ProofState(goals=new_goals, metavars=final_metavars)
+        return ProofState(goals=tuple(remaining_goals), metavars=final_metavars)
 
     def refine_goal(self, state: ProofState, assignment: Expr, subgoals: list[Goal]) -> ProofState:
         """
@@ -53,18 +51,11 @@ class ProofEngine:
 
         candidate_metavars = state.metavars | {g.id: MetaVar(statement=g.statement) for g in subgoals}
         candidate_metavars[current_goal.id] = MetaVar(statement=current_goal.statement, assignment=assignment)
-        
-        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
-
-        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
-
-        new_goals = tuple(subgoals) + state.goals[1:]
-        candidate_state = ProofState(goals=new_goals, metavars=final_metavars)
 
         meta_var_ids = collect_meta_var_ids(assignment)
-        assigned_ids = {mid for mid, m in final_metavars.items() if m.is_assigned and mid != current_goal.id}
+        assigned_ids = {mid for mid, m in state.metavars.items() if m.is_assigned}
         active_meta_ids = meta_var_ids - assigned_ids
-        
+
         other_goal_ids = {g.id for g in state.goals[1:]}
         subgoal_ids = {g.id for g in subgoals}
         untracked_ids = active_meta_ids - subgoal_ids - other_goal_ids
@@ -79,7 +70,14 @@ class ProofEngine:
             raise KernelValueError("Some provided subgoals are missing from the assignment expression.")
 
         for g in subgoals:
-            if g.id in state.metavars and state.metavars[g.id].is_assigned:
-                raise KernelStateError(f"Meta-variable ?{g.id} is already registered and assigned in the proof state.")
+            if g.id in state.metavars:
+                raise KernelStateError(f"Meta-variable ?{g.id} is already registered in the proof state.")
 
-        return candidate_state
+        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
+
+        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+
+        all_potential_goals = subgoals + list(state.goals[1:])
+        truly_active_goals = [g for g in all_potential_goals if not final_metavars[g.id].is_assigned]
+
+        return ProofState(goals=tuple(truly_active_goals), metavars=final_metavars)
