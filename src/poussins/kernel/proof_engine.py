@@ -6,11 +6,10 @@ from __future__ import annotations
 
 from .proof_state import ProofState, MetaVar
 from .goal import Goal
-from .typecheck import infer_type, whnf, is_alpha_eq
+from .typecheck import infer_type, unify
 from ..ast import Expr, collect_meta_var_ids
-from ..errors import KernelStateError, KernelTypeError, KernelValueError
-
 from ..environment import Environment
+from ..errors import KernelStateError, KernelValueError
 
 
 class ProofEngine:
@@ -34,49 +33,39 @@ class ProofEngine:
         if current_goal is None:
             raise KernelStateError("No active goal to close.")
 
-        new_metavars = state.metavars | {
+        candidate_metavars = state.metavars | {
             current_goal.id: MetaVar(statement=current_goal.statement, assignment=assignment)
         }
+
+        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
+        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+
         new_goals = state.goals[1:]
-        candidate_state = ProofState(goals=new_goals, metavars=new_metavars)
-
-        inferred_type = infer_type(assignment, current_goal.context, candidate_state.metavars)
-
-        if not is_alpha_eq(whnf(inferred_type, candidate_state.metavars), whnf(current_goal.statement, candidate_state.metavars)):
-            raise KernelTypeError(
-                f"Goal statement mismatch. "
-                f"Expected: {current_goal.statement}, Found: {inferred_type}"
-            )
-
-        return candidate_state
+        return ProofState(goals=new_goals, metavars=final_metavars)
 
     def refine_goal(self, state: ProofState, assignment: Expr, subgoals: list[Goal]) -> ProofState:
         """
         Refine the current goal by providing an assignment that splits it into new subgoals.
-        Called by tactics (e.g., apply, intro).
         """
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to refine.")
 
-        new_metavars = state.metavars | {g.id: MetaVar(statement=g.statement) for g in subgoals}
-        new_metavars[current_goal.id] = MetaVar(statement=current_goal.statement, assignment=assignment)
-        new_goals = tuple(subgoals) + state.goals[1:]
+        candidate_metavars = state.metavars | {g.id: MetaVar(statement=g.statement) for g in subgoals}
+        candidate_metavars[current_goal.id] = MetaVar(statement=current_goal.statement, assignment=assignment)
         
-        candidate_state = ProofState(goals=new_goals, metavars=new_metavars)
+        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
 
-        inferred_type = infer_type(assignment, current_goal.context, candidate_state.metavars)
-        if not is_alpha_eq(whnf(inferred_type, candidate_state.metavars), whnf(current_goal.statement, candidate_state.metavars)):
-            raise KernelTypeError(
-                f"Goal statement mismatch inside refinement. "
-                f"Expected: {current_goal.statement}, Found: {inferred_type}"
-            )
+        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+
+        new_goals = tuple(subgoals) + state.goals[1:]
+        candidate_state = ProofState(goals=new_goals, metavars=final_metavars)
 
         meta_var_ids = collect_meta_var_ids(assignment)
-        assigned_ids = {mid for mid, m in state.metavars.items() if m.is_assigned}
+        assigned_ids = {mid for mid, m in final_metavars.items() if m.is_assigned and mid != current_goal.id}
         active_meta_ids = meta_var_ids - assigned_ids
+        
         other_goal_ids = {g.id for g in state.goals[1:]}
-
         subgoal_ids = {g.id for g in subgoals}
         untracked_ids = active_meta_ids - subgoal_ids - other_goal_ids
 
@@ -90,7 +79,7 @@ class ProofEngine:
             raise KernelValueError("Some provided subgoals are missing from the assignment expression.")
 
         for g in subgoals:
-            if g.id in state.metavars:
-                raise KernelStateError(f"Meta-variable ?{g.id} is already registered in the proof state.")
+            if g.id in state.metavars and state.metavars[g.id].is_assigned:
+                raise KernelStateError(f"Meta-variable ?{g.id} is already registered and assigned in the proof state.")
 
         return candidate_state

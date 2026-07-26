@@ -168,3 +168,123 @@ def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = 
 
         case _:
             return False
+
+def is_def_eq(
+    t1: Expr, t2: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar]
+) -> bool:
+    """
+    Check if two expressions are definitionally equal.
+    It fully instantiates meta-variables, checks for alpha-equivalence,
+    and falls back to WHNF reduction and structural recursion.
+    """
+    t1 = instantiate(t1, metavars)
+    t2 = instantiate(t2, metavars)
+
+    if is_alpha_eq(t1, t2):
+        return True
+
+    t1_whnf = whnf(t1, metavars)
+    t2_whnf = whnf(t2, metavars)
+
+    if t1_whnf != t1 or t2_whnf != t2:
+        if is_alpha_eq(t1_whnf, t2_whnf):
+            return True
+
+    if type(t1_whnf) is not type(t2_whnf):
+        return False
+
+    match (t1_whnf, t2_whnf):
+        case (EApp(f1, a1), EApp(f2, a2)):
+            return (
+                is_def_eq(f1, f2, context, metavars) and
+                is_def_eq(a1, a2, context, metavars)
+            )
+
+        case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
+            if not is_def_eq(d1, d2, context, metavars):
+                return False
+
+            if v1 != v2:
+                b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
+
+            return is_def_eq(b1, b2, context | {v1: d1}, metavars)
+
+        case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
+            if i1 != i2:
+                return False
+            if not is_def_eq(d1, d2, context, metavars):
+                return False
+            if not is_def_eq(m1, m2, context, metavars):
+                return False
+            if len(c1) != len(c2):
+                return False
+            return all(is_def_eq(b1, b2, context, metavars) for b1, b2 in zip(c1, c2))
+
+        case _:
+            return False
+
+
+def unify(
+    t1: Expr, t2: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar]
+) -> dict[str, MetaVar]:
+    """
+    Unify two expressions and return an updated metavars dictionary.
+    This implementation leverages instantiate and is_alpha_eq for maximal simplicity.
+    Raises TacticError if unification fails.
+    """
+    t1 = instantiate(t1, metavars)
+    t2 = instantiate(t2, metavars)
+
+    if is_alpha_eq(t1, t2):
+        return metavars
+
+    if isinstance(t1, EMetaVar):
+        mvar_id = t1.goal_id
+        if mvar_id in metavars and not metavars[mvar_id].is_assigned:
+            return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t2)}
+
+    if isinstance(t2, EMetaVar):
+        mvar_id = t2.goal_id
+        if mvar_id in metavars and not metavars[mvar_id].is_assigned:
+            return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t1)}
+
+    t1_whnf = whnf(t1, metavars)
+    t2_whnf = whnf(t2, metavars)
+
+    if t1_whnf != t1 or t2_whnf != t2:
+        if is_alpha_eq(t1_whnf, t2_whnf):
+            return metavars
+        if isinstance(t1_whnf, EMetaVar) or isinstance(t2_whnf, EMetaVar):
+            return unify(t1_whnf, t2_whnf, context, metavars)
+
+    if type(t1_whnf) is not type(t2_whnf):
+        raise KernelTypeError(f"Unification failed: type mismatch between {t1_whnf} and {t2_whnf}")
+
+    match (t1_whnf, t2_whnf):
+        case (EApp(f1, a1), EApp(f2, a2)):
+            current_metavars = unify(f1, f2, context, metavars)
+            return unify(a1, a2, context, current_metavars)
+
+        case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
+            current_metavars = unify(d1, d2, context, metavars)
+            if v1 != v2:
+                b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
+            return unify(b1, b2, context | {v1: d1}, current_metavars)
+
+        case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
+            if i1 != i2:
+                raise KernelTypeError("Unification failed: match inductive type mismatch")
+            current_metavars = unify(d1, d2, context, metavars)
+            current_metavars = unify(m1, m2, context, current_metavars)
+            if len(c1) != len(c2):
+                raise KernelTypeError("Unification failed: match branch length mismatch")
+            for b1, b2 in zip(c1, c2):
+                current_metavars = unify(b1, b2, context, current_metavars)
+            return current_metavars
+
+        case _:
+            raise KernelTypeError(f"Unification failed: expressions are structurally distinct: {t1_whnf} vs {t2_whnf}")

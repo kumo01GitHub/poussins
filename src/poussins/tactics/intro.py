@@ -14,7 +14,8 @@ def intro(manager: ProofManager, var_name: str) -> None:
 
     state = manager.current_state
     current_goal = state.current_goal
-    assert current_goal is not None
+    if current_goal is None:
+        raise TacticError("intro failed: No active goals remain.")
 
     goal_expr = whnf(current_goal.statement, state.metavars)
     if not isinstance(goal_expr, EPi):
@@ -38,7 +39,4 @@ def intro(manager: ProofManager, var_name: str) -> None:
         body=EMetaVar(new_subgoal.id)
     )
 
-    try:
-        manager.refine_goal(assignment, [new_subgoal])
-    except Exception as e:
-        raise TacticError(f"intro failed during kernel verification: {e}") from e
+    manager.refine_goal(assignment, [new_subgoal])

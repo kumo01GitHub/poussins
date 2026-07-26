@@ -6,7 +6,7 @@ from .proof_engine import ProofEngine
 from .proof_manager import ProofManager
 from .proof_session import ProofSession
 from .proof_state import ProofState
-from .typecheck import infer_type, whnf, instantiate, is_alpha_eq
+from .typecheck import infer_type, whnf, instantiate, is_alpha_eq, is_def_eq, unify
 
 __all__ = [
     "Goal",
@@ -18,4 +18,6 @@ __all__ = [
     "whnf",
     "instantiate",
     "is_alpha_eq",
+    "is_def_eq",
+    "unify",
 ]
