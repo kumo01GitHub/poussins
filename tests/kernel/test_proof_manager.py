@@ -21,6 +21,13 @@ def test_manager_current_proof_term_none_before_closure(default_env) -> None:
     assert manager.current_proof_term is None
 
 
+def test_manager_current_proof_term_none_when_root_metavar_is_unset(default_env) -> None:
+    manager = ProofManager(EConst("True", ()), default_env)
+    manager.root_metavar_id = None
+
+    assert manager.current_proof_term is None
+
+
 def test_manager_close_goal_builds_proof_term(default_env) -> None:
     manager = ProofManager(EConst("True", ()), default_env)
 

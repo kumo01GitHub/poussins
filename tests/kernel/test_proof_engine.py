@@ -40,6 +40,14 @@ def test_close_goal_without_active_goal_raises(default_env) -> None:
         engine.close_goal(state, EConst("True.intro", ()))
 
 
+def test_refine_goal_without_active_goal_raises(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = ProofState(goals=(), metavars={})
+
+    with pytest.raises(KernelStateError):
+        engine.refine_goal(state, EConst("True.intro", ()), subgoals=[])
+
+
 def test_refine_goal_rejects_untracked_metavars(default_env) -> None:
     engine = ProofEngine(default_env)
     state = engine.create_initial_state(EConst("True", ()))
