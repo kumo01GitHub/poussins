@@ -106,7 +106,7 @@ def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar
 
             expected_domain = whnf(fn_type_whnf.domain, metavars)
             actual_arg_type = whnf(arg_type, metavars)
-            if expected_domain != actual_arg_type:
+            if not is_def_eq(expected_domain, actual_arg_type, context, metavars):
                 raise KernelTypeError(f"Argument type mismatch. Expected: {expected_domain}, Found: {actual_arg_type}")
 
             return substitute_expr_var(fn_type_whnf.body, fn_type_whnf.var, arg)
@@ -124,7 +124,7 @@ def check_type(expr: Expr, expected_type: Expr, context: dict[str, Expr], metava
     """
     try:
         inferred = infer_type(expr, context, metavars)
-        return whnf(inferred, metavars) == whnf(expected_type, metavars)
+        return is_def_eq(inferred, expected_type, context, metavars)
     except KernelTypeError:
         return False
 

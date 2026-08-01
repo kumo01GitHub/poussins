@@ -88,6 +88,22 @@ def test_infer_type_app_argument_mismatch_raises() -> None:
         infer_type(EApp(fn, arg), context={}, metavars={})
 
 
+def test_infer_type_app_accepts_alpha_equivalent_argument_types() -> None:
+    fn = ELam("f", EPi("y", _prop(), _prop()), EVar("f"))
+    arg = ELam("z", _prop(), EVar("z"))
+
+    inferred = infer_type(EApp(fn, arg), context={}, metavars={})
+
+    assert inferred == EPi("y", _prop(), _prop())
+
+
+def test_check_type_accepts_alpha_equivalent_argument_types() -> None:
+    fn = ELam("f", EPi("y", _prop(), _prop()), EVar("f"))
+    arg = ELam("z", _prop(), EVar("z"))
+
+    assert check_type(EApp(fn, arg), EPi("y", _prop(), _prop()), context={}, metavars={})
+
+
 def test_check_type_returns_true_when_types_match() -> None:
     expr = ELam("x", _prop(), EVar("x"))
     expected = EPi("x", _prop(), _prop())
