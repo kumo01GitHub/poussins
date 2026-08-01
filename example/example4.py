@@ -14,5 +14,5 @@ example.exfalso()
 example.exact("hFalse")
 
 example.qed()
-print(f"Example has been successfully proved ✨:")
+print("Example has been successfully proved ✨:")
 print(f"    {example.manager.current_proof_term}")

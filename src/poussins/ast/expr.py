@@ -58,7 +58,7 @@ class EConst(Expr):
 
     def __str__(self) -> str:
         if self.levels:
-            levels_str = ", ".join(str(l) for l in self.levels)
+            levels_str = ", ".join(str(lv) for lv in self.levels)
             return f"{self.name}.{{{levels_str}}}"
         else:
             return self.name

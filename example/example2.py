@@ -14,7 +14,7 @@ example1.constructor(1)
 example1.exact("hP")
 
 example1.qed()
-print(f"Example1 has been successfully proved ✨:")
+print("Example1 has been successfully proved ✨:")
 print(f"    {example1.manager.current_proof_term}")
 
 
@@ -29,5 +29,5 @@ example2.constructor(2)
 example2.exact("hQ")
 
 example2.qed()
-print(f"Example2 has been successfully proved ✨:")
+print("Example2 has been successfully proved ✨:")
 print(f"    {example2.manager.current_proof_term}")

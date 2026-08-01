@@ -17,7 +17,7 @@ example1.exact("hP")
 example1.exact("hQ")
 
 example1.qed()
-print(f"Example1 has been successfully proved ✨:")
+print("Example1 has been successfully proved ✨:")
 print(f"    {example1.manager.current_proof_term}")
 
 
@@ -31,5 +31,5 @@ example2.intro("hP")
 example2.assumption()
 
 example2.qed()
-print(f"Example2 has been successfully proved ✨:")
+print("Example2 has been successfully proved ✨:")
 print(f"    {example2.manager.current_proof_term}")
