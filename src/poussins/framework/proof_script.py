@@ -9,9 +9,10 @@ from ..environment import Environment
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     apply,
-    exact,
+    exact, assumption,
     intro, intros,
-    constructor
+    constructor,
+    exfalso
 )
 
 
@@ -57,5 +58,11 @@ class ProofScript(ABC):
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
 
+    def assumption(self) -> None:
+        assumption(self.manager)
+
     def constructor(self, index: int | None = None) -> None:
         constructor(self.manager, index)
+
+    def exfalso(self) -> None:
+        exfalso(self.manager)

@@ -75,6 +75,14 @@ class Environment:
                 constructor_names=(),
             )
         )
+        env.add(
+            ConstantDeclaration(
+                name="False.elim",
+                level_params=(),
+                type=EPi("P", cls.PROP_SORT, EPi("_", EConst("False", ()), EVar("P"))),
+                value=None,
+            )
+        )
 
         # ---------------------------------------------------------
         # 3. And (Conjunction)

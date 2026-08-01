@@ -32,8 +32,9 @@ from .framework import (
 from .tactics import (
     apply,
     constructor,
-    exact,
-    intro
+    exact, assumption,
+    intro, intros,
+    exfalso,
 )
 
 __all__ = [
@@ -86,6 +87,9 @@ __all__ = [
     # Tactics
     "apply",
     "intro",
+    "intros",
     "exact",
+    "assumption",
     "constructor",
+    "exfalso",
 ]
