@@ -88,6 +88,27 @@ def test_infer_type_app_argument_mismatch_raises() -> None:
         infer_type(EApp(fn, arg), context={}, metavars={})
 
 
+def test_infer_type_lambda_body_must_have_type() -> None:
+    expr = ELam("x", _prop(), EApp(EConst("bad", ()), EConst("bad", ())))
+
+    with pytest.raises(KernelTypeError):
+        infer_type(expr, context={}, metavars={})
+
+
+def test_infer_type_pi_domain_must_be_sort() -> None:
+    expr = EPi("x", EVar("x"), _prop())
+
+    with pytest.raises(KernelTypeError):
+        infer_type(expr, context={}, metavars={})
+
+
+def test_infer_type_app_requires_function_type() -> None:
+    expr = EApp(EConst("True", ()), EConst("True", ()))
+
+    with pytest.raises(KernelTypeError):
+        infer_type(expr, context={}, metavars={})
+
+
 def test_infer_type_app_accepts_alpha_equivalent_argument_types() -> None:
     fn = ELam("f", EPi("y", _prop(), _prop()), EVar("f"))
     arg = ELam("z", _prop(), EVar("z"))

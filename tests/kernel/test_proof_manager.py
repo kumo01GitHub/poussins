@@ -1,6 +1,10 @@
+import pytest
+
 from poussins.ast import EConst, EMetaVar
+from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_manager import ProofManager
+from poussins.kernel.proof_state import ProofState
 
 
 def test_manager_initial_state_and_unclosed_status(default_env) -> None:
@@ -48,3 +52,18 @@ def test_manager_refine_then_close_subgoal(default_env) -> None:
 
     assert manager.is_closed
     assert manager.current_proof_term == EConst("True.intro", ())
+
+
+def test_manager_close_goal_without_active_goal_raises_kernel_state_error(default_env) -> None:
+    manager = ProofManager(EConst("True", ()), default_env)
+    manager.session.update_state(ProofState(goals=(), metavars={}))
+
+    with pytest.raises(KernelStateError):
+        manager.close_goal(EConst("True.intro", ()))
+
+
+def test_manager_refine_goal_with_untracked_metavar_raises_kernel_value_error(default_env) -> None:
+    manager = ProofManager(EConst("True", ()), default_env)
+
+    with pytest.raises(KernelValueError):
+        manager.refine_goal(EMetaVar("ghost"), subgoals=[])
