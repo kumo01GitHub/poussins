@@ -25,7 +25,6 @@ uv run python example/example1.py
 ```bash
 # CLI
 uv run -m poussins prove path/to/proofs.py
-uv run -m poussins step path/to/proofs.py --theorem theorem_name
 
 # Tests and lint
 uv run pytest
