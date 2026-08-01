@@ -1,18 +1,21 @@
-"""
-Propositional logic example using poussins DSL.
-"""
-
 from poussins import Lemma, Prop, Environment
 
-a, b, c = Prop("A"), Prop("B"), Prop("C")
 
-hilbert_s = Lemma("HilbertS", ((a >> (b >> c)) >> ((a >> b) >> (a >> c))).formula)
+env = Environment.default()
+
+p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
+
+hilbert_s = Lemma("HilbertS", ((p >> (q >> r)) >> ((p >> q) >> (p >> r))), env)
 print(f"{hilbert_s.name}: {hilbert_s.statement}")
 
-hilbert_s.intros(["habc", "hab", "ha"])
-hilbert_s.apply("habc")
-hilbert_s.exact("ha")
-hilbert_s.apply("hab")
-hilbert_s.exact("ha")
-hilbert_s.qed(Environment())
-print(f"Assignment: {hilbert_s.assignment}")
+hilbert_s.intro("hPQR")
+hilbert_s.intro("hPQ")
+hilbert_s.intro("hP")
+hilbert_s.apply("hPQR")
+hilbert_s.exact("hP")
+hilbert_s.apply("hPQ")
+hilbert_s.exact("hP")
+
+hilbert_s.qed()
+print(f"Theorem '{hilbert_s.name}' has been successfully proved ✨:")
+print(f"    {hilbert_s.manager.current_proof_term}")

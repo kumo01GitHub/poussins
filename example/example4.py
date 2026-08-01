@@ -1,26 +1,18 @@
 """
 Propositional logic example using poussins DSL.
 """
+from poussins import Example, Prop, Environment
 
-from poussins import Theorem, Example, Prop, Environment
 
-a, b, c, d = Prop("A"), Prop("B"), Prop("C"), Prop("D")
-env = Environment()
+env = Environment.default()
 
-th = Theorem("Sample", a >> (b >> ((a | c) & (d | b))))
-print(f"Statement: {th.statement}")
-th.intros(["ha", "hb"])
-th.constructor()
-th.constructor()
-th.exact("ha")
-th.constructor(2)
-th.exact("hb")
-th.qed(env)
-print(f"Assignment: {th.assignment}")
+example = Example(Prop.bottom() >> Prop("A", env), env)
+print(f"Example: {example.statement}")
 
-example = Example(a >> (b >> ((a | c) & (d | b))))
-print(f"Statement: {example.statement}")
-example.import_env(env)
-example.exact("Sample")
+example.intro("hFalse")
+example.exfalso()
+example.exact("hFalse")
+
 example.qed()
-print(f"Assignment: {example.assignment}")
+print("Example has been successfully proved ✨:")
+print(f"    {example.manager.current_proof_term}")

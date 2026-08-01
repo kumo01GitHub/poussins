@@ -1,52 +1,48 @@
-"""
-Apply tactic: applies a hypothesis or a theorem to the current goal, generating subgoals for the premises of the hypothesis/theorem.
-"""
-from copy import deepcopy
-from typing import Optional
+from __future__ import annotations
 
-from ..ast import Formula, FImpl, ProofTerm, PApp, PMetaVar, PVar
+from ..ast import (
+    EApp, EPi, EMetaVar, Expr,
+    substitute_expr_var
+)
+from ..kernel import ProofManager, Goal, infer_type, whnf
 from ..errors import TacticError
-from ..framework import Environment
-from ..kernel import ProofEngine, Goal
 
 
-def apply(engine: ProofEngine, hyp_name: str, env: Optional[Environment]):
-    current_goal = engine.state.current_goal
+def apply(manager: ProofManager, expr: Expr) -> None:
+    """
+    Apply tactic: Apply a theorem or a hypothesis expression (Expr) to the current goal.
+    """
+    if manager.is_closed:
+        raise TacticError("apply failed: No active goals remain.")
+
+    state = manager.current_state
+    current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("No active goal to apply apply tactic.")
+        raise TacticError("apply failed: No active goals remain.")
 
-    hyp = current_goal.context.get(hyp_name)
-    if hyp is not None and hyp == current_goal.formula:
-        engine.close_goal(PVar(name=hyp_name))
-        return
-    elif hyp is None:
-        if env is None:
-            env = Environment()
-        declaration = env.get(hyp_name)
-        if declaration is not None and declaration.statement == current_goal.formula:
-            engine.close_goal(declaration.assignment)
-            return
-        elif declaration is not None:
-            hyp = declaration.statement
+    implicit_subgoals: list[Goal] = []
+    current_type = whnf(infer_type(expr, current_goal.context, state.metavars), state.metavars)
+    assignment = expr
 
-    if hyp is None:
-        raise TacticError(f"Hypothesis '{hyp_name}' not found in the current context.")
-    elif not isinstance(hyp, FImpl):
-        raise TacticError(f"Hypothesis '{hyp_name}' is not an implication and cannot be applied.")
+    while isinstance(current_type, EPi):
+        new_goal = Goal(statement=current_type.domain, context=current_goal.context)
+        implicit_subgoals.append(new_goal)
 
-    subgoals: list[Goal] = []
-    assignment: ProofTerm = PVar(name=hyp_name)
-    current_formula: Formula = hyp
-    while isinstance(current_formula, FImpl):
-        subgoal = Goal(
-            formula=deepcopy(current_formula.antecedent),
-            context=current_goal.context
+        assignment = EApp(assignment, EMetaVar(new_goal.id))
+        
+        current_type = whnf(
+            substitute_expr_var(
+                expr=current_type.body,
+                var_name=current_type.var,
+                replacement=EMetaVar(new_goal.id)
+            ),
+            state.metavars
         )
-        subgoals.append(subgoal)
-        assignment = PApp(fn=assignment, arg=PMetaVar(goal_id=subgoal.id))
-        current_formula = current_formula.consequent
 
-    if current_goal.formula != current_formula:
-        raise TacticError(f"Hypothesis '{hyp}' cannot be applied to the current goal '{current_goal.formula}'.")
-
-    engine.refine_goal(subgoals=subgoals, assignment=assignment)
+    try:
+        if not implicit_subgoals:
+            manager.close_goal(assignment)
+        else:
+            manager.refine_goal(assignment, implicit_subgoals)
+    except Exception as e:
+        raise TacticError(f"apply failed during kernel verification: {e}")

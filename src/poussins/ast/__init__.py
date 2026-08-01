@@ -1,60 +1,33 @@
 """
+Abstract Syntax Tree (AST) module.
 """
-from .formulas import (
-    Formula,
-    FVar,
-    FImpl,
-    FAnd,
-    FOr,
-    FTrue,
-    FFalse,
-    FExists,
-)
-from .ops import collect_meta_var_ids, has_meta_var, substitute_meta_var
-from .proof_terms import (
-    ProofTerm,
-    PMetaVar,
-    PVar,
-    PLam,
-    PApp,
-    PAndI,
-    PAndE,
-    POrIL,
-    POrIR,
-    POrE,
-    PTrueI,
-    PFalseE,
-    PExI,
-    PExE,
-)
+from .expr import Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar
+from .ops import has_meta_var, substitute_meta_var, substitute_expr_var, collect_meta_var_ids, collect_free_vars
+from .universe import UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelMax, UnivLevelIMax
+
 
 __all__ = [
-    # Formula AST
-    "Formula",
-    "FVar",
-    "FImpl",
-    "FAnd",
-    "FOr",
-    "FTrue",
-    "FFalse",
-    "FExists",
-    # ProofTerm AST
-    "ProofTerm",
-    "PMetaVar",
-    "PVar",
-    "PLam",
-    "PApp",
-    "PAndI",
-    "PAndE",
-    "POrIL",
-    "POrIR",
-    "POrE",
-    "PTrueI",
-    "PFalseE",
-    "PExI",
-    "PExE",
-    # Operations on AST
-    "collect_meta_var_ids",
+    # Expr classes
+    "Expr",
+    "EVar",
+    "EConst",
+    "EPi",
+    "ELam",
+    "EApp",
+    "EMetaVar",
+    "ESort",
+    "EMatch",
+    # Expr operations
     "has_meta_var",
     "substitute_meta_var",
+    "collect_meta_var_ids",
+    "substitute_expr_var",
+    "collect_free_vars",
+    # Universe level classes
+    "UnivLevel",
+    "UnivLevelZero",
+    "UnivLevelSucc",
+    "UnivLevelParam",
+    "UnivLevelMax",
+    "UnivLevelIMax",
 ]

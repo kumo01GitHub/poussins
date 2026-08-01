@@ -1,23 +1,33 @@
-"""
-Propositional logic example using poussins DSL.
-"""
+from poussins import Example, Prop, Environment
 
-from poussins import Example, Prop
 
-a, b, c, d = Prop("A"), Prop("B"), Prop("C"), Prop("D")
+env = Environment.default()
 
-example1 = Example(a >> (a | b))
-print(f"Statement: {example1.statement}")
-example1.intro("ha")
+p, q = Prop("P", env), Prop("Q", env)
+
+
+example1 = Example(p >> (p | q), env)
+print(f"Example1: {example1.statement}")
+
+example1.intro("hP")
 example1.constructor(1)
-example1.assumption()
-example1.qed()
-print(f"Assignment: {example1.assignment}")
+example1.exact("hP")
 
-example2 = Example(b >> (a | b))
-print(f"Statement: {example2.statement}")
-example2.intro("hb")
+example1.qed()
+print("Example1 has been successfully proved ✨:")
+print(f"    {example1.manager.current_proof_term}")
+
+
+print()
+
+
+example2 = Example(q >> (p | q), env)
+print(f"Example2: {example2.statement}")
+
+example2.intro("hQ")
 example2.constructor(2)
-example2.assumption()
+example2.exact("hQ")
+
 example2.qed()
-print(f"Assignment: {example2.assignment}")
+print("Example2 has been successfully proved ✨:")
+print(f"    {example2.manager.current_proof_term}")

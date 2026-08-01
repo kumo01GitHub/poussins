@@ -1,97 +1,83 @@
 """
-Kernel-level components of the proof system, including the core data structures and proof engine.
+Kernel: Proof Engine
+This module is responsible for managing the proof state, including goals and metavariables.
 """
-from collections import deque
+from __future__ import annotations
 
-from .goal import Goal, Context, ProofAssurance
-from .proof_state import ProofState
-from .typecheck import infer_formula, check_formula
-from ..ast import ProofTerm, Formula, collect_meta_var_ids, has_meta_var, substitute_meta_var
+from .proof_state import ProofState, MetaVar
+from .goal import Goal
+from .typecheck import infer_type, unify
+from ..ast import Expr, collect_meta_var_ids
+from ..environment import Environment
 from ..errors import KernelStateError, KernelValueError
 
 
 class ProofEngine:
-    """Proof engine: manages the proof state and applies inference rules to manipulate goals."""
+    def __init__(self, env: Environment):
+        self.global_context = {name: decl.type for name, decl in env.items()}
 
-    def __init__(self, root_formula: Formula):
-        self.goal = Goal(formula=root_formula, context=Context(hyps={}))
-        self.state = ProofState(goals=deque([self.goal]))
+    def create_initial_state(self, statement: Expr) -> ProofState:
+        """
+        Create the initial proof state with a single goal and its corresponding metavariable.
+        """
+        initial_goal = Goal(statement=statement, context=self.global_context)
+        initial_metavars = {initial_goal.id: MetaVar(statement=statement)}
+        return ProofState(goals=(initial_goal,), metavars=initial_metavars)
 
-    @property
-    def is_closed(self) -> bool:
-        return self.state.is_closed and self.goal.is_closed
-
-    def close_goal(self, assignment: ProofTerm):
-        current_goal = self.state.current_goal
+    def close_goal(self, state: ProofState, assignment: Expr) -> ProofState:
+        """
+        Close the current goal by providing an assignment that satisfies the goal's statement.
+        """
+        current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to close.")
-        elif current_goal.is_closed:
-            raise KernelStateError("Cannot close a closed goal.")
-        elif current_goal.assignment is not None:
-            raise KernelStateError("Current goal is already assigned a proof term.")
-        elif current_goal.formula != infer_formula(assignment, current_goal.context):
-            raise KernelStateError("Assignment does not match the goal's formula.")
-        else:
-            current_goal.assignment = assignment
-            current_goal.assurance = ProofAssurance.VERIFIED
-            closed_goals = [current_goal]
-            processed_goal_ids: set[str] = set()
 
-            while closed_goals:
-                closed_goal = closed_goals.pop()
-                if closed_goal.id in processed_goal_ids:
-                    continue
-                processed_goal_ids.add(closed_goal.id)
+        candidate_metavars = state.metavars | {
+            current_goal.id: MetaVar(statement=current_goal.statement, assignment=assignment)
+        }
+        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
+        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+        remaining_goals = [g for g in state.goals[1:] if not final_metavars[g.id].is_assigned]
 
-                for idx, goal in enumerate(self.state.goals):
-                    if (
-                        goal == closed_goal
-                        or goal.assignment is None
-                        or goal.assurance in {ProofAssurance.VERIFIED, ProofAssurance.TRUSTED}
-                        or closed_goal.assignment is None
-                    ):
-                        continue
+        return ProofState(goals=tuple(remaining_goals), metavars=final_metavars)
 
-                    substituted = substitute_meta_var(goal.assignment, closed_goal.id, closed_goal.assignment)
-                    self.state.goals[idx].assignment = substituted
-
-                    if has_meta_var(substituted):
-                        continue
-
-                    if check_formula(substituted, goal.formula, goal.context):
-                        self.state.goals[idx].assurance = ProofAssurance.VERIFIED
-                        closed_goals.append(self.state.goals[idx])
-
-            for goal in list(self.state.goals):
-                if goal.is_closed:
-                    self.state.goals.remove(goal)
-
-
-    def refine_goal(self, subgoals: list[Goal], assignment: ProofTerm):
-        current_goal = self.state.current_goal
+    def refine_goal(self, state: ProofState, assignment: Expr, subgoals: list[Goal]) -> ProofState:
+        """
+        Refine the current goal by providing an assignment that splits it into new subgoals.
+        """
+        current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to refine.")
-        elif current_goal.is_closed:
-            raise KernelStateError("Cannot refine a closed goal.")
-        elif current_goal.assignment is not None:
-            raise KernelStateError("Current goal is already assigned a proof term.")
-        elif not subgoals:
-            raise KernelValueError("Sub-goals cannot be empty when refining a goal.")
-        elif any(subgoal.assignment is not None for subgoal in subgoals):
-            raise KernelValueError("Sub-goals must not be assigned a proof term when refining a goal.")
-        elif assignment is None:
-            raise KernelValueError("Assignment cannot be None when refining a goal.")
 
-        subgoal_ids = {goal.id for goal in subgoals}
+        candidate_metavars = state.metavars | {g.id: MetaVar(statement=g.statement) for g in subgoals}
+        candidate_metavars[current_goal.id] = MetaVar(statement=current_goal.statement, assignment=assignment)
+
         meta_var_ids = collect_meta_var_ids(assignment)
-        if not meta_var_ids.issubset(subgoal_ids):
-            raise KernelValueError("Not all meta-variables in the assignment have corresponding sub-goals.")
+        assigned_ids = {mid for mid, m in state.metavars.items() if m.is_assigned}
+        active_meta_ids = meta_var_ids - assigned_ids
 
-        self.state.current_goal.assignment = assignment
-        self.state.goals.extendleft(subgoals[::-1])
+        other_goal_ids = {g.id for g in state.goals[1:]}
+        subgoal_ids = {g.id for g in subgoals}
+        untracked_ids = active_meta_ids - subgoal_ids - other_goal_ids
 
-    def rotate_left(self):
-        self.state.goals.rotate(-1)
+        if untracked_ids:
+            raise KernelValueError(
+                f"Found untracked or implicit meta-variables in the assignment: {untracked_ids}. "
+                f"All active meta-variables in the proof term must be explicitly registered as subgoals."
+            )
 
-    def rotate_right(self):
-        self.state.goals.rotate(1)
+        if not subgoal_ids.issubset(active_meta_ids):
+            raise KernelValueError("Some provided subgoals are missing from the assignment expression.")
+
+        for g in subgoals:
+            if g.id in state.metavars:
+                raise KernelStateError(f"Meta-variable ?{g.id} is already registered in the proof state.")
+
+        inferred_type = infer_type(assignment, current_goal.context, candidate_metavars)
+
+        final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars)
+
+        all_potential_goals = subgoals + list(state.goals[1:])
+        truly_active_goals = [g for g in all_potential_goals if not final_metavars[g.id].is_assigned]
+
+        return ProofState(goals=tuple(truly_active_goals), metavars=final_metavars)

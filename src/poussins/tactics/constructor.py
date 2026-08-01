@@ -1,91 +1,78 @@
-"""
-Constructor tactic: splits conjunction goals into subgoals, and handles disjunction goals by creating a subgoal for the chosen disjunct.
-"""
-from copy import deepcopy
+from __future__ import annotations
 
-from .constants import TacticSide
-from ..ast import (
-    FTrue,
-    FAnd,
-    FOr,
-    PMetaVar,
-    PTrueI,
-    PAndI,
-    POrIL,
-    POrIR
-)
+from .apply import apply
+from ..ast import EConst, EApp, EPi
 from ..errors import TacticError
-from ..kernel import Goal, ProofEngine
+from ..kernel import ProofManager, whnf, infer_type
+from ..environment import InductiveDeclaration, ConstructorDeclaration
 
 
-def constructor(engine: ProofEngine, side: TacticSide = TacticSide.LEFT):
-    """Apply the constructor tactic to split a conjunction goal into subgoals."""
-    current_goal = engine.state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goal to apply constructor tactic.")
+def constructor(manager: ProofManager, index: int | None = None) -> None:
+    """Constructor tactic: Apply a valid constructor or the specified index (1-indexed)."""
+    if manager.is_closed:
+        raise TacticError("constructor failed: No active goals remain.")
 
-    if isinstance(current_goal.formula, FTrue):
-        engine.close_goal(PTrueI())
-    elif isinstance(current_goal.formula, FAnd):
-        left_subgoal = Goal(
-            formula=deepcopy(current_goal.formula.left),
-            context=current_goal.context
-        )
-        right_subgoal = Goal(
-            formula=deepcopy(current_goal.formula.right),
-            context=current_goal.context
-        )
-        engine.refine_goal(
-            [left_subgoal, right_subgoal],
-            assignment=PAndI(
-                left=PMetaVar(goal_id=left_subgoal.id),
-                right=PMetaVar(goal_id=right_subgoal.id)
+    state = manager.current_state
+    current_goal = state.current_goal
+    assert current_goal is not None
+
+    goal_type = whnf(current_goal.statement, state.metavars)
+
+    head_expr = goal_type
+    while isinstance(head_expr, EApp):
+        head_expr = head_expr.fn
+
+    head_name = getattr(head_expr, "name", None)
+    if not head_name:
+        raise TacticError(f"constructor failed: Goal type head has no name. Found: {goal_type}")
+
+    env = manager.env
+    inductive_decl = env.get(head_name)
+    if not isinstance(inductive_decl, InductiveDeclaration):
+        raise TacticError(f"constructor failed: '{head_name}' is not an inductive type.")
+    elif not inductive_decl.constructor_names:
+        raise TacticError(f"constructor failed: Inductive type '{head_name}' has no constructors.")
+
+    if index is not None:
+        if not (1 <= index <= len(inductive_decl.constructor_names)):
+            raise TacticError(
+                f"constructor failed: Invalid constructor index {index} for '{head_name}'. "
+                f"Expected 1..{len(inductive_decl.constructor_names)}."
             )
-        )
-    elif isinstance(current_goal.formula, FOr):
-        if side == TacticSide.LEFT:
-            subgoal = Goal(
-                formula=deepcopy(current_goal.formula.left),
-                context=current_goal.context
-            )
-            engine.refine_goal(
-                [subgoal],
-                assignment=POrIL(
-                    proof=PMetaVar(goal_id=subgoal.id),
-                    other_disjunct=deepcopy(current_goal.formula.right)
-                )
-            )
-        elif side == TacticSide.RIGHT:
-            subgoal = Goal(
-                formula=deepcopy(current_goal.formula.right),
-                context=current_goal.context
-            )
-            engine.refine_goal(
-                [subgoal],
-                assignment=POrIR(
-                    other_disjunct=deepcopy(current_goal.formula.left),
-                    proof=PMetaVar(goal_id=subgoal.id)
-                )
-            )
-        else:
-            raise TacticError("Constructor tactic for disjunction requires a valid side.")
-    else:
-        raise TacticError("Constructor tactic can only be applied to conjunctions, disjunctions, or true goals.")
+        target_name = inductive_decl.constructor_names[index - 1]
+        decl = env.get(target_name)
+        if not isinstance(decl, ConstructorDeclaration):
+            raise TacticError(f"constructor failed: '{target_name}' is not a constructor declaration.")
 
+        apply(manager, EConst(name=target_name, levels=decl.level_params))
+        return
 
-def left(engine: ProofEngine):
-    constructor(engine, TacticSide.LEFT)
+    matched_constructor_const: EConst | None = None
 
+    for name in inductive_decl.constructor_names:
+        decl = env.get(name)
+        if not isinstance(decl, ConstructorDeclaration):
+            raise TacticError(f"constructor failed: '{name}' is not a constructor declaration.")
 
-def right(engine: ProofEngine):
-    constructor(engine, TacticSide.RIGHT)
+        levels = decl.level_params
+        const = EConst(name=name, levels=levels)
 
+        c_type = whnf(infer_type(const, current_goal.context, state.metavars), state.metavars)
 
-def split(engine: ProofEngine):
-    current_goal = engine.state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goal to apply constructor tactic.")
-    elif not isinstance(current_goal.formula, FAnd):
-        raise TacticError("Split tactic can only be applied to conjunctions.")
+        c_conclusion = c_type
+        while isinstance(c_conclusion, EPi):
+            c_conclusion = whnf(c_conclusion.body, state.metavars)
 
-    constructor(engine)
+        c_head = c_conclusion
+        while isinstance(c_head, EApp):
+            c_head = c_head.fn
+
+        c_head_name = getattr(c_head, "name", None)
+        if c_head_name == head_name:
+            matched_constructor_const = const
+            break
+
+    if matched_constructor_const is None:
+        raise TacticError(f"constructor failed: No constructor of '{head_name}' matches the goal structure.")
+
+    apply(manager, matched_constructor_const)
