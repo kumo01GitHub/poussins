@@ -32,7 +32,7 @@ from .framework import (
 from .tactics import (
     apply,
     cases,
-    constructor,
+    constructor, left, right, split,
     exact, assumption,
     intro, intros,
     exfalso,
@@ -94,5 +94,8 @@ __all__ = [
     "assumption",
     "cases",
     "constructor",
+    "left",
+    "right",
+    "split",
     "exfalso",
 ]

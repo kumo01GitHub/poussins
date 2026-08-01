@@ -11,7 +11,7 @@ from ..tactics import (
     apply,
     exact, assumption,
     intro, intros,
-    constructor,
+    constructor, left, right, split,
     cases,
     exfalso
 )
@@ -97,6 +97,24 @@ class ProofScript(ABC):
         Apply an inductive constructor to the current goal.
         """
         constructor(self.manager, index)
+
+    def left(self) -> None:
+        """
+        Select the left branch of a disjunction goal.
+        """
+        left(self.manager)
+
+    def right(self) -> None:
+        """
+        Select the right branch of a disjunction goal.
+        """
+        right(self.manager)
+
+    def split(self) -> None:
+        """
+        Split a conjunction goal into two subgoals.
+        """
+        split(self.manager)
 
     def cases(
         self,

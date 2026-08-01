@@ -63,6 +63,16 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `exfalso()`: change target to `False` and prove contradiction first
 - `undo()`: rollback one proof step
 
+### Logical Helpers
+
+For the default logical connectives, poussins also provides a few convenience tactics:
+
+- `left()`: solve an `Or` goal by choosing the left branch (`Or.inl`)
+- `right()`: solve an `Or` goal by choosing the right branch (`Or.inr`)
+- `split()`: solve an `And` goal by applying `And.intro`
+
+These are convenience wrappers around the constructor tactic and are intended for the standard environment shipped with poussins.
+
 ## Proof Example 1: Conjunction Introduction
 
 Goal: prove $P \to Q \to P \land Q$.

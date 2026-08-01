@@ -81,3 +81,103 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         raise TacticError(f"constructor failed: No constructor of '{head_name}' matches the goal structure.")
 
     apply(manager, matched_constructor_const)
+
+
+def _goal_head_name(manager: ProofManager) -> str:
+    """
+    Resolve the head constant name of the current goal type.
+    """
+    state = manager.current_state
+    current_goal = state.current_goal
+    if current_goal is None:
+        raise TacticError("constructor failed: No active goals remain.")
+
+    goal_type = whnf(current_goal.statement, state.metavars)
+
+    head_expr = goal_type
+    while isinstance(head_expr, EApp):
+        head_expr = head_expr.fn
+
+    head_name = getattr(head_expr, "name", None)
+    if not head_name:
+        raise TacticError(f"constructor failed: Goal type head has no name. Found: {goal_type}")
+    return head_name
+
+
+def _apply_named_constructor(
+    manager: ProofManager,
+    *,
+    inductive_name: str,
+    constructor_name: str,
+    tactic_name: str,
+) -> None:
+    """
+    Apply a specific constructor of an expected inductive goal.
+    """
+    head_name = _goal_head_name(manager)
+    if head_name != inductive_name:
+        if tactic_name == "left" or tactic_name == "right":
+            raise TacticError(f"{tactic_name} failed: Goal is not a disjunction. Found head '{head_name}'.")
+        if tactic_name == "split":
+            raise TacticError(f"split failed: Goal is not a conjunction. Found head '{head_name}'.")
+        raise TacticError(f"{tactic_name} failed: Goal head '{head_name}' does not match '{inductive_name}'.")
+
+    env = manager.env
+    inductive_decl = env.get(inductive_name)
+    if not isinstance(inductive_decl, InductiveDeclaration):
+        raise TacticError(f"{tactic_name} failed: '{inductive_name}' is not an inductive type.")
+    if constructor_name not in inductive_decl.constructor_names:
+        raise TacticError(
+            f"{tactic_name} failed: '{constructor_name}' is not a constructor of '{inductive_name}'."
+        )
+
+    decl = env.get(constructor_name)
+    if not isinstance(decl, ConstructorDeclaration):
+        raise TacticError(f"{tactic_name} failed: '{constructor_name}' is not a constructor declaration.")
+
+    apply(manager, EConst(name=constructor_name, levels=decl.level_params))
+
+
+def left(manager: ProofManager) -> None:
+    """
+    Prove an `Or` goal by selecting the left constructor (`Or.inl`).
+    """
+    if manager.is_closed:
+        raise TacticError("left failed: No active goals remain.")
+
+    _apply_named_constructor(
+        manager,
+        inductive_name="Or",
+        constructor_name="Or.inl",
+        tactic_name="left",
+    )
+
+
+def right(manager: ProofManager) -> None:
+    """
+    Prove an `Or` goal by selecting the right constructor (`Or.inr`).
+    """
+    if manager.is_closed:
+        raise TacticError("right failed: No active goals remain.")
+
+    _apply_named_constructor(
+        manager,
+        inductive_name="Or",
+        constructor_name="Or.inr",
+        tactic_name="right",
+    )
+
+
+def split(manager: ProofManager) -> None:
+    """
+    Prove an `And` goal by applying `And.intro`.
+    """
+    if manager.is_closed:
+        raise TacticError("split failed: No active goals remain.")
+
+    _apply_named_constructor(
+        manager,
+        inductive_name="And",
+        constructor_name="And.intro",
+        tactic_name="split",
+    )
