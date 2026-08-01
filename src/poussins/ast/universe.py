@@ -1,7 +1,6 @@
 """
 Universe-level data structures used by expression sorts.
 """
-
 from __future__ import annotations
 from dataclasses import dataclass
 

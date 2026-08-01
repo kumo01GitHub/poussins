@@ -12,6 +12,7 @@ from ..tactics import (
     exact, assumption,
     intro, intros,
     constructor,
+    cases,
     exfalso
 )
 
@@ -96,6 +97,16 @@ class ProofScript(ABC):
         Apply an inductive constructor to the current goal.
         """
         constructor(self.manager, index)
+
+    def cases(
+        self,
+        hypothesis_name: str,
+        patterns: tuple[tuple[str, ...], ...] | None = None,
+    ) -> None:
+        """
+        Case-split on an inductive hypothesis.
+        """
+        cases(self.manager, hypothesis_name, patterns)
 
     def exfalso(self) -> None:
         """

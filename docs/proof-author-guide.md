@@ -59,6 +59,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `assumption()`: close goal from a matching local hypothesis
 - `apply(expr_or_name)`: apply theorem/hypothesis and create subgoals
 - `constructor(index=None)`: apply a matching constructor (or choose 1-based constructor index)
+- `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
 - `exfalso()`: change target to `False` and prove contradiction first
 - `undo()`: rollback one proof step
 
@@ -82,7 +83,23 @@ th.qed()
 
 After `qed()`, `and_intro` is available from `env` as a reusable declaration.
 
-## Proof Example 2: Modus Ponens with `apply`
+## Proof Example 2: Case Splitting with `cases`
+
+Goal: prove `True -> True` by splitting on the hypothesis.
+
+```python
+from poussins import Environment, Example, Prop
+
+env = Environment.default()
+
+ex = Example(Prop.top() >> Prop.top(), env)
+ex.intro("hTrue")
+ex.cases("hTrue")
+ex.constructor()
+ex.qed()
+```
+
+## Proof Example 3: Modus Ponens with `apply`
 
 Goal: prove $(P \to Q) \to P \to Q$.
 

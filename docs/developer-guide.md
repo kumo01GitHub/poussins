@@ -119,6 +119,7 @@ flowchart LR
   - construct proof term skeletons
   - call `ProofManager` for verified state transitions
 - `constructor` resolves inductive constructors from the environment and delegates to `apply`.
+- `cases` performs a structural split over an inductive hypothesis and produces branch subgoals, which are then verified through the existing kernel refinement flow.
 
 ### Framework (`framework/`)
 
