@@ -17,7 +17,7 @@ uv run -m poussins --help
 Run an example proof:
 
 ```bash
-uv run python example/example1.py
+uv run -m poussins prove example/example1.py
 ```
 
 ## Common Commands
