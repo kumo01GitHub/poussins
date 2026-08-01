@@ -6,8 +6,8 @@ from __future__ import annotations
 from .proof_state import MetaVar
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
-    UnivLevelSucc, UnivLevelIMax,
-    substitute_meta_var, substitute_expr_var
+    UnivLevelZero, UnivLevelSucc, UnivLevelIMax,
+    collect_free_vars, substitute_meta_var, substitute_expr_var
 )
 from ..errors import KernelTypeError
 
@@ -52,6 +52,26 @@ def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
             break
         current = next_term
     return current
+
+
+def is_universe_leq(level_left: object, level_right: object) -> bool:
+    """
+    Return True when the left universe level is below or equal to the right.
+    """
+    if level_left == level_right:
+        return True
+
+    match (level_left, level_right):
+        case (UnivLevelZero(), UnivLevelSucc(_)):
+            return True
+        case (UnivLevelSucc(pred_left), UnivLevelSucc(pred_right)):
+            return is_universe_leq(pred_left, pred_right)
+        case (UnivLevelZero(), UnivLevelIMax(left, right)):
+            return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
+        case (UnivLevelSucc(_), UnivLevelIMax(left, right)):
+            return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
+        case _:
+            return False
 
 
 def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> Expr:
@@ -124,7 +144,11 @@ def check_type(expr: Expr, expected_type: Expr, context: dict[str, Expr], metava
     """
     try:
         inferred = infer_type(expr, context, metavars)
-        return is_def_eq(inferred, expected_type, context, metavars)
+        if is_def_eq(inferred, expected_type, context, metavars):
+            return True
+        if isinstance(inferred, ESort) and isinstance(expected_type, ESort):
+            return is_universe_leq(inferred.level, expected_type.level)
+        return False
     except KernelTypeError:
         return False
 
@@ -193,10 +217,35 @@ def is_def_eq(
         if is_alpha_eq(t1_whnf, t2_whnf):
             return True
 
+    if isinstance(t1_whnf, ELam) and isinstance(t2_whnf, EVar):
+        if not isinstance(t1_whnf.body, EApp):
+            return False
+        if not isinstance(t1_whnf.body.arg, EVar):
+            return False
+        if t1_whnf.body.arg.name != t1_whnf.var:
+            return False
+        if t1_whnf.body.arg.name in collect_free_vars(t1_whnf.body.fn):
+            return False
+        return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars)
+
+    if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
+        if not isinstance(t2_whnf.body, EApp):
+            return False
+        if not isinstance(t2_whnf.body.arg, EVar):
+            return False
+        if t2_whnf.body.arg.name != t2_whnf.var:
+            return False
+        if t2_whnf.body.arg.name in collect_free_vars(t2_whnf.body.fn):
+            return False
+        return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars)
+
     if type(t1_whnf) is not type(t2_whnf):
         return False
 
     match (t1_whnf, t2_whnf):
+        case (ESort(level1), ESort(level2)):
+            return level1 == level2
+
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
                 is_def_eq(f1, f2, context, metavars) and

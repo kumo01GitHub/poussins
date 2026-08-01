@@ -1,6 +1,6 @@
 import pytest
 
-from poussins.ast import EConst, EMetaVar
+from poussins.ast import EConst, EMetaVar, ELam, EPi, ESort, EVar, UnivLevelZero
 from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_engine import ProofEngine
@@ -77,3 +77,15 @@ def test_refine_goal_adds_explicit_subgoal(default_env) -> None:
     assert new_subgoal.id in next_state.metavars
     assert not next_state.metavars[new_subgoal.id].is_assigned
     assert next_state.metavars[state.current_goal.id].assignment == EMetaVar(new_subgoal.id)
+
+
+def test_close_goal_accepts_alpha_equivalent_lambda_term(default_env) -> None:
+    engine = ProofEngine(default_env)
+    prop = ESort(UnivLevelZero())
+    statement = EPi("x", prop, prop)
+    state = engine.create_initial_state(statement)
+
+    next_state = engine.close_goal(state, ELam("y", prop, EVar("y")))
+
+    assert next_state.goals == ()
+    assert next_state.metavars[state.current_goal.id].is_assigned

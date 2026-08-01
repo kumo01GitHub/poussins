@@ -115,6 +115,18 @@ def test_check_type_returns_false_on_kernel_error() -> None:
     assert not check_type(EVar("x"), _prop(), context={}, metavars={})
 
 
+def test_is_def_eq_handles_eta_equivalence() -> None:
+    fn = EVar("f")
+    eta_expanded = ELam("x", _prop(), EApp(EVar("f"), EVar("x")))
+    context = {"f": EPi("x", _prop(), _prop())}
+
+    assert is_def_eq(eta_expanded, fn, context=context, metavars={})
+
+
+def test_check_type_accepts_cumulative_universe_sort() -> None:
+    assert check_type(_prop(), _type1(), context={}, metavars={})
+
+
 def test_is_alpha_eq_handles_renamed_binders() -> None:
     t1 = ELam("x", _prop(), EVar("x"))
     t2 = ELam("y", _prop(), EVar("y"))
