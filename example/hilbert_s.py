@@ -1,19 +1,9 @@
-from poussins import (
-    Lemma, Prop, Environment,
-    ESort, EVar, UnivLevelZero,
-    ConstantDeclaration
-)
+from poussins import Lemma, Prop, Environment
 
 
-env = Environment()
+env = Environment.default()
 
-prop_sort = ESort(UnivLevelZero())
-
-env.add(ConstantDeclaration(name="P", level_params=(), type=prop_sort, value=EVar("P")))
-env.add(ConstantDeclaration(name="Q", level_params=(), type=prop_sort, value=EVar("Q")))
-env.add(ConstantDeclaration(name="R", level_params=(), type=prop_sort, value=EVar("R")))
-
-p, q, r = Prop("P"), Prop("Q"), Prop("R")
+p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
 
 hilbert_s = Lemma("HilbertS", ((p >> (q >> r)) >> ((p >> q) >> (p >> r))), env)
 print(f"{hilbert_s.name}: {hilbert_s.statement}")

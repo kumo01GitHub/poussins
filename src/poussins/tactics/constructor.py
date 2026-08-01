@@ -7,11 +7,8 @@ from ..kernel import ProofManager, whnf, infer_type
 from ..environment import InductiveDeclaration, ConstructorDeclaration
 
 
-def constructor(manager: ProofManager) -> None:
-    """
-    Constructor tactic: Automatically find and apply a valid constructor 
-    for the current inductive goal type.
-    """
+def constructor(manager: ProofManager, index: int | None = None) -> None:
+    """Constructor tactic: Apply a valid constructor or the specified index (1-indexed)."""
     if manager.is_closed:
         raise TacticError("constructor failed: No active goals remain.")
 
@@ -25,15 +22,30 @@ def constructor(manager: ProofManager) -> None:
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
-    if not isinstance(head_expr, EConst):
-        raise TacticError(f"constructor failed: Goal type head is not a constant. Found: {goal_type}")
+    head_name = getattr(head_expr, "name", None)
+    if not head_name:
+        raise TacticError(f"constructor failed: Goal type head has no name. Found: {goal_type}")
 
     env = manager.env
-    inductive_decl = env.get(head_expr.name)
+    inductive_decl = env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
-        raise TacticError(f"constructor failed: '{head_expr.name}' is not an inductive type.")
+        raise TacticError(f"constructor failed: '{head_name}' is not an inductive type.")
     elif not inductive_decl.constructor_names:
-        raise TacticError(f"constructor failed: Inductive type '{head_expr.name}' has no constructors.")
+        raise TacticError(f"constructor failed: Inductive type '{head_name}' has no constructors.")
+
+    if index is not None:
+        if not (1 <= index <= len(inductive_decl.constructor_names)):
+            raise TacticError(
+                f"constructor failed: Invalid constructor index {index} for '{head_name}'. "
+                f"Expected 1..{len(inductive_decl.constructor_names)}."
+            )
+        target_name = inductive_decl.constructor_names[index - 1]
+        decl = env.get(target_name)
+        if not isinstance(decl, ConstructorDeclaration):
+            raise TacticError(f"constructor failed: '{target_name}' is not a constructor declaration.")
+
+        apply(manager, EConst(name=target_name, levels=decl.level_params))
+        return
 
     matched_constructor_const: EConst | None = None
 
@@ -50,16 +62,17 @@ def constructor(manager: ProofManager) -> None:
         c_conclusion = c_type
         while isinstance(c_conclusion, EPi):
             c_conclusion = whnf(c_conclusion.body, state.metavars)
-            
+
         c_head = c_conclusion
         while isinstance(c_head, EApp):
             c_head = c_head.fn
 
-        if isinstance(c_head, EConst) and c_head.name == head_expr.name:
+        c_head_name = getattr(c_head, "name", None)
+        if c_head_name == head_name:
             matched_constructor_const = const
             break
 
     if matched_constructor_const is None:
-        raise TacticError(f"constructor failed: No constructor of '{head_expr.name}' matches the goal structure.")
+        raise TacticError(f"constructor failed: No constructor of '{head_name}' matches the goal structure.")
 
     apply(manager, matched_constructor_const)

@@ -18,20 +18,29 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..ast import (
-    Expr, ESort, EVar, EConst, EPi, EApp,
-    UnivLevelZero
+    Expr, EVar, EConst, EPi, EApp
 )
+from ..environment import Environment, ConstantDeclaration
 
 
 @dataclass(frozen=True)
 class Prop:
     expr: Expr
 
-    def __init__(self, expr_or_name: Expr | str) -> None:
+    def __init__(self, expr_or_name: Expr | str, env: Environment | None = None) -> None:
         if isinstance(expr_or_name, Expr):
             object.__setattr__(self, "expr", expr_or_name)
         else:
             object.__setattr__(self, "expr", EVar(expr_or_name))
+            if env is not None and env.get(expr_or_name) is None:
+                env.add(
+                    ConstantDeclaration(
+                        name=expr_or_name,
+                        level_params=(),
+                        type=Environment.PROP_SORT,
+                        value=EConst("P", ())
+                    )
+                )
 
     # ------------------------------------------------------------------
     # Coercion helpers
@@ -46,16 +55,12 @@ class Prop:
     # ------------------------------------------------------------------
 
     @classmethod
-    def prop_sort(cls) -> Prop:
-        return cls(ESort(UnivLevelZero()))
-
-    @classmethod
     def top(cls) -> Prop:
         """⊤ (True)."""
         return cls(EConst("True", levels=()))
 
     @classmethod
-    def bot(cls) -> Prop:
+    def bottom(cls) -> Prop:
         """⊥ (False)."""
         return cls(EConst("False", levels=()))
 
@@ -83,7 +88,7 @@ class Prop:
 
     def __invert__(self) -> Prop:
         """~P  →  P → ⊥  (negation)."""
-        return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(self.bot())))
+        return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(self.bottom())))
 
     # ------------------------------------------------------------------
     # Equality / hashing — delegate to Expr

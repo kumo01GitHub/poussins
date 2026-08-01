@@ -40,3 +40,11 @@ def intro(manager: ProofManager, var_name: str) -> None:
     )
 
     manager.refine_goal(assignment, [new_subgoal])
+
+
+def intros(manager: ProofManager, var_names: list[str]) -> None:
+    """
+    Intros tactic: Introduce multiple new variables for the current goal if it is a product type (EPi).
+    """
+    for var_name in var_names:
+        intro(manager, var_name)

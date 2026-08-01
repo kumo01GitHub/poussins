@@ -7,7 +7,12 @@ from abc import ABC, abstractmethod
 from ..ast import Expr, EVar
 from ..environment import Environment
 from ..kernel import ProofManager, ProofState
-from ..tactics import apply, exact, intro, constructor
+from ..tactics import (
+    apply,
+    exact,
+    intro, intros,
+    constructor
+)
 
 
 class ProofScript(ABC):
@@ -41,6 +46,9 @@ class ProofScript(ABC):
     def intro(self, name: str) -> None:
         intro(self.manager, name)
 
+    def intros(self, names: list[str]) -> None:
+        intros(self.manager, names)
+
     def apply(self, expr_or_name: Expr | str) -> None:
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         apply(self.manager, expr)
@@ -49,5 +57,5 @@ class ProofScript(ABC):
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
 
-    def constructor(self) -> None:
-        constructor(self.manager)
+    def constructor(self, index: int | None = None) -> None:
+        constructor(self.manager, index)
