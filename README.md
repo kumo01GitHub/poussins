@@ -1,26 +1,37 @@
 # poussins
 
-A proof assistant running on Python.
+A Python proof assistant with a small kernel, tactic layer, and ergonomic proof DSL.
 
-## Develop
+## Documentation Map
+
+- Proof authors: [Proof Author Guide](docs/proof-author-guide.md)
+- Contributors and maintainers: [Developer Guide](docs/developer-guide.md)
+
+## Quick Start
 
 ```bash
-# Run
-uv run -m poussins
-
-# Unit Test
-uv run pytest
-
-# Lint
-uv run ruff check .
+uv sync
+uv run -m poussins --help
 ```
 
-## Release
+Run an example proof:
 
 ```bash
-# Build
-uv build
+uv run python example/example1.py
+```
 
-# Publish
+## Common Commands
+
+```bash
+# CLI
+uv run -m poussins prove path/to/proofs.py
+uv run -m poussins step path/to/proofs.py --theorem theorem_name
+
+# Tests and lint
+uv run pytest
+uv run ruff check .
+
+# Package
+uv build
 uv publish
 ```
