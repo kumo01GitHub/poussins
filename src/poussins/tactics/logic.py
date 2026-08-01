@@ -1,10 +1,15 @@
+"""
+Tactics for basic logical transformations.
+"""
 from ..ast import EApp, EConst, EMetaVar
 from ..errors import TacticError
 from ..kernel import ProofManager, Goal
 
 
 def exfalso(manager: ProofManager) -> None:
-    """Exfalso tactic: Changes the target of the current goal from `P` to `False`."""
+    """
+    Replace the current goal with False and derive the target from it.
+    """
     if manager.is_closed:
         raise TacticError("exfalso failed: No active goals remain.")
 

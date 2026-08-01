@@ -7,6 +7,7 @@ from .exact import exact, assumption
 from .intro import intro, intros
 from .logic import exfalso
 
+
 __all__ = [
     "apply",
     "constructor",

@@ -19,50 +19,86 @@ from ..tactics import (
 class ProofScript(ABC):
     """
     Abstract base class for all proof-carrying script objects (Theorem, Example).
-    
-    This class acts purely as a fluent frontend interface for writing proof scripts. 
+
+    This class acts purely as a fluent frontend interface for writing proof scripts.
     It completely delegates all state mutation and history tracking concerns to ProofManager.
     """
 
     def __init__(self, statement: Expr, env: Environment):
+        """
+        Create a proof script bound to a statement and environment.
+        """
         self.statement: Expr = statement
         self.env: Environment = env
         self.manager: ProofManager = ProofManager(statement, env)
 
     @property
     def current_state(self) -> ProofState:
+        """
+        Return the current proof state.
+        """
         return self.manager.current_state
 
     @property
     def is_closed(self) -> bool:
+        """
+        Return whether the proof has no remaining goals.
+        """
         return self.manager.is_closed
 
     def undo(self):
+        """
+        Revert the proof to the previous state.
+        """
         self.manager.undo()
 
     @abstractmethod
     def qed(self):
+        """
+        Finalize the proof script.
+        """
         pass
 
     def intro(self, name: str) -> None:
+        """
+        Introduce one local variable.
+        """
         intro(self.manager, name)
 
     def intros(self, names: list[str]) -> None:
+        """
+        Introduce multiple local variables.
+        """
         intros(self.manager, names)
 
     def apply(self, expr_or_name: Expr | str) -> None:
+        """
+        Apply a theorem, hypothesis, or expression to the current goal.
+        """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         apply(self.manager, expr)
 
     def exact(self, expr_or_name: Expr | str) -> None:
+        """
+        Close the current goal with the given expression.
+        """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
 
     def assumption(self) -> None:
+        """
+        Solve the current goal using a matching hypothesis.
+        """
         assumption(self.manager)
 
     def constructor(self, index: int | None = None) -> None:
+        """
+        Apply an inductive constructor to the current goal.
+        """
         constructor(self.manager, index)
 
     def exfalso(self) -> None:
+        """
+        Switch the current goal to False.
+        """
         exfalso(self.manager)

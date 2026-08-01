@@ -1,10 +1,16 @@
+"""
+Universe-level data structures used by expression sorts.
+"""
+
 from __future__ import annotations
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class UnivLevelZero:
-    """The base universe level (0)."""
+    """
+    The base universe level (0).
+    """
 
     def __str__(self) -> str:
         return "0"
@@ -12,7 +18,9 @@ class UnivLevelZero:
 
 @dataclass(frozen=True)
 class UnivLevelSucc:
-    """The successor of a universe level (n + 1)."""
+    """
+    The successor of a universe level (n + 1).
+    """
 
     pred: UnivLevel
 
@@ -22,7 +30,9 @@ class UnivLevelSucc:
 
 @dataclass(frozen=True)
 class UnivLevelParam:
-    """A parameterized universe level (e.g., a variable)."""
+    """
+    A parameterized universe level (e.g., a variable).
+    """
 
     name: str
 
@@ -32,7 +42,9 @@ class UnivLevelParam:
 
 @dataclass(frozen=True)
 class UnivLevelMax:
-    """The maximum of two universe levels (max(n, m))."""
+    """
+    The maximum of two universe levels (max(n, m)).
+    """
 
     left: UnivLevel
     right: UnivLevel
@@ -43,7 +55,9 @@ class UnivLevelMax:
 
 @dataclass(frozen=True)
 class UnivLevelIMax:
-    """The imax of two universe levels (imax(n, m))."""
+    """
+    The imax of two universe levels (imax(n, m)).
+    """
 
     left: UnivLevel
     right: UnivLevel

@@ -11,7 +11,8 @@ from ..errors import FrameworkError
 
 
 class Theorem(ProofScript):
-    """A named proposition together with an interactive proof session.
+    """
+    A named proposition together with an interactive proof session.
 
     Tactics can be applied as methods (via ProofScript) or as standalone
     functions — both styles are equivalent::
@@ -32,6 +33,9 @@ class Theorem(ProofScript):
         env: Environment,
         level_params: tuple[str, ...] = ()
     ) -> None:
+        """
+        Create a theorem with a name, statement, environment, and universe parameters.
+        """
         self.name = name
         self.level_params = level_params
         super().__init__(Prop.to_expr(statement), env)
@@ -71,7 +75,8 @@ Property = Theorem
 
 
 class Example(ProofScript):
-    """An anonymous proof for exploration or testing.
+    """
+    An anonymous proof for exploration or testing.
 
     Like Theorem but without a name and without registering to Environment.
     """
@@ -81,11 +86,16 @@ class Example(ProofScript):
         statement: Prop | Expr,
         env: Environment
     ) -> None:
+        """
+        Create an anonymous proof script for the given statement.
+        """
         pure_expr = Prop.to_expr(statement)
         super().__init__(pure_expr, env)
 
     def qed(self) -> None:
-        """Verify the anonymity proof is complete."""
+        """
+        Verify the anonymity proof is complete.
+        """
         if not self.is_closed:
             raise FrameworkError("Example cannot be verified: The proof is not finished.")
 

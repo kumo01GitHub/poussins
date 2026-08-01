@@ -1,6 +1,5 @@
 """
-Kernel-level expression type inference and checking (Dependent Type Theory).
-This module is COMPLETELY STATELESS and has ZERO dependency on Environment or Framework.
+Stateless kernel routines for inference, checking, and unification.
 """
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ from ..errors import KernelTypeError
 
 def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     """
-    Instantiate meta-variables in the expression based on the given metavars dictionary.
+    Instantiate assigned metavariables in an expression.
     """
     current = expr
     for goal_id, m in metavars.items():
@@ -26,7 +25,7 @@ def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
 
 def whnf(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     """
-    Weak Head Normal Form (WHNF) evaluation of the expression.
+    Reduce an expression to weak head normal form.
     """
     expr = instantiate_meta(expr, metavars)
 
@@ -44,7 +43,7 @@ def whnf(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
 
 def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     """
-    Fully instantiate the expression by recursively replacing all meta-variables with their assignments.
+    Recursively replace all assigned metavariables in an expression.
     """
     current = expr
     while True:
@@ -56,7 +55,9 @@ def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
 
 
 def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> Expr:
-    """Infer the type (which is also an Expr) of the given expression."""
+    """
+    Infer the type of an expression.
+    """
     expr = instantiate_meta(expr, metavars)
 
     match expr:
@@ -118,7 +119,9 @@ def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar
 
 
 def check_type(expr: Expr, expected_type: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> bool:
-    """Return True when the expression checks against the expected type in the given context."""
+    """
+    Return True when the expression checks against the expected type.
+    """
     try:
         inferred = infer_type(expr, context, metavars)
         return whnf(inferred, metavars) == whnf(expected_type, metavars)
@@ -128,7 +131,7 @@ def check_type(expr: Expr, expected_type: Expr, context: dict[str, Expr], metava
 
 def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = []) -> bool:
     """
-    Check if two expressions are alpha-equivalent, considering bound variable names.
+    Return True when two expressions are alpha-equivalent.
     """
     if type(t1) is not type(t2):
         return False
@@ -175,9 +178,7 @@ def is_def_eq(
     metavars: dict[str, MetaVar]
 ) -> bool:
     """
-    Check if two expressions are definitionally equal.
-    It fully instantiates meta-variables, checks for alpha-equivalence,
-    and falls back to WHNF reduction and structural recursion.
+    Return True when two expressions are definitionally equal.
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
@@ -232,9 +233,7 @@ def unify(
     metavars: dict[str, MetaVar]
 ) -> dict[str, MetaVar]:
     """
-    Unify two expressions and return an updated metavars dictionary.
-    This implementation leverages instantiate and is_alpha_eq for maximal simplicity.
-    Raises TacticError if unification fails.
+    Unify two expressions and return updated metavariable assignments.
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)

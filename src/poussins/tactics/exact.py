@@ -1,3 +1,6 @@
+"""
+Tactics for closing goals with exact terms or assumptions.
+"""
 from ..ast import Expr, EVar
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq
@@ -5,8 +8,7 @@ from ..kernel import ProofManager, is_def_eq
 
 def exact(manager: ProofManager, expr: Expr) -> None:
     """
-    Exact tactic:
-        Close the current goal using the original expression.
+    Close the current goal with the given expression.
     """
     if manager.is_closed:
         raise TacticError("exact failed: No active goals remain.")
@@ -16,9 +18,7 @@ def exact(manager: ProofManager, expr: Expr) -> None:
 
 def assumption(manager: ProofManager) -> None:
     """
-    Assumption tactic:
-        Finds a local hypothesis in the context whose type is definitionally equal (is_def_eq)
-        to the current goal's statement, and closes the goal with it.
+    Close the current goal with a matching local hypothesis.
     """
     if manager.is_closed:
         raise TacticError("assumption failed: No active goals remain.")

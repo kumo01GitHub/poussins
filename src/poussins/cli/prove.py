@@ -1,4 +1,3 @@
-
 """
 Batch proof execution subcommand for poussins CLI.
 """

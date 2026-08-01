@@ -6,6 +6,7 @@ from .kernel_error import KernelTypeError, KernelStateError, KernelValueError
 from .proof_error import ProofError
 from .tactic_error import TacticError
 
+
 __all__ = [
     "ProofError",
     "FrameworkError",

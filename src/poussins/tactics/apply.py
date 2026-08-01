@@ -1,3 +1,6 @@
+"""
+Tactic for applying a theorem, hypothesis, or expression.
+"""
 from __future__ import annotations
 
 from ..ast import (
@@ -10,7 +13,7 @@ from ..errors import TacticError
 
 def apply(manager: ProofManager, expr: Expr) -> None:
     """
-    Apply tactic: Apply a theorem or a hypothesis expression (Expr) to the current goal.
+    Apply an expression to the current goal.
     """
     if manager.is_closed:
         raise TacticError("apply failed: No active goals remain.")

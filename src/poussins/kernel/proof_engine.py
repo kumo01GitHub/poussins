@@ -13,7 +13,14 @@ from ..errors import KernelStateError, KernelValueError
 
 
 class ProofEngine:
+    """
+    Validate proof-state transitions against the current environment.
+    """
+
     def __init__(self, env: Environment):
+        """
+        Build a proof engine with the declarations available in ``env``.
+        """
         self.global_context = {name: decl.type for name, decl in env.items()}
 
     def create_initial_state(self, statement: Expr) -> ProofState:

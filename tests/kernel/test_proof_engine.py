@@ -4,7 +4,7 @@ from poussins.ast import EConst, EMetaVar
 from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_engine import ProofEngine
-from poussins.kernel.proof_state import MetaVar, ProofState
+from poussins.kernel.proof_state import ProofState
 
 
 def test_create_initial_state_has_single_goal_and_metavar(default_env) -> None:

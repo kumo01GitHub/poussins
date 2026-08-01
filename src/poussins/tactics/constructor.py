@@ -1,3 +1,6 @@
+"""
+Tactic for applying inductive constructors.
+"""
 from __future__ import annotations
 
 from .apply import apply
@@ -8,7 +11,9 @@ from ..environment import InductiveDeclaration, ConstructorDeclaration
 
 
 def constructor(manager: ProofManager, index: int | None = None) -> None:
-    """Constructor tactic: Apply a valid constructor or the specified index (1-indexed)."""
+    """
+    Apply a matching constructor, or the constructor at the given index.
+    """
     if manager.is_closed:
         raise TacticError("constructor failed: No active goals remain.")
 

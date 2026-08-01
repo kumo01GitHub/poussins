@@ -10,13 +10,18 @@ from ..ast.expr import Expr
 
 @dataclass(frozen=True)
 class Goal:
-    """A single proof subgoal, consisting of a statement and a local context."""
+    """
+    A single proof subgoal, consisting of a statement and a local context.
+    """
 
     id: str = field(default_factory=lambda: str(uuid4()), init=False)
     statement: Expr
     context: dict[str, Expr]
 
     def __eq__(self, other: object) -> bool:
+        """
+        Compare goals by their stable identifier.
+        """
         if not isinstance(other, Goal):
             return False
         return self.id == other.id

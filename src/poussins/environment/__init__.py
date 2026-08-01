@@ -1,3 +1,6 @@
+"""
+Public environment exports for poussins.
+"""
 from .declaration import Declaration, ConstantDeclaration, InductiveDeclaration, ConstructorDeclaration, QuotDeclaration
 from .environment import Environment
 

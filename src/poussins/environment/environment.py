@@ -1,3 +1,6 @@
+"""
+Environment storage and predefined logical declarations.
+"""
 from __future__ import annotations
 from typing import Final
 
@@ -15,7 +18,7 @@ from ..ast import (
 
 class Environment:
     """
-    Environment: a collection of declarations (axioms, theorems, etc.) with unique names.
+    Collection of named declarations used by the proof engine.
     """
 
     PROP_SORT: Final[ESort] = ESort(UnivLevelZero())
@@ -25,29 +28,41 @@ class Environment:
         self.declarations: dict[str, Declaration] = {}
 
     def add(self, declaration: Declaration):
+        """
+        Add a declaration to the environment.
+        """
         if declaration.name in self.declarations:
             raise ValueError(f"Declaration with name '{declaration.name}' already exists.")
         self.declarations[declaration.name] = declaration
 
     def get(self, name: str) -> Declaration | None:
+        """
+        Return the declaration with the given name, if it exists.
+        """
         return self.declarations.get(name)
 
     def update(self, other: Environment):
+        """
+        Merge declarations from another environment into this one.
+        """
         self.declarations.update(other.declarations)
 
     def items(self):
+        """
+        Return the environment declarations as `(name, declaration)` pairs.
+        """
         return self.declarations.items()
 
     @classmethod
     def default(cls) -> Environment:
         """
-        Create a default Environment pre-populated with True, False, And, Or, Not, and Nat.
+        Create a default environment with the core logical declarations.
         """
         env = cls()
 
-        # ---------------------------------------------------------
-        # 1. True (Top)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # True (Top)
+        # ------------------------------------------------------------------
         env.add(
             InductiveDeclaration(
                 name="True",
@@ -65,9 +80,9 @@ class Environment:
             )
         )
 
-        # ---------------------------------------------------------
-        # 2. False (Bottom)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # False (Bottom)
+        # ------------------------------------------------------------------
         env.add(
             InductiveDeclaration(
                 name="False",
@@ -85,9 +100,9 @@ class Environment:
             )
         )
 
-        # ---------------------------------------------------------
-        # 3. And (Conjunction)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # And (Conjunction)
+        # ------------------------------------------------------------------
         env.add(
             InductiveDeclaration(
                 name="And",
@@ -121,9 +136,9 @@ class Environment:
             )
         )
 
-        # ---------------------------------------------------------
-        # 4. Or (Disjunction)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # Or (Disjunction)
+        # ------------------------------------------------------------------
         env.add(
             InductiveDeclaration(
                 name="Or",
@@ -173,9 +188,7 @@ class Environment:
             )
         )
 
-        # ---------------------------------------------------------
-        # 5. Not (Negation : A -> False)
-        # ---------------------------------------------------------
+        # Not (negation).
         env.add(
             ConstantDeclaration(
                 name="Not",
@@ -185,9 +198,9 @@ class Environment:
             )
         )
 
-        # ---------------------------------------------------------
-        # 6. Nat (Natural Numbers)
-        # ---------------------------------------------------------
+        # ------------------------------------------------------------------
+        # Nat (Natural Numbers)
+        # ------------------------------------------------------------------
         env.add(
             InductiveDeclaration(
                 name="Nat",
@@ -196,7 +209,7 @@ class Environment:
                 constructor_names=("Nat.zero", "Nat.succ"),
             )
         )
-        # Nat.zero : Nat
+        # Nat.zero
         env.add(
             ConstructorDeclaration(
                 name="Nat.zero",
@@ -205,7 +218,7 @@ class Environment:
                 type=EConst("Nat", ()),
             )
         )
-        # Nat.succ : Nat -> Nat
+        # Nat.succ
         env.add(
             ConstructorDeclaration(
                 name="Nat.succ",

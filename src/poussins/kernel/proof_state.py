@@ -11,11 +11,18 @@ from .goal import Goal
 
 @dataclass(frozen=True)
 class MetaVar:
+    """
+    Track a metavariable statement and its optional assignment.
+    """
+
     statement: Expr
     assignment: Optional[Expr] = None
 
     @property
     def is_assigned(self) -> bool:
+        """
+        Return whether the metavariable has been assigned.
+        """
         return self.assignment is not None
 
 
@@ -30,4 +37,7 @@ class ProofState:
 
     @property
     def current_goal(self) -> Optional[Goal]:
+        """
+        Return the next active goal, if one exists.
+        """
         return self.goals[0] if self.goals else None

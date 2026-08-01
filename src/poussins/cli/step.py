@@ -1,4 +1,3 @@
-
 """
 Step-by-step proof execution subcommand for poussins CLI.
 """

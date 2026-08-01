@@ -1,5 +1,6 @@
-# Entrypoint for `python -m poussins`.
-# Sets up logger and global error handler.
+"""
+Entrypoint poussins.
+"""
 from .cli import main
 
 if __name__ == "__main__":

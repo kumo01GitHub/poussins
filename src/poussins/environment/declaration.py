@@ -1,3 +1,6 @@
+"""
+Declaration types stored in the environment.
+"""
 from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass
@@ -5,10 +8,9 @@ from dataclasses import dataclass
 from ..ast.expr import Expr
 
 
-
 class Declaration(ABC):
     """
-    Base class for all declarations in the environment.
+    Base class for all declarations stored in the environment.
     """
     name: str
     type: Expr
@@ -17,7 +19,7 @@ class Declaration(ABC):
 @dataclass(frozen=True)
 class ConstantDeclaration(Declaration):
     """
-    Global constant information (def / theorem).
+    Global constant information for a definition or theorem.
     """
     name: str
     level_params: tuple[str, ...]
@@ -28,7 +30,7 @@ class ConstantDeclaration(Declaration):
 @dataclass(frozen=True)
 class InductiveDeclaration(Declaration):
     """
-    Inductive type information (data type / logical connective).
+    Inductive type information for a data type or logical connective.
     """
     name: str
     level_params: tuple[str, ...]
@@ -38,7 +40,9 @@ class InductiveDeclaration(Declaration):
 
 @dataclass(frozen=True)
 class ConstructorDeclaration(Declaration):
-    """Constructor information belonging to an inductive type (Nat.zero, And.intro)."""
+    """
+    Constructor information for an inductive type.
+    """
     name: str
     level_params: tuple[str, ...]
     inductive_name: str
@@ -48,7 +52,7 @@ class ConstructorDeclaration(Declaration):
 @dataclass(frozen=True)
 class QuotDeclaration(Declaration):
     """
-    Quotient type information (Quot, Quot.mk, Quot.lift, Quot.sound).
+    Quotient type information.
     """
     name: str
     level_params: tuple[str, ...]

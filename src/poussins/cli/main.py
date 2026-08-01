@@ -8,6 +8,9 @@ from .lean import run_lean2py, run_py2lean
 
 
 def main():
+    """
+    Parse CLI arguments and dispatch to the selected subcommand.
+    """
     parser = argparse.ArgumentParser(description="poussins command line")
     subparsers = parser.add_subparsers(dest="subcmd", required=True)
 

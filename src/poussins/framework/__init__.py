@@ -15,6 +15,7 @@ from .theorem import (
     Example,
 )
 
+
 __all__ = [
     "Axiom",
     "ProofScript",

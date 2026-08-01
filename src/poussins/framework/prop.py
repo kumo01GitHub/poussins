@@ -25,9 +25,16 @@ from ..environment import Environment, ConstantDeclaration
 
 @dataclass(frozen=True)
 class Prop:
+    """
+    Immutable wrapper for proposition expressions with operator syntax.
+    """
+
     expr: Expr
 
     def __init__(self, expr_or_name: Expr | str, env: Environment | None = None) -> None:
+        """
+        Create a proposition from an expression or a named variable.
+        """
         if isinstance(expr_or_name, Expr):
             object.__setattr__(self, "expr", expr_or_name)
         else:
@@ -48,6 +55,9 @@ class Prop:
 
     @staticmethod
     def to_expr(prop_or_expr: Prop | Expr) -> Expr:
+        """
+        Return the underlying expression for a proposition-like value.
+        """
         return prop_or_expr.expr if isinstance(prop_or_expr, Prop) else prop_or_expr
 
     # ------------------------------------------------------------------
@@ -56,12 +66,16 @@ class Prop:
 
     @classmethod
     def top(cls) -> Prop:
-        """⊤ (True)."""
+        """
+        ⊤ (True).
+        """
         return cls(EConst("True", levels=()))
 
     @classmethod
     def bottom(cls) -> Prop:
-        """⊥ (False)."""
+        """
+        ⊥ (False).
+        """
         return cls(EConst("False", levels=()))
 
     # ------------------------------------------------------------------
@@ -87,7 +101,9 @@ class Prop:
         return Prop(EApp(EApp(EConst("Or", levels=()), self.expr), self.to_expr(other)))
 
     def __invert__(self) -> Prop:
-        """~P  →  P → ⊥  (negation)."""
+        """
+        ~P  →  P → ⊥  (negation).
+        """
         return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(self.bottom())))
 
     # ------------------------------------------------------------------
@@ -95,6 +111,9 @@ class Prop:
     # ------------------------------------------------------------------
 
     def __eq__(self, other: object) -> bool:
+        """
+        Compare propositions by their underlying expression.
+        """
         if isinstance(other, Prop):
             return self.expr == other.expr
         elif isinstance(other, Expr):
@@ -102,7 +121,13 @@ class Prop:
         return NotImplemented
 
     def __hash__(self) -> int:
+        """
+        Hash the wrapped expression.
+        """
         return hash(self.expr)
 
     def __repr__(self) -> str:
+        """
+        Return a debug representation of the proposition.
+        """
         return f"Prop({self.expr!r})"

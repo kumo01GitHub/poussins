@@ -1,3 +1,6 @@
+"""
+Tactics for introducing local variables into the current goal.
+"""
 from __future__ import annotations
 
 from ..ast import ELam, EPi, EMetaVar, EVar, substitute_expr_var  
@@ -7,7 +10,7 @@ from ..kernel import ProofManager, Goal, whnf
 
 def intro(manager: ProofManager, var_name: str) -> None:
     """
-    Intro tactic: Introduce a new variable for the current goal if it is a product type (EPi).
+    Introduce one variable from a dependent product goal.
     """
     if manager.is_closed:
         raise TacticError("intro failed: No active goals remain.")
@@ -44,7 +47,7 @@ def intro(manager: ProofManager, var_name: str) -> None:
 
 def intros(manager: ProofManager, var_names: list[str]) -> None:
     """
-    Intros tactic: Introduce multiple new variables for the current goal if it is a product type (EPi).
+    Introduce multiple variables from a dependent product goal.
     """
     for var_name in var_names:
         intro(manager, var_name)
