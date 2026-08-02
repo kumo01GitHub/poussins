@@ -34,11 +34,3 @@ uv run ruff check .
 uv build
 uv publish
 ```
-
-## Available tactics
-
-- `intro`, `intros`
-- `exact`, `assumption`
-- `constructor`, `left`, `right`, `split`
-- `cases`
-- `induction` for natural-number induction over a `Nat` hypothesis
