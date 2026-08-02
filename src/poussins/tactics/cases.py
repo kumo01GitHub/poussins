@@ -20,6 +20,11 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 
 
+def _definitions(manager: ProofManager):
+    engine = getattr(manager, "engine", None)
+    return None if engine is None else engine.definitions
+
+
 def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
     """
     Produce a fresh binder name that does not collide with the current context.
@@ -141,10 +146,10 @@ def cases(
     if current_goal is None:
         raise TacticError("cases failed: No active goals remain.")
 
-    if hypothesis_name not in current_goal.context:
+    if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"cases failed: Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.context[hypothesis_name], state.metavars)
+    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, _definitions(manager))
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
@@ -204,13 +209,13 @@ def cases(
             hypothesis_name,
             constructor_pattern,
         )
-        branch_context = {
+        branch_local_context = {
             name: substitute_expr_var(type_expr, hypothesis_name, constructor_pattern)
-            for name, type_expr in current_goal.context.items()
+            for name, type_expr in current_goal.local_context.items()
             if name != hypothesis_name
         }
         for var_name, var_type in branch_binders:
-            branch_context[var_name] = var_type
+            branch_local_context[var_name] = var_type
 
         if len(names_for_branch) > len(constructor_arg_binders):
             raise TacticError("cases failed: too many branch names for constructor pattern.")
@@ -218,15 +223,19 @@ def cases(
             specialized_type = binder_type
             for param_name, param_value in parameter_substitutions.items():
                 specialized_type = substitute_expr_var(specialized_type, param_name, param_value)
-            branch_context[branch_name] = specialized_type
+            branch_local_context[branch_name] = specialized_type
 
-        branch_context[hypothesis_name] = substitute_expr_var(
-            current_goal.context[hypothesis_name],
+        branch_local_context[hypothesis_name] = substitute_expr_var(
+            current_goal.local_context[hypothesis_name],
             hypothesis_name,
             constructor_pattern,
         )
 
-        branch_goal = Goal(statement=branch_goal_statement, context=branch_context)
+        branch_goal = Goal(
+            statement=branch_goal_statement,
+            context=current_goal.global_context | branch_local_context,
+            local_hypothesis_names=frozenset(branch_local_context.keys()),
+        )
         subgoals.append(branch_goal)
         branch_terms.append(_build_branch_expr(constructor_arg_binders, branch_goal.id))
 

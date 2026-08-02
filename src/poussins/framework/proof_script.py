@@ -11,6 +11,7 @@ from ..tactics import (
     apply,
     exact, assumption,
     intro, intros,
+    change,
     constructor, left, right, split,
     cases,
     exfalso,
@@ -86,6 +87,13 @@ class ProofScript(ABC):
         """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
+
+    def change(self, expr_or_name: Expr | str, hypothesis_name: str | None = None) -> None:
+        """
+        Replace the current goal, or a local hypothesis type, with a definitionally equal expression.
+        """
+        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
+        change(self.manager, expr, hypothesis_name)
 
     def assumption(self) -> None:
         """

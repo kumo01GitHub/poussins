@@ -10,6 +10,11 @@ from ..kernel import ProofManager, whnf, infer_type
 from ..environment import Environment, InductiveDeclaration, ConstructorDeclaration
 
 
+def _definitions(manager: ProofManager):
+    engine = getattr(manager, "engine", None)
+    return None if engine is None else engine.definitions
+
+
 def constructor(manager: ProofManager, index: int | None = None) -> None:
     """
     Apply a matching constructor, or the constructor at the given index.
@@ -21,7 +26,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     current_goal = state.current_goal
     assert current_goal is not None
 
-    goal_type = whnf(current_goal.statement, state.metavars)
+    goal_type = whnf(current_goal.statement, state.metavars, _definitions(manager))
 
     head_expr = goal_type
     while isinstance(head_expr, EApp):
@@ -62,11 +67,15 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         levels = decl.level_params
         const = EConst(name=name, levels=levels)
 
-        c_type = whnf(infer_type(const, current_goal.context, state.metavars), state.metavars)
+        c_type = whnf(
+            infer_type(const, current_goal.context, state.metavars, _definitions(manager)),
+            state.metavars,
+            _definitions(manager),
+        )
 
         c_conclusion = c_type
         while isinstance(c_conclusion, EPi):
-            c_conclusion = whnf(c_conclusion.body, state.metavars)
+            c_conclusion = whnf(c_conclusion.body, state.metavars, _definitions(manager))
 
         c_head = c_conclusion
         while isinstance(c_head, EApp):
@@ -92,7 +101,7 @@ def _goal_head_name(manager: ProofManager) -> str:
     if current_goal is None:
         raise TacticError("constructor failed: No active goals remain.")
 
-    goal_type = whnf(current_goal.statement, state.metavars)
+    goal_type = whnf(current_goal.statement, state.metavars, _definitions(manager))
 
     head_expr = goal_type
     while isinstance(head_expr, EApp):

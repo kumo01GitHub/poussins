@@ -3,6 +3,8 @@ Stateless kernel routines for inference, checking, and unification.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from .proof_state import MetaVar
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
@@ -10,6 +12,9 @@ from ..ast import (
     collect_free_vars, substitute_meta_var, substitute_expr_var
 )
 from ..errors import KernelTypeError
+
+
+Definitions = Mapping[str, Expr | None] | None
 
 
 def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
@@ -23,20 +28,28 @@ def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     return current
 
 
-def whnf(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
+def whnf(
+    expr: Expr,
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
+    unfolding: frozenset[str] = frozenset(),
+) -> Expr:
     """
     Reduce an expression to weak head normal form.
     """
     expr = instantiate_meta(expr, metavars)
 
     match expr:
+        case EConst(name, _):
+            if definitions is not None and name in definitions and definitions[name] is not None and name not in unfolding:
+                return whnf(definitions[name], metavars, definitions, unfolding | {name})
+            return expr
         case EApp(fn, arg):
-            fn_whnf = whnf(fn, metavars)
+            fn_whnf = whnf(fn, metavars, definitions, unfolding)
             if isinstance(fn_whnf, ELam):
                 new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
-                return whnf(new_expr, metavars)
-            else:
-                return EApp(fn_whnf, arg)
+                return whnf(new_expr, metavars, definitions, unfolding)
+            return EApp(fn_whnf, arg)
         case _:
             return expr
 
@@ -74,7 +87,12 @@ def is_universe_leq(level_left: object, level_right: object) -> bool:
             return False
 
 
-def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> Expr:
+def infer_type(
+    expr: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
+) -> Expr:
     """
     Infer the type of an expression.
     """
@@ -96,13 +114,13 @@ def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar
             return t
 
         case EPi(var, domain, body):
-            sort_a = infer_type(domain, context, metavars)
-            sort_a_whnf = whnf(sort_a, metavars)
+            sort_a = infer_type(domain, context, metavars, definitions)
+            sort_a_whnf = whnf(sort_a, metavars, definitions)
             if not isinstance(sort_a_whnf, ESort):
                 raise KernelTypeError("The domain of a dependent product must be a Sort.")
 
-            sort_b = infer_type(body, context | {var: domain}, metavars)
-            sort_b_whnf = whnf(sort_b, metavars)
+            sort_b = infer_type(body, context | {var: domain}, metavars, definitions)
+            sort_b_whnf = whnf(sort_b, metavars, definitions)
             if not isinstance(sort_b_whnf, ESort):
                 raise KernelTypeError("The body of a dependent product must be a Sort.")
 
@@ -110,23 +128,23 @@ def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar
 
         case ELam(var, domain, body):
             extended_context = context | {var: domain}
-            body_type = infer_type(body, extended_context, metavars)
+            body_type = infer_type(body, extended_context, metavars, definitions)
 
-            infer_type(EPi(var, domain, body_type), context, metavars)
+            infer_type(EPi(var, domain, body_type), context, metavars, definitions)
             return EPi(var, domain, body_type)
 
         case EApp(fn, arg):
-            fn_type = infer_type(fn, context, metavars)
-            arg_type = infer_type(arg, context, metavars)
+            fn_type = infer_type(fn, context, metavars, definitions)
+            arg_type = infer_type(arg, context, metavars, definitions)
 
-            fn_type_whnf = whnf(fn_type, metavars)
+            fn_type_whnf = whnf(fn_type, metavars, definitions)
 
             if not isinstance(fn_type_whnf, EPi):
                 raise KernelTypeError(f"Expected function type (EPi), but found: {fn_type_whnf}")
 
-            expected_domain = whnf(fn_type_whnf.domain, metavars)
-            actual_arg_type = whnf(arg_type, metavars)
-            if not is_def_eq(expected_domain, actual_arg_type, context, metavars):
+            expected_domain = whnf(fn_type_whnf.domain, metavars, definitions)
+            actual_arg_type = whnf(arg_type, metavars, definitions)
+            if not is_def_eq(expected_domain, actual_arg_type, context, metavars, definitions):
                 raise KernelTypeError(f"Argument type mismatch. Expected: {expected_domain}, Found: {actual_arg_type}")
 
             return substitute_expr_var(fn_type_whnf.body, fn_type_whnf.var, arg)
@@ -138,13 +156,19 @@ def infer_type(expr: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar
             raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
-def check_type(expr: Expr, expected_type: Expr, context: dict[str, Expr], metavars: dict[str, MetaVar]) -> bool:
+def check_type(
+    expr: Expr,
+    expected_type: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
+) -> bool:
     """
     Return True when the expression checks against the expected type.
     """
     try:
-        inferred = infer_type(expr, context, metavars)
-        if is_def_eq(inferred, expected_type, context, metavars):
+        inferred = infer_type(expr, context, metavars, definitions)
+        if is_def_eq(inferred, expected_type, context, metavars, definitions):
             return True
         if isinstance(inferred, ESort) and isinstance(expected_type, ESort):
             return is_universe_leq(inferred.level, expected_type.level)
@@ -196,10 +220,13 @@ def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = 
         case _:
             return False
 
+
 def is_def_eq(
-    t1: Expr, t2: Expr,
+    t1: Expr,
+    t2: Expr,
     context: dict[str, Expr],
-    metavars: dict[str, MetaVar]
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
 ) -> bool:
     """
     Return True when two expressions are definitionally equal.
@@ -210,8 +237,8 @@ def is_def_eq(
     if is_alpha_eq(t1, t2):
         return True
 
-    t1_whnf = whnf(t1, metavars)
-    t2_whnf = whnf(t2, metavars)
+    t1_whnf = whnf(t1, metavars, definitions)
+    t2_whnf = whnf(t2, metavars, definitions)
 
     if t1_whnf != t1 or t2_whnf != t2:
         if is_alpha_eq(t1_whnf, t2_whnf):
@@ -226,7 +253,7 @@ def is_def_eq(
             return False
         if t1_whnf.body.arg.name in collect_free_vars(t1_whnf.body.fn):
             return False
-        return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars)
+        return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars, definitions)
 
     if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
         if not isinstance(t2_whnf.body, EApp):
@@ -237,7 +264,7 @@ def is_def_eq(
             return False
         if t2_whnf.body.arg.name in collect_free_vars(t2_whnf.body.fn):
             return False
-        return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars)
+        return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars, definitions)
 
     if type(t1_whnf) is not type(t2_whnf):
         return False
@@ -248,38 +275,40 @@ def is_def_eq(
 
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
-                is_def_eq(f1, f2, context, metavars) and
-                is_def_eq(a1, a2, context, metavars)
+                is_def_eq(f1, f2, context, metavars, definitions) and
+                is_def_eq(a1, a2, context, metavars, definitions)
             )
 
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
-            if not is_def_eq(d1, d2, context, metavars):
+            if not is_def_eq(d1, d2, context, metavars, definitions):
                 return False
 
             if v1 != v2:
                 b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
 
-            return is_def_eq(b1, b2, context | {v1: d1}, metavars)
+            return is_def_eq(b1, b2, context | {v1: d1}, metavars, definitions)
 
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 return False
-            if not is_def_eq(d1, d2, context, metavars):
+            if not is_def_eq(d1, d2, context, metavars, definitions):
                 return False
-            if not is_def_eq(m1, m2, context, metavars):
+            if not is_def_eq(m1, m2, context, metavars, definitions):
                 return False
             if len(c1) != len(c2):
                 return False
-            return all(is_def_eq(b1, b2, context, metavars) for b1, b2 in zip(c1, c2))
+            return all(is_def_eq(b1, b2, context, metavars, definitions) for b1, b2 in zip(c1, c2))
 
         case _:
             return False
 
 
 def unify(
-    t1: Expr, t2: Expr,
+    t1: Expr,
+    t2: Expr,
     context: dict[str, Expr],
-    metavars: dict[str, MetaVar]
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
 ) -> dict[str, MetaVar]:
     """
     Unify two expressions and return updated metavariable assignments.
@@ -300,38 +329,38 @@ def unify(
         if mvar_id in metavars and not metavars[mvar_id].is_assigned:
             return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t1)}
 
-    t1_whnf = whnf(t1, metavars)
-    t2_whnf = whnf(t2, metavars)
+    t1_whnf = whnf(t1, metavars, definitions)
+    t2_whnf = whnf(t2, metavars, definitions)
 
     if t1_whnf != t1 or t2_whnf != t2:
         if is_alpha_eq(t1_whnf, t2_whnf):
             return metavars
         if isinstance(t1_whnf, EMetaVar) or isinstance(t2_whnf, EMetaVar):
-            return unify(t1_whnf, t2_whnf, context, metavars)
+            return unify(t1_whnf, t2_whnf, context, metavars, definitions)
 
     if type(t1_whnf) is not type(t2_whnf):
         raise KernelTypeError(f"Unification failed: type mismatch between {t1_whnf} and {t2_whnf}")
 
     match (t1_whnf, t2_whnf):
         case (EApp(f1, a1), EApp(f2, a2)):
-            current_metavars = unify(f1, f2, context, metavars)
-            return unify(a1, a2, context, current_metavars)
+            current_metavars = unify(f1, f2, context, metavars, definitions)
+            return unify(a1, a2, context, current_metavars, definitions)
 
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
-            current_metavars = unify(d1, d2, context, metavars)
+            current_metavars = unify(d1, d2, context, metavars, definitions)
             if v1 != v2:
                 b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
-            return unify(b1, b2, context | {v1: d1}, current_metavars)
+            return unify(b1, b2, context | {v1: d1}, current_metavars, definitions)
 
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 raise KernelTypeError("Unification failed: match inductive type mismatch")
-            current_metavars = unify(d1, d2, context, metavars)
-            current_metavars = unify(m1, m2, context, current_metavars)
+            current_metavars = unify(d1, d2, context, metavars, definitions)
+            current_metavars = unify(m1, m2, context, current_metavars, definitions)
             if len(c1) != len(c2):
                 raise KernelTypeError("Unification failed: match branch length mismatch")
             for b1, b2 in zip(c1, c2):
-                current_metavars = unify(b1, b2, context, current_metavars)
+                current_metavars = unify(b1, b2, context, current_metavars, definitions)
             return current_metavars
 
         case _:

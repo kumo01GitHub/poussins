@@ -39,7 +39,7 @@ Prefer importing from the subpackage that owns the API.
 
 The framework layer gives you a friendly interface:
 
-- `Environment.default()`: creates a default logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`)
+- `Environment.default()`: creates a default logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`)
 - `Prop`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`)
 - `Example(statement, env)`: anonymous proof (useful for exploration)
 - `Theorem(name, statement, env)`: named proof; `qed()` registers it into the environment
@@ -70,6 +70,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `apply(expr_or_name)`: apply theorem/hypothesis and create subgoals
 - `constructor(index=None)`: apply a matching constructor (or choose 1-based constructor index)
 - `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
+- `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
 - `exfalso()`: change target to `False` and prove contradiction first
 - `undo()`: rollback one proof step
 

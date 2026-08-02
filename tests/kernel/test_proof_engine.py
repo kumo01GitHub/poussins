@@ -1,10 +1,15 @@
 import pytest
 
-from poussins.ast import EConst, EMetaVar, ELam, EPi, ESort, EVar, UnivLevelZero
+from poussins.ast import EApp, EConst, EMetaVar, ELam, EPi, ESort, EVar, UnivLevelZero
 from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_engine import ProofEngine
 from poussins.kernel.proof_state import ProofState
+
+
+def _beta_false() -> Expr:
+    prop = ESort(UnivLevelZero())
+    return EApp(ELam("P", prop, EVar("P")), EConst("False", ()))
 
 
 def test_create_initial_state_has_single_goal_and_metavar(default_env) -> None:
@@ -97,3 +102,88 @@ def test_close_goal_accepts_alpha_equivalent_lambda_term(default_env) -> None:
 
     assert next_state.goals == ()
     assert next_state.metavars[state.current_goal.id].is_assigned
+
+
+def test_change_goal_replaces_current_goal_with_definitionally_equal_statement(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("False", ()))
+    new_statement = _beta_false()
+
+    next_state = engine.change_goal(state, new_statement)
+
+    assert next_state.current_goal is not None
+    assert next_state.current_goal.id == state.current_goal.id
+    assert next_state.current_goal.statement == new_statement
+    assert next_state.metavars[state.current_goal.id].statement == new_statement
+
+
+def test_change_goal_rejects_non_convertible_statement(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("False", ()))
+
+    with pytest.raises(KernelValueError):
+        engine.change_goal(state, EConst("True", ()))
+
+
+def test_change_goal_without_active_goal_raises(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = ProofState(goals=(), metavars={})
+
+    with pytest.raises(KernelStateError):
+        engine.change_goal(state, EConst("True", ()))
+
+
+def test_change_hypothesis_replaces_local_type_with_definitionally_equal_statement(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("True", ()))
+    current_goal = state.current_goal
+    subgoal = Goal(statement=EConst("True", ()), context=current_goal.context | {"hFalse": EConst("False", ())})
+    state = engine.refine_goal(
+        state,
+        EMetaVar(subgoal.id),
+        [subgoal],
+    )
+    current_goal = state.current_goal
+    assert current_goal is not None
+    new_type = _beta_false()
+
+    next_state = engine.change_hypothesis(state, "hFalse", new_type)
+
+    assert next_state.current_goal is not None
+    assert next_state.current_goal.id == current_goal.id
+    assert next_state.current_goal.context["hFalse"] == new_type
+
+
+def test_change_hypothesis_rejects_unknown_name(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("True", ()))
+
+    with pytest.raises(KernelValueError):
+        engine.change_hypothesis(state, "missing", EConst("True", ()))
+
+
+def test_change_hypothesis_without_active_goal_raises(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = ProofState(goals=(), metavars={})
+
+    with pytest.raises(KernelStateError):
+        engine.change_hypothesis(state, "h", EConst("True", ()))
+
+
+def test_change_hypothesis_rejects_global_name(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("True", ()))
+
+    with pytest.raises(KernelValueError):
+        engine.change_hypothesis(state, "True", EConst("True", ()))
+
+
+def test_change_hypothesis_rejects_non_convertible_type(default_env) -> None:
+    engine = ProofEngine(default_env)
+    state = engine.create_initial_state(EConst("True", ()))
+    current_goal = state.current_goal
+    subgoal = Goal(statement=EConst("True", ()), context=current_goal.context | {"hFalse": EConst("False", ())})
+    state = engine.refine_goal(state, EMetaVar(subgoal.id), [subgoal])
+
+    with pytest.raises(KernelValueError):
+        engine.change_hypothesis(state, "hFalse", EConst("True", ()))

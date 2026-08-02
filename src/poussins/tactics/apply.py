@@ -11,6 +11,11 @@ from ..kernel import ProofManager, Goal, infer_type, whnf
 from ..errors import TacticError
 
 
+def _definitions(manager: ProofManager):
+    engine = getattr(manager, "engine", None)
+    return None if engine is None else engine.definitions
+
+
 def apply(manager: ProofManager, expr: Expr) -> None:
     """
     Apply an expression to the current goal.
@@ -24,11 +29,19 @@ def apply(manager: ProofManager, expr: Expr) -> None:
         raise TacticError("apply failed: No active goals remain.")
 
     implicit_subgoals: list[Goal] = []
-    current_type = whnf(infer_type(expr, current_goal.context, state.metavars), state.metavars)
+    current_type = whnf(
+        infer_type(expr, current_goal.context, state.metavars, _definitions(manager)),
+        state.metavars,
+        _definitions(manager),
+    )
     assignment = expr
 
     while isinstance(current_type, EPi):
-        new_goal = Goal(statement=current_type.domain, context=current_goal.context)
+        new_goal = Goal(
+            statement=current_type.domain,
+            context=current_goal.context,
+            local_hypothesis_names=current_goal.local_hypothesis_names,
+        )
         implicit_subgoals.append(new_goal)
 
         assignment = EApp(assignment, EMetaVar(new_goal.id))
@@ -39,7 +52,8 @@ def apply(manager: ProofManager, expr: Expr) -> None:
                 var_name=current_type.var,
                 replacement=EMetaVar(new_goal.id)
             ),
-            state.metavars
+            state.metavars,
+            _definitions(manager),
         )
 
     try:

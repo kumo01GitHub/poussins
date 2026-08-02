@@ -18,7 +18,9 @@ def exfalso(manager: ProofManager) -> None:
         raise TacticError("exfalso failed: No active goals remain.")
 
     false_goal = Goal(
-        statement=EConst("False", ()), context=current_goal.context
+        statement=EConst("False", ()),
+        context=current_goal.context,
+        local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
     elim_expr = EApp(

@@ -1,10 +1,16 @@
 import pytest
 
-from poussins.ast import EConst, EMetaVar
+from poussins.ast import EApp, EConst, EMetaVar, ELam, ESort, EVar, UnivLevelZero
+from poussins.environment import ConstantDeclaration
 from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_manager import ProofManager
 from poussins.kernel.proof_state import ProofState
+
+
+def _beta_false():
+    prop = ESort(UnivLevelZero())
+    return EApp(ELam("P", prop, EVar("P")), EConst("False", ()))
 
 
 def test_manager_initial_state_and_unclosed_status(default_env) -> None:
@@ -74,3 +80,45 @@ def test_manager_refine_goal_with_untracked_metavar_raises_kernel_value_error(de
 
     with pytest.raises(KernelValueError):
         manager.refine_goal(EMetaVar("ghost"), subgoals=[])
+
+
+def test_manager_change_goal_updates_current_statement(default_env) -> None:
+    manager = ProofManager(EConst("False", ()), default_env)
+    new_statement = _beta_false()
+
+    manager.change_goal(new_statement)
+
+    current_goal = manager.current_state.current_goal
+    assert current_goal is not None
+    assert current_goal.statement == new_statement
+
+
+def test_manager_change_hypothesis_updates_current_context(default_env) -> None:
+    manager = ProofManager(EConst("True", ()), default_env)
+    current_goal = manager.current_state.current_goal
+    subgoal = Goal(statement=EConst("True", ()), context=current_goal.context | {"hFalse": EConst("False", ())})
+
+    manager.refine_goal(EMetaVar(subgoal.id), subgoals=[subgoal])
+    manager.change_hypothesis("hFalse", _beta_false())
+
+    updated_goal = manager.current_state.current_goal
+    assert updated_goal is not None
+    assert updated_goal.context["hFalse"] == _beta_false()
+
+
+def test_manager_uses_new_environment_definitions_for_change(default_env) -> None:
+    manager = ProofManager(EConst("False", ()), default_env)
+    default_env.add(
+        ConstantDeclaration(
+            name="AliasFalse",
+            level_params=(),
+            type=EConst("False", ()),
+            value=EConst("False", ()),
+        )
+    )
+
+    manager.change_goal(EConst("AliasFalse", ()))
+
+    current_goal = manager.current_state.current_goal
+    assert current_goal is not None
+    assert current_goal.statement == EConst("AliasFalse", ())

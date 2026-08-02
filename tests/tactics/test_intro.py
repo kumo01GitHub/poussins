@@ -35,6 +35,16 @@ def test_intro_rejects_duplicate_variable_name(default_env: Environment) -> None
         intro(manager, "x")
 
 
+def test_intro_allows_shadowing_global_name(default_env: Environment) -> None:
+    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), default_env)
+
+    intro(manager, "True")
+
+    current_goal = manager.current_state.current_goal
+    assert current_goal is not None
+    assert current_goal.has_local_hypothesis("True")
+
+
 def test_intros_adds_multiple_variables(default_env: Environment) -> None:
     goal = EPi("x", ESort(UnivLevelZero()), EPi("y", ESort(UnivLevelZero()), ESort(UnivLevelZero())))
     manager = ProofManager(goal, default_env)

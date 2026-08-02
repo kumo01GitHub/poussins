@@ -74,6 +74,8 @@ This layout keeps the architecture layered and avoids circular imports.
 - Thin tactics layer: tactics orchestrate `ProofManager`, while correctness is enforced by kernel checks.
 - Friendly frontend DSL: `Prop`, `Example`, and `Theorem` hide kernel internals for users.
 - Explicit environment model: declarations are registered in `Environment` and referenced by name.
+- Dynamic environment sync: active goals are refreshed from the latest environment view before each kernel transition.
+- Local/global context split: goal-local hypotheses are tracked separately from global declarations.
 
 ### System Architecture
 
@@ -97,7 +99,7 @@ This section explains how proof construction flows through the system and how th
 1. `Example` or `Theorem` is created with a target expression.
 2. `ProofManager` builds an initial goal/metavariable state through `ProofEngine.create_initial_state`.
 3. A tactic generates a candidate assignment and optional subgoals.
-4. Kernel validates typing and definitional equality, then returns next immutable state.
+4. Kernel validates typing and definitional equality (including definition unfolding), then returns next immutable state.
 5. Session history keeps state snapshots for `undo()`.
 6. On `Theorem.qed()`, the final proof term is extracted and added to `Environment`.
 
@@ -111,14 +113,16 @@ This section explains how proof construction flows through the system and how th
 ### Environment (`environment/`)
 
 - Stores declarations (`ConstantDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, ...).
-- `Environment.default()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`) and `Nat`.
+- `Environment.default()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`) and core inductives (`Nat`, `Bool`).
 
 ### Kernel (`kernel/`)
 
 - `ProofState`: immutable snapshot of current goals + metavariable assignments.
-- `ProofEngine`: validates and applies `close_goal` / `refine_goal` transitions.
-- `ProofManager`: stable facade used by tactics and framework.
-- `typecheck.py`: inference, normalization (`whnf`), and unification core.
+- `ProofEngine`: validates and applies `close_goal`, `refine_goal`, `change_goal`, and `change_hypothesis` transitions.
+- `ProofEngine.global_context` and `ProofEngine.refresh_state(...)`: rebuild active goals from the current environment so newly added declarations stay visible during ongoing proofs.
+- `ProofManager`: stable facade used by tactics/framework; delegates state transitions to `ProofEngine` and exposes `change_goal(...)` / `change_hypothesis(...)`.
+- `Goal`: keeps `local_hypothesis_names`, and provides `local_context` / `global_context` projections so tactics can distinguish local hypotheses from global constants.
+- `typecheck.py`: inference, normalization (`whnf`), definitional equality, and unification core. All main entry points accept optional `definitions` for delta unfolding of constants.
 
 ### Tactics (`tactics/`)
 
@@ -128,6 +132,7 @@ This section explains how proof construction flows through the system and how th
   - call `ProofManager` for verified state transitions
 - `constructor` resolves inductive constructors from the environment and delegates to `apply`.
 - `cases` performs a structural split over an inductive hypothesis and produces branch subgoals, which are then verified through the existing kernel refinement flow.
+- `change` rewrites the current goal or a named local hypothesis type to a definitionally equal expression via manager-level `change_*` transitions.
 
 ### Framework (`framework/`)
 
@@ -203,7 +208,7 @@ When adding a new user-facing inductive type such as `Bool` or `List`, split the
 Tactics are thin adapters over `ProofManager`. Keep them narrow and do not move proof-state ownership out of the kernel facade.
 
 1. A tactic function should take `ProofManager` as its first argument.
-2. Use `ProofManager` operations such as `close_goal()`, `refine_goal()`, and `undo()` to change proof state.
+2. Use `ProofManager` operations such as `close_goal()`, `refine_goal()`, `change_goal()`, `change_hypothesis()`, and `undo()` to change proof state.
 3. It is acceptable to inspect the current goal through `manager.current_state` when computing the next step.
 4. Do not mutate `ProofSession`, `ProofState`, goal lists, or metavariable tables directly.
 5. Do not bypass `ProofManager` to call lower-level kernel transition code for normal tactic behavior.

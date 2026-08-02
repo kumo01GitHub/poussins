@@ -9,6 +9,11 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 
 
+def _definitions(manager: ProofManager):
+    engine = getattr(manager, "engine", None)
+    return None if engine is None else engine.definitions
+
+
 def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
     """
     Produce a fresh binder name that does not collide with the current context.
@@ -38,10 +43,10 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     if current_goal is None:
         raise TacticError("induction failed: No active goals remain.")
 
-    if hypothesis_name not in current_goal.context:
+    if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"induction failed: Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.context[hypothesis_name], state.metavars)
+    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, _definitions(manager))
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
@@ -79,30 +84,34 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
             current_type = current_type.body
 
         branch_statement = substitute_expr_var(current_goal.statement, hypothesis_name, branch_expr)
-        branch_context = {
+        branch_local_context = {
             name: substitute_expr_var(type_expr, hypothesis_name, branch_expr)
-            for name, type_expr in current_goal.context.items()
+            for name, type_expr in current_goal.local_context.items()
             if name != hypothesis_name
         }
-        branch_context[hypothesis_name] = branch_expr
+        branch_local_context[hypothesis_name] = branch_expr
 
         for var_name, var_type in branch_binders:
-            branch_context[var_name] = var_type
+            branch_local_context[var_name] = var_type
 
         induction_hypotheses: list[tuple[str, Expr]] = []
         for var_name, var_type in branch_binders:
             if isinstance(var_type, EConst) and var_type.name == head_name:
-                ih_name = _fresh_name("ih", branch_context, used_names=set())
+                ih_name = _fresh_name("ih", current_goal.global_context | branch_local_context, used_names=set())
                 ih_expr = substitute_expr_var(current_goal.statement, hypothesis_name, EVar(var_name))
-                branch_context[ih_name] = ih_expr
+                branch_local_context[ih_name] = ih_expr
                 induction_hypotheses.append((ih_name, EVar(var_name)))
 
-        subgoal = Goal(statement=branch_statement, context=branch_context)
+        subgoal = Goal(
+            statement=branch_statement,
+            context=current_goal.global_context | branch_local_context,
+            local_hypothesis_names=frozenset(branch_local_context.keys()),
+        )
         subgoals.append(subgoal)
 
         branch_term = EMetaVar(subgoal.id)
         for var_name, _ in reversed(branch_binders):
-            branch_term = ELam(var_name, branch_context[var_name], branch_term)
+            branch_term = ELam(var_name, branch_local_context[var_name], branch_term)
         branch_terms.append(branch_term)
 
     motive = ELam(

@@ -34,7 +34,7 @@ class ProofManager:
         """
         Return the current proof state (the last state in the history).
         """
-        return self.session.current_state
+        return self.engine.refresh_state(self.session.current_state)
 
     @property
     def is_closed(self) -> bool:
@@ -70,6 +70,20 @@ class ProofManager:
         Refine the current goal by providing an assignment that splits it into new subgoals.
         """
         next_state = self.engine.refine_goal(self.current_state, assignment, subgoals)
+        self.session.update_state(next_state)
+
+    def change_goal(self, new_statement: Expr) -> None:
+        """
+        Replace the current goal statement with a definitionally equal statement.
+        """
+        next_state = self.engine.change_goal(self.current_state, new_statement)
+        self.session.update_state(next_state)
+
+    def change_hypothesis(self, hypothesis_name: str, new_type: Expr) -> None:
+        """
+        Replace a local hypothesis type with a definitionally equal type.
+        """
+        next_state = self.engine.change_hypothesis(self.current_state, hypothesis_name, new_type)
         self.session.update_state(next_state)
 
     def undo(self) -> None:
