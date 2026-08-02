@@ -63,6 +63,26 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `exfalso()`: change target to `False` and prove contradiction first
 - `undo()`: rollback one proof step
 
+### Induction and the Nat DSL
+
+The built-in Nat type can be constructed with the public Nat DSL:
+
+```python
+from poussins import Environment, Example, Nat
+from poussins.ast import EConst, EMetaVar
+from poussins.kernel.goal import Goal
+
+env = Environment.default()
+
+example = Example(EConst("True", ()), env)
+subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("Nat", ())})
+example.manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
+
+example.induction("n")
+```
+
+`Nat.zero()` and `Nat.succ(n)` are convenient constructors for the default Nat type. The induction tactic is not limited to Nat; it also works for other inductive declarations, creating one branch per constructor and adding induction hypotheses for recursive arguments when appropriate.
+
 ### Logical Helpers
 
 For the default logical connectives, poussins also provides a few convenience tactics:

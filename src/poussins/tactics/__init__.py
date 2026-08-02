@@ -7,6 +7,7 @@ from .constructor import constructor, left, right, split
 from .exact import exact, assumption
 from .intro import intro, intros
 from .logic import exfalso
+from .induction import induction
 
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "assumption",
     "intro",
     "intros",
-    "exfalso"
+    "exfalso",
+    "induction"
 ]

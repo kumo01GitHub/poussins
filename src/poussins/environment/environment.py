@@ -141,6 +141,29 @@ class Environment:
         value=ELam("A", PROP_SORT, EPi("_", EVar("A"), EConst("False", ()))),
     )
 
+    """Eq inductive declaration for propositional equality."""
+    EQ_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="Eq",
+        level_params=(),
+        type=EPi("A", TYPE_SORT, EPi("x", EVar("A"), EPi("y", EVar("A"), PROP_SORT))),
+        constructor_names=("Eq.refl",),
+    )
+    """Eq.refl constructor declaration for propositional equality."""
+    EQ_REFL_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Eq.refl",
+        level_params=(),
+        inductive_name="Eq",
+        type=EPi(
+            "A",
+            TYPE_SORT,
+            EPi(
+                "x",
+                EVar("A"),
+                EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("x")),
+            ),
+        ),
+    )
+
     """Nat inductive declaration for natural numbers."""
     NAT_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
         name="Nat",
@@ -228,6 +251,12 @@ class Environment:
         # Not (Negation)
         # ------------------------------------------------------------------
         env.add(cls.NOT_DECLARATION)
+
+        # ------------------------------------------------------------------
+        # Eq (Propositional Equality)
+        # ------------------------------------------------------------------
+        env.add(cls.EQ_DECLARATION)
+        env.add(cls.EQ_REFL_DECLARATION)
 
         # ------------------------------------------------------------------
         # Nat (Natural Numbers)

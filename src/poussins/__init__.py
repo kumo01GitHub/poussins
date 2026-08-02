@@ -20,6 +20,7 @@ from .errors import (
 from .framework import (
     Axiom,
     Prop,
+    Nat,
     Theorem,
     Lemma,
     Proposition,
@@ -36,6 +37,7 @@ from .tactics import (
     exact, assumption,
     intro, intros,
     exfalso,
+    induction,
 )
 
 
@@ -78,6 +80,7 @@ __all__ = [
     "Declaration",
     "Environment",
     "Prop",
+    "Nat",
     "Theorem",
     "Lemma",
     "Proposition",
@@ -98,4 +101,5 @@ __all__ = [
     "right",
     "split",
     "exfalso",
+    "induction",
 ]

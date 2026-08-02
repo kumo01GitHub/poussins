@@ -13,7 +13,8 @@ from ..tactics import (
     intro, intros,
     constructor, left, right, split,
     cases,
-    exfalso
+    exfalso,
+    induction,
 )
 
 
@@ -131,3 +132,9 @@ class ProofScript(ABC):
         Switch the current goal to False.
         """
         exfalso(self.manager)
+
+    def induction(self, hypothesis_name: str) -> None:
+        """
+        Perform induction on a Nat-valued hypothesis.
+        """
+        induction(self.manager, hypothesis_name)
