@@ -21,8 +21,146 @@ class Environment:
     Collection of named declarations used by the proof engine.
     """
 
+    """Proposition sort (⊥) for logical propositions."""
     PROP_SORT: Final[ESort] = ESort(UnivLevelZero())
+    """Type sort (⊤) for types and data structures."""
     TYPE_SORT: Final[ESort] = ESort(UnivLevelSucc(UnivLevelZero()))
+
+    """True (⊤) inductive declaration for logical truth."""
+    TRUE_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="True",
+        level_params=(),
+        type=PROP_SORT,
+        constructor_names=("True.intro",),
+    )
+    """True.intro constructor declaration for logical truth."""
+    TRUE_INTRO_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="True.intro",
+        level_params=(),
+        inductive_name="True",
+        type=EConst("True", ()),
+    )
+
+    """False (⊥) inductive declaration for logical falsehood."""
+    FALSE_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="False",
+        level_params=(),
+        type=PROP_SORT,
+        constructor_names=(),
+    )
+    """False.elim constant declaration for logical falsehood."""
+    FALSE_ELIM_DECLARATION: Final[ConstantDeclaration] = ConstantDeclaration(
+        name="False.elim",
+        level_params=(),
+        type=EPi("P", PROP_SORT, EPi("_", EConst("False", ()), EVar("P"))),
+        value=None,
+    )
+
+    """And (∧) inductive declaration for logical conjunction."""
+    AND_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="And",
+        level_params=(),
+        type=EPi("A", PROP_SORT, EPi("B", PROP_SORT, PROP_SORT)),
+        constructor_names=("And.intro",),
+    )
+    """And.intro constructor declaration for logical conjunction."""
+    AND_INTRO_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="And.intro",
+        level_params=(),
+        inductive_name="And",
+        type=EPi(
+            "A",
+            PROP_SORT,
+            EPi(
+                "B",
+                PROP_SORT,
+                EPi(
+                    "hA",
+                    EVar("A"),
+                    EPi(
+                        "hB",
+                        EVar("B"),
+                        EApp(EApp(EConst("And", ()), EVar("A")), EVar("B")),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    """Or (∨) inductive declaration for logical disjunction."""
+    OR_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="Or",
+        level_params=(),
+        type=EPi("A", PROP_SORT, EPi("B", PROP_SORT, PROP_SORT)),
+        constructor_names=("Or.inl", "Or.inr"),
+    )
+    """Or.inl constructor declaration for logical disjunction."""
+    OR_INL_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Or.inl",
+        level_params=(),
+        inductive_name="Or",
+        type=EPi(
+            "A",
+            PROP_SORT,
+            EPi(
+                "B",
+                PROP_SORT,
+                EPi(
+                    "hA",
+                    EVar("A"),
+                    EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
+                ),
+            ),
+        ),
+    )
+    """Or.inr constructor declaration for logical disjunction."""
+    OR_INR_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Or.inr",
+        level_params=(),
+        inductive_name="Or",
+        type=EPi(
+            "A",
+            PROP_SORT,
+            EPi(
+                "B",
+                PROP_SORT,
+                EPi(
+                    "hB",
+                    EVar("B"),
+                    EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
+                ),
+            ),
+        ),
+    )
+
+    """Not (¬) constant declaration for logical negation."""
+    NOT_DECLARATION: Final[ConstantDeclaration] = ConstantDeclaration(
+        name="Not",
+        level_params=(),
+        type=EPi("A", PROP_SORT, PROP_SORT),
+        value=ELam("A", PROP_SORT, EPi("_", EVar("A"), EConst("False", ()))),
+    )
+
+    NAT_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="Nat",
+        level_params=(),
+        type=TYPE_SORT,
+        constructor_names=("Nat.zero", "Nat.succ"),
+    )
+    """Nat.zero constructor declaration for natural numbers."""
+    NAT_ZERO_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Nat.zero",
+        level_params=(),
+        inductive_name="Nat",
+        type=EConst("Nat", ()),
+    )
+    """Nat.succ constructor declaration for natural numbers."""
+    NAT_SUCC_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Nat.succ",
+        level_params=(),
+        inductive_name="Nat",
+        type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
+    )
 
     def __init__(self):
         self.declarations: dict[str, Declaration] = {}
@@ -63,169 +201,38 @@ class Environment:
         # ------------------------------------------------------------------
         # True (Top)
         # ------------------------------------------------------------------
-        env.add(
-            InductiveDeclaration(
-                name="True",
-                level_params=(),
-                type=cls.PROP_SORT,
-                constructor_names=("True.intro",),
-            )
-        )
-        env.add(
-            ConstructorDeclaration(
-                name="True.intro",
-                level_params=(),
-                inductive_name="True",
-                type=EConst("True", ()),
-            )
-        )
+        env.add(cls.TRUE_DECLARATION)
+        env.add(cls.TRUE_INTRO_DECLARATION)
 
         # ------------------------------------------------------------------
         # False (Bottom)
         # ------------------------------------------------------------------
-        env.add(
-            InductiveDeclaration(
-                name="False",
-                level_params=(),
-                type=cls.PROP_SORT,
-                constructor_names=(),
-            )
-        )
-        env.add(
-            ConstantDeclaration(
-                name="False.elim",
-                level_params=(),
-                type=EPi("P", cls.PROP_SORT, EPi("_", EConst("False", ()), EVar("P"))),
-                value=None,
-            )
-        )
+        env.add(cls.FALSE_DECLARATION)
+        env.add(cls.FALSE_ELIM_DECLARATION)
 
         # ------------------------------------------------------------------
         # And (Conjunction)
         # ------------------------------------------------------------------
-        env.add(
-            InductiveDeclaration(
-                name="And",
-                level_params=(),
-                type=EPi("A", cls.PROP_SORT, EPi("B", cls.PROP_SORT, cls.PROP_SORT)),
-                constructor_names=("And.intro",),
-            )
-        )
-        env.add(
-            ConstructorDeclaration(
-                name="And.intro",
-                level_params=(),
-                inductive_name="And",
-                type=EPi(
-                    "A",
-                    cls.PROP_SORT,
-                    EPi(
-                        "B",
-                        cls.PROP_SORT,
-                        EPi(
-                            "hA",
-                            EVar("A"),
-                            EPi(
-                                "hB",
-                                EVar("B"),
-                                EApp(EApp(EConst("And", ()), EVar("A")), EVar("B")),
-                            ),
-                        ),
-                    ),
-                ),
-            )
-        )
+        env.add(cls.AND_DECLARATION)
+        env.add(cls.AND_INTRO_DECLARATION)
 
         # ------------------------------------------------------------------
         # Or (Disjunction)
         # ------------------------------------------------------------------
-        env.add(
-            InductiveDeclaration(
-                name="Or",
-                level_params=(),
-                type=EPi("A", cls.PROP_SORT, EPi("B", cls.PROP_SORT, cls.PROP_SORT)),
-                constructor_names=("Or.inl", "Or.inr"),
-            )
-        )
-        env.add(
-            ConstructorDeclaration(
-                name="Or.inl",
-                level_params=(),
-                inductive_name="Or",
-                type=EPi(
-                    "A",
-                    cls.PROP_SORT,
-                    EPi(
-                        "B",
-                        cls.PROP_SORT,
-                        EPi(
-                            "hA",
-                            EVar("A"),
-                            EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
-                        ),
-                    ),
-                ),
-            )
-        )
-        env.add(
-            ConstructorDeclaration(
-                name="Or.inr",
-                level_params=(),
-                inductive_name="Or",
-                type=EPi(
-                    "A",
-                    cls.PROP_SORT,
-                    EPi(
-                        "B",
-                        cls.PROP_SORT,
-                        EPi(
-                            "hB",
-                            EVar("B"),
-                            EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
-                        ),
-                    ),
-                ),
-            )
-        )
+        env.add(cls.OR_DECLARATION)
+        env.add(cls.OR_INL_DECLARATION)
+        env.add(cls.OR_INR_DECLARATION)
 
-        # Not (negation).
-        env.add(
-            ConstantDeclaration(
-                name="Not",
-                level_params=(),
-                type=EPi("A", cls.PROP_SORT, cls.PROP_SORT),
-                value=ELam("A", cls.PROP_SORT, EPi("_", EVar("A"), EConst("False", ()))),
-            )
-        )
+        # ------------------------------------------------------------------
+        # Not (Negation)
+        # ------------------------------------------------------------------
+        env.add(cls.NOT_DECLARATION)
 
         # ------------------------------------------------------------------
         # Nat (Natural Numbers)
         # ------------------------------------------------------------------
-        env.add(
-            InductiveDeclaration(
-                name="Nat",
-                level_params=(),
-                type=cls.TYPE_SORT,
-                constructor_names=("Nat.zero", "Nat.succ"),
-            )
-        )
-        # Nat.zero
-        env.add(
-            ConstructorDeclaration(
-                name="Nat.zero",
-                level_params=(),
-                inductive_name="Nat",
-                type=EConst("Nat", ()),
-            )
-        )
-        # Nat.succ
-        env.add(
-            ConstructorDeclaration(
-                name="Nat.succ",
-                level_params=(),
-                inductive_name="Nat",
-                type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
-            )
-        )
+        env.add(cls.NAT_DECLARATION)
+        env.add(cls.NAT_ZERO_DECLARATION)
+        env.add(cls.NAT_SUCC_DECLARATION)
 
         return env

@@ -7,7 +7,7 @@ from .apply import apply
 from ..ast import EConst, EApp, EPi
 from ..errors import TacticError
 from ..kernel import ProofManager, whnf, infer_type
-from ..environment import InductiveDeclaration, ConstructorDeclaration
+from ..environment import Environment, InductiveDeclaration, ConstructorDeclaration
 
 
 def constructor(manager: ProofManager, index: int | None = None) -> None:
@@ -147,8 +147,8 @@ def left(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name="Or",
-        constructor_name="Or.inl",
+        inductive_name=Environment.OR_DECLARATION.name,
+        constructor_name=Environment.OR_INL_DECLARATION.name,
         tactic_name="left",
     )
 
@@ -162,8 +162,8 @@ def right(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name="Or",
-        constructor_name="Or.inr",
+        inductive_name=Environment.OR_DECLARATION.name,
+        constructor_name=Environment.OR_INR_DECLARATION.name,
         tactic_name="right",
     )
 
@@ -177,7 +177,7 @@ def split(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name="And",
-        constructor_name="And.intro",
+        inductive_name=Environment.AND_DECLARATION.name,
+        constructor_name=Environment.AND_INTRO_DECLARATION.name,
         tactic_name="split",
     )
