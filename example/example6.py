@@ -1,9 +1,10 @@
 """
 Example proof that exercises the Nat DSL and the induction tactic.
 """
-from poussins import Environment, Example, Prop
-from poussins.ast import EApp, EConst, EVar
-from poussins.framework.nat import Nat
+from poussins import (
+    Environment, Example, Prop, Nat,
+    EApp, EConst, EVar
+)
 
 
 env = Environment.default()
