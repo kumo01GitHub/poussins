@@ -31,6 +31,14 @@ class ConstantDeclaration(Declaration):
 class InductiveDeclaration(Declaration):
     """
     Inductive type information for a data type or logical connective.
+
+    The ``type`` field stores the full type former of the inductive name.
+    Examples:
+    - ``Nat : Type``
+    - ``Eq : Π A : Type, A -> A -> Prop``
+
+    Nullary inductives such as ``Nat`` therefore use a sort as their type
+    former, while parameterized inductives use a Pi-shaped expression.
     """
     name: str
     level_params: tuple[str, ...]

@@ -1,23 +1,21 @@
 """
 Example proof that exercises the Nat DSL and the induction tactic.
 """
-from poussins import (
-    Environment, Example, Prop, Nat,
-    EApp, EConst, EVar
-)
+from poussins.environment import Environment
+from poussins.framework import Example, Nat, Prop
 
 
 env = Environment.default()
 
 # Prove that equality is reflexive for an arbitrary natural number using tactics.
 statement = Prop.forall(("n", Nat.type()), Nat.eq(Nat("n"), Nat("n")))
-example = Example(statement.expr, env)
+example = Example(statement, env)
 print(f"Example: {example.statement}")
 
 example.intro("n")
 example.induction("n")
-example.exact(EApp(EApp(EConst("Eq.refl", ()), Nat.type()), EConst("Nat.zero", ())))
-example.exact(EApp(EApp(EConst("Eq.refl", ()), Nat.type()), EApp(EConst("Nat.succ", ()), EVar("n1"))))
+example.constructor()
+example.constructor()
 
 example.qed()
 print("Example has been successfully proved ✨:")

@@ -1,7 +1,8 @@
 """
 Propositional logic examples using poussins DSL.
 """
-from poussins import Example, Prop, Environment
+from poussins.environment import Environment
+from poussins.framework import Example, Prop
 
 
 env = Environment.default()

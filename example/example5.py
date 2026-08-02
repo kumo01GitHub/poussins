@@ -1,7 +1,8 @@
 """
 Example proof that exercises the richer cases tactic API with nested And/Or branching.
 """
-from poussins import Environment, Example, Prop
+from poussins.environment import Environment
+from poussins.framework import Example, Prop
 
 
 env = Environment.default()

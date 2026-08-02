@@ -13,7 +13,11 @@ uv run ruff check .
 uv run -m poussins --help
 ```
 
-## Repository Structure
+## Overview
+
+This section gives the high-level structure of the repository and the main architectural boundaries.
+
+### Repository Structure
 
 ```text
 src/poussins/
@@ -28,7 +32,7 @@ example/         # Executable proof scripts
 tests/           # Test suite
 ```
 
-## Folder Dependency Hierarchy
+### Folder Dependency Hierarchy
 
 The package is organized as a directed acyclic dependency graph. Each layer depends on lower layers, but no layer depends back on a higher layer.
 
@@ -64,14 +68,14 @@ In practice:
 
 This layout keeps the architecture layered and avoids circular imports.
 
-## Design Principles
+### Design Principles
 
 - Pure kernel state transitions: proof steps produce new immutable `ProofState` values.
 - Thin tactics layer: tactics orchestrate `ProofManager`, while correctness is enforced by kernel checks.
 - Friendly frontend DSL: `Prop`, `Example`, and `Theorem` hide kernel internals for users.
 - Explicit environment model: declarations are registered in `Environment` and referenced by name.
 
-## System Architecture
+### System Architecture
 
 ```mermaid
 flowchart LR
@@ -84,7 +88,11 @@ flowchart LR
     CLI[cli commands] --> DSL
 ```
 
-## End-to-End Proof Flow
+## Internals
+
+This section explains how proof construction flows through the system and how the major layers are divided.
+
+### End-to-End Proof Flow
 
 1. `Example` or `Theorem` is created with a target expression.
 2. `ProofManager` builds an initial goal/metavariable state through `ProofEngine.create_initial_state`.
@@ -93,7 +101,7 @@ flowchart LR
 5. Session history keeps state snapshots for `undo()`.
 6. On `Theorem.qed()`, the final proof term is extracted and added to `Environment`.
 
-## Key Components
+### Key Components
 
 ### AST (`ast/`)
 
@@ -128,7 +136,7 @@ flowchart LR
 - `Example` validates anonymous proofs.
 - `Theorem` validates and registers named proofs into the environment.
 
-## CLI Surface
+### CLI Surface
 
 Main entrypoint:
 
@@ -142,7 +150,11 @@ Available subcommands:
 - `lean2py <file> [--output FILE]`
 - `py2lean <file> [--output FILE]`
 
-## Extension Points
+## Customization
+
+This section explains how to extend the system safely without breaking the layering between framework, tactics, kernel, and environment.
+
+### Extension Points
 
 - Add a new tactic:
   - implement logic in `src/poussins/tactics/`
@@ -153,7 +165,54 @@ Available subcommands:
   - extend environment declarations
   - ensure kernel typing/unification handles new cases
 
-## Quality Checklist for Changes
+#### Public Import Policy
+
+Keep the root `poussins` package small and user-oriented.
+
+1. `poussins` should expose the proof-authoring surface only.
+  - `Environment`
+  - DSL wrappers such as `Prop`, `Nat`, and `Bool`
+  - proof-script entry points such as `Example`, `Theorem`, and theorem-style aliases
+2. Extension and implementation APIs should be imported from subpackages.
+  - Use `poussins.framework` for extension bases such as `InductiveType` and `ProofScript`.
+  - Use `poussins.tactics` for tactic functions.
+  - Use `poussins.environment` for declaration classes.
+  - Use `poussins.ast` and `poussins.kernel` for low-level expression and kernel APIs.
+3. Do not re-export low-level AST nodes, kernel internals, or extension-only base classes from the root package unless they are intentionally being promoted to stable end-user API.
+
+#### Adding A New Inductive Type
+
+When adding a new user-facing inductive type such as `Bool` or `List`, split the work between `environment/` and `framework/`.
+
+1. Add declarations in `src/poussins/environment/environment.py`.
+  - Add one `InductiveDeclaration` for the inductive name itself.
+  - Add one `ConstructorDeclaration` per constructor.
+  - Register all of them in `Environment.default()`.
+2. Keep `InductiveDeclaration.type` as the full type former of the inductive name.
+  - Nullary inductives use a sort directly, for example `Nat : Type`.
+  - Parameterized inductives use a Pi-shaped expression, for example `Eq : Π A : Type, A -> A -> Prop`.
+3. If the type should be part of the public DSL, add a wrapper class in `src/poussins/framework/` by extending `InductiveType`.
+  - Use `Environment` declaration names as the source of truth for the inductive name and constructor names.
+  - Build `Expr` values in the wrapper, but do not make the wrapper depend on an `Environment` instance at runtime.
+  - Keep the wrapper focused on ergonomic construction helpers such as `zero()`, `succ(...)`, `true()`, or `false()`.
+4. Export the wrapper from `src/poussins/framework/__init__.py` and `src/poussins/__init__.py` if it is intended to be public.
+5. Add focused tests for both the environment declarations and the wrapper helpers.
+
+#### Tactic Implementation Rules
+
+Tactics are thin adapters over `ProofManager`. Keep them narrow and do not move proof-state ownership out of the kernel facade.
+
+1. A tactic function should take `ProofManager` as its first argument.
+2. Use `ProofManager` operations such as `close_goal()`, `refine_goal()`, and `undo()` to change proof state.
+3. It is acceptable to inspect the current goal through `manager.current_state` when computing the next step.
+4. Do not mutate `ProofSession`, `ProofState`, goal lists, or metavariable tables directly.
+5. Do not bypass `ProofManager` to call lower-level kernel transition code for normal tactic behavior.
+6. Raise domain-specific errors such as `TacticError` with concrete messages when a tactic cannot proceed.
+7. After adding a tactic function in `src/poussins/tactics/`, add the corresponding fluent wrapper method to `src/poussins/framework/proof_script.py`.
+8. If the tactic is part of the public API, export it from `src/poussins/__init__.py`.
+9. Add focused positive and negative tests under `tests/tactics/`.
+
+### Quality Checklist For Changes
 
 - New/changed tactic has positive and negative tests.
 - Error messages are specific (`TacticError`, `Kernel*Error`, `FrameworkError`).

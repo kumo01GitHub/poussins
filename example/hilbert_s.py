@@ -1,4 +1,5 @@
-from poussins import Lemma, Prop, Environment
+from poussins.environment import Environment
+from poussins.framework import Lemma, Prop
 
 
 env = Environment.default()

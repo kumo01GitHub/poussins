@@ -164,7 +164,10 @@ class Environment:
         ),
     )
 
-    """Nat inductive declaration for natural numbers."""
+    """Nat inductive declaration for natural numbers.
+
+    Nat is a nullary inductive, so its type former is just ``Type``.
+    """
     NAT_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
         name="Nat",
         level_params=(),
@@ -184,6 +187,28 @@ class Environment:
         level_params=(),
         inductive_name="Nat",
         type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
+    )
+
+    """Bool inductive declaration for booleans."""
+    BOOL_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
+        name="Bool",
+        level_params=(),
+        type=TYPE_SORT,
+        constructor_names=("Bool.true", "Bool.false"),
+    )
+    """Bool.true constructor declaration for booleans."""
+    BOOL_TRUE_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Bool.true",
+        level_params=(),
+        inductive_name="Bool",
+        type=EConst("Bool", ()),
+    )
+    """Bool.false constructor declaration for booleans."""
+    BOOL_FALSE_DECLARATION: Final[ConstructorDeclaration] = ConstructorDeclaration(
+        name="Bool.false",
+        level_params=(),
+        inductive_name="Bool",
+        type=EConst("Bool", ()),
     )
 
     def __init__(self):
@@ -264,5 +289,12 @@ class Environment:
         env.add(cls.NAT_DECLARATION)
         env.add(cls.NAT_ZERO_DECLARATION)
         env.add(cls.NAT_SUCC_DECLARATION)
+
+        # ------------------------------------------------------------------
+        # Bool (Booleans)
+        # ------------------------------------------------------------------
+        env.add(cls.BOOL_DECLARATION)
+        env.add(cls.BOOL_TRUE_DECLARATION)
+        env.add(cls.BOOL_FALSE_DECLARATION)
 
         return env

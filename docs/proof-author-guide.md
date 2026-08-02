@@ -26,6 +26,15 @@ uv run python example/example1.py
 4. Apply tactics until no goals remain.
 5. Call `qed()`.
 
+## Import Style
+
+Prefer importing from the subpackage that owns the API.
+
+- Use `poussins.environment` for `Environment`.
+- Use `poussins.framework` for proof-authoring DSL objects such as `Prop`, `Nat`, `Example`, and `Theorem`.
+- Use `poussins.tactics` only when you want function-style tactics instead of method-style proof scripts.
+- Use `poussins.ast` and `poussins.kernel` only when you intentionally need low-level implementation APIs.
+
 ## Framework API
 
 The framework layer gives you a friendly interface:
@@ -38,7 +47,8 @@ The framework layer gives you a friendly interface:
 ### Minimal `Example`
 
 ```python
-from poussins import Environment, Example, Prop
+from poussins.environment import Environment
+from poussins.framework import Example, Prop
 
 env = Environment.default()
 p = Prop("P", env)
@@ -68,7 +78,8 @@ You can call tactics as methods on `Example`/`Theorem`:
 The built-in Nat type can be constructed with the public Nat DSL:
 
 ```python
-from poussins import Environment, Example, Nat
+from poussins.environment import Environment
+from poussins.framework import Example, Nat
 from poussins.ast import EConst, EMetaVar
 from poussins.kernel.goal import Goal
 
@@ -98,7 +109,8 @@ These are convenience wrappers around the constructor tactic and are intended fo
 Goal: prove $P \to Q \to P \land Q$.
 
 ```python
-from poussins import Environment, Theorem, Prop
+from poussins.environment import Environment
+from poussins.framework import Prop, Theorem
 
 env = Environment.default()
 p, q = Prop("P", env), Prop("Q", env)
@@ -118,7 +130,8 @@ After `qed()`, `and_intro` is available from `env` as a reusable declaration.
 Goal: prove `True -> True` by splitting on the hypothesis.
 
 ```python
-from poussins import Environment, Example, Prop
+from poussins.environment import Environment
+from poussins.framework import Example, Prop
 
 env = Environment.default()
 
@@ -134,7 +147,8 @@ ex.qed()
 Goal: prove $(P \to Q) \to P \to Q$.
 
 ```python
-from poussins import Environment, Theorem, Prop
+from poussins.environment import Environment
+from poussins.framework import Prop, Theorem
 
 env = Environment.default()
 p, q = Prop("P", env), Prop("Q", env)
