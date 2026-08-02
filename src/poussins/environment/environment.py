@@ -141,6 +141,7 @@ class Environment:
         value=ELam("A", PROP_SORT, EPi("_", EVar("A"), EConst("False", ()))),
     )
 
+    """Nat inductive declaration for natural numbers."""
     NAT_DECLARATION: Final[InductiveDeclaration] = InductiveDeclaration(
         name="Nat",
         level_params=(),
