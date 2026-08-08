@@ -12,12 +12,12 @@ from poussins.tactics.constructor import constructor, left, right, split
 
 
 @pytest.fixture
-def default_env() -> Environment:
-    return Environment.default()
+def standard_env() -> Environment:
+    return Environment.standard()
 
 
-def test_constructor_applies_matching_constructor_to_inductive_goal(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_constructor_applies_matching_constructor_to_inductive_goal(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     constructor(manager)
 
@@ -25,16 +25,16 @@ def test_constructor_applies_matching_constructor_to_inductive_goal(default_env:
     assert manager.current_proof_term == EConst("True.intro", ())
 
 
-def test_constructor_handles_constructor_with_pi_bindings(default_env: Environment) -> None:
-    manager = ProofManager(EApp(EApp(EConst("And", ()), EConst("True", ())), EConst("True", ())), default_env)
+def test_constructor_handles_constructor_with_pi_bindings(standard_env: Environment) -> None:
+    manager = ProofManager(EApp(EApp(EConst("And", ()), EConst("True", ())), EConst("True", ())), standard_env)
 
     constructor(manager)
 
     assert manager.current_state.current_goal is not None
 
 
-def test_constructor_with_index_selects_named_constructor(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_constructor_with_index_selects_named_constructor(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     constructor(manager, index=1)
 
@@ -42,22 +42,22 @@ def test_constructor_with_index_selects_named_constructor(default_env: Environme
     assert manager.current_proof_term == EConst("True.intro", ())
 
 
-def test_left_applies_or_left_constructor(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_left_applies_or_left_constructor(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         left(manager)
 
 
-def test_right_applies_or_right_constructor(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_right_applies_or_right_constructor(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         right(manager)
 
 
-def test_split_applies_and_constructor(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_split_applies_and_constructor(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         split(manager)
@@ -77,8 +77,8 @@ def test_constructor_rejects_closed_manager() -> None:
         constructor(manager)
 
 
-def test_constructor_rejects_goal_without_inductive_head(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_constructor_rejects_goal_without_inductive_head(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     original_goal = manager.current_state.current_goal
     assert original_goal is not None
     mutated_goal = Goal(statement=ESort(UnivLevelZero()), context=original_goal.context)
@@ -91,8 +91,8 @@ def test_constructor_rejects_goal_without_inductive_head(default_env: Environmen
         constructor(manager)
 
 
-def test_constructor_rejects_non_inductive_head(default_env: Environment) -> None:
-    env = Environment.default()
+def test_constructor_rejects_non_inductive_head(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(ConstantDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), value=None))
     manager = ProofManager(EConst("Foo", ()), env)
 
@@ -100,8 +100,8 @@ def test_constructor_rejects_non_inductive_head(default_env: Environment) -> Non
         constructor(manager)
 
 
-def test_constructor_rejects_inductive_type_without_constructors(default_env: Environment) -> None:
-    env = Environment.default()
+def test_constructor_rejects_inductive_type_without_constructors(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=()))
     manager = ProofManager(EConst("Foo", ()), env)
 
@@ -109,15 +109,15 @@ def test_constructor_rejects_inductive_type_without_constructors(default_env: En
         constructor(manager)
 
 
-def test_constructor_rejects_invalid_index(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_constructor_rejects_invalid_index(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         constructor(manager, index=2)
 
 
-def test_constructor_rejects_missing_indexed_constructor_declaration(default_env: Environment) -> None:
-    env = Environment.default()
+def test_constructor_rejects_missing_indexed_constructor_declaration(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.intro",)))
     manager = ProofManager(EConst("Foo", ()), env)
 
@@ -125,8 +125,8 @@ def test_constructor_rejects_missing_indexed_constructor_declaration(default_env
         constructor(manager, index=1)
 
 
-def test_constructor_rejects_constructor_without_constructor_declaration(default_env: Environment) -> None:
-    env = Environment.default()
+def test_constructor_rejects_constructor_without_constructor_declaration(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.intro",)))
     env.add(ConstantDeclaration(name="Foo.intro", level_params=(), type=EConst("Foo", ()), value=None))
     manager = ProofManager(EConst("Foo", ()), env)
@@ -135,8 +135,8 @@ def test_constructor_rejects_constructor_without_constructor_declaration(default
         constructor(manager)
 
 
-def test_constructor_rejects_unmatched_constructor(default_env: Environment) -> None:
-    env = Environment.default()
+def test_constructor_rejects_unmatched_constructor(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.intro",)))
     env.add(ConstructorDeclaration(name="Foo.intro", level_params=(), inductive_name="Foo", type=EConst("Bar", ())))
     manager = ProofManager(EConst("Foo", ()), env)
@@ -145,8 +145,8 @@ def test_constructor_rejects_unmatched_constructor(default_env: Environment) -> 
         constructor(manager)
 
 
-def test_left_right_and_split_raise_for_missing_inductive_declarations(default_env: Environment) -> None:
-    env = Environment.default()
+def test_left_right_and_split_raise_for_missing_inductive_declarations(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.declarations.pop("Or", None)
     env.add(ConstantDeclaration(name="Or", level_params=(), type=ESort(UnivLevelZero()), value=None))
     manager = ProofManager(EConst("Or", ()), env)
@@ -158,8 +158,8 @@ def test_left_right_and_split_raise_for_missing_inductive_declarations(default_e
         right(manager)
 
 
-def test_left_right_and_split_raise_for_missing_constructor_names(default_env: Environment) -> None:
-    env = Environment.default()
+def test_left_right_and_split_raise_for_missing_constructor_names(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.declarations.pop("And", None)
     env.add(InductiveDeclaration(name="And", level_params=(), type=ESort(UnivLevelZero()), constructor_names=()))
     manager = ProofManager(EConst("And", ()), env)
@@ -182,7 +182,7 @@ def test_left_right_and_split_raise_for_closed_manager() -> None:
 
 
 def test_left_rejects_constructor_name_not_in_inductive_declarations() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.declarations.pop("Or", None)
     env.add(InductiveDeclaration(name="Or", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Or.inr",)))
     manager = ProofManager(EConst("Or", ()), env)
@@ -231,7 +231,7 @@ def test_goal_head_name_uses_nested_application() -> None:
 
 
 def test_named_constructor_rejects_head_mismatch() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.declarations.pop("And", None)
     env.add(InductiveDeclaration(name="And", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("And.intro",)))
     manager = ProofManager(EConst("True", ()), env)
@@ -243,7 +243,7 @@ def test_named_constructor_rejects_head_mismatch() -> None:
 
 
 def test_named_constructor_reaches_apply_path() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.declarations.pop("And", None)
     env.declarations.pop("And.intro", None)
     env.add(InductiveDeclaration(name="And", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("And.intro",)))

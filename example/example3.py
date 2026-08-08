@@ -5,7 +5,7 @@ from poussins.environment import Environment
 from poussins.framework import Example, Prop
 
 
-env = Environment.default()
+env = Environment.standard()
 
 example1 = Example(Prop.top(), env)
 print(f"Example1: {example1.statement}")

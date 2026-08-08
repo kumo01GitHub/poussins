@@ -12,7 +12,7 @@ from poussins.tactics import induction
 
 
 def test_induction_splits_nat_goal_into_base_and_step_cases() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("Nat", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -25,7 +25,7 @@ def test_induction_splits_nat_goal_into_base_and_step_cases() -> None:
 
 
 def test_induction_rejects_unknown_hypothesis_name() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -35,7 +35,7 @@ def test_induction_rejects_unknown_hypothesis_name() -> None:
 
 
 def test_induction_rejects_non_nat_context() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("False", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -49,7 +49,7 @@ def test_induction_rejects_non_nat_context() -> None:
 
 
 def test_induction_rejects_non_inductive_app_head() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"x": EApp(EConst("False", ()), EConst("True", ()))})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -59,7 +59,7 @@ def test_induction_rejects_non_inductive_app_head() -> None:
 
 
 def test_induction_rejects_unnamed_head() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"x": EVar("h")})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -69,7 +69,7 @@ def test_induction_rejects_unnamed_head() -> None:
 
 
 def test_induction_supports_general_inductive_types() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.zero", "Foo.succ")))
     env.add(ConstructorDeclaration(name="Foo.zero", level_params=(), inductive_name="Foo", type=EConst("Foo", ())))
     env.add(ConstructorDeclaration(name="Foo.succ", level_params=(), inductive_name="Foo", type=EPi("x", EConst("Foo", ()), EConst("Foo", ()))))
@@ -110,7 +110,7 @@ def test_induction_rejects_head_without_name() -> None:
 
 
 def test_induction_rejects_non_inductive_head() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"x": EConst("False", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -120,7 +120,7 @@ def test_induction_rejects_non_inductive_head() -> None:
 
 
 def test_induction_rejects_missing_constructor_declaration() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Bar", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Bar.intro",)))
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"x": EConst("Bar", ())})
@@ -131,7 +131,7 @@ def test_induction_rejects_missing_constructor_declaration() -> None:
 
 
 def test_induction_rejects_inductive_type_without_constructors() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Baz", level_params=(), type=ESort(UnivLevelZero()), constructor_names=()))
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"x": EConst("Baz", ())})
@@ -142,7 +142,7 @@ def test_induction_rejects_inductive_type_without_constructors() -> None:
 
 
 def test_induction_skips_induction_hypothesis_for_non_matching_argument() -> None:
-    env = Environment.default()
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Qux", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Qux.mk",)))
     env.add(ConstructorDeclaration(name="Qux.mk", level_params=(), inductive_name="Qux", type=EPi("x", EConst("Bool", ()), EConst("Qux", ()))))
     manager = ProofManager(EConst("True", ()), env)

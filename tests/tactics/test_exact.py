@@ -11,12 +11,12 @@ from poussins.tactics.exact import assumption, exact
 
 
 @pytest.fixture
-def default_env() -> Environment:
-    return Environment.default()
+def standard_env() -> Environment:
+    return Environment.standard()
 
 
-def test_exact_closes_goal(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_exact_closes_goal(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     exact(manager, EConst("True.intro", ()))
 
@@ -24,8 +24,8 @@ def test_exact_closes_goal(default_env: Environment) -> None:
     assert manager.current_proof_term == EConst("True.intro", ())
 
 
-def test_assumption_closes_goal_with_matching_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_assumption_closes_goal_with_matching_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("True", ())})
 
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
@@ -35,8 +35,8 @@ def test_assumption_closes_goal_with_matching_hypothesis(default_env: Environmen
     assert manager.current_proof_term == EVar("h")
 
 
-def test_assumption_raises_when_no_matching_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("False", ()), default_env)
+def test_assumption_raises_when_no_matching_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("False", ()), standard_env)
 
     with pytest.raises(TacticError):
         assumption(manager)

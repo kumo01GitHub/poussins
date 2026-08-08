@@ -241,9 +241,9 @@ class Environment:
         return self.declarations.items()
 
     @classmethod
-    def default(cls) -> Environment:
+    def standard(cls) -> Environment:
         """
-        Create a default environment with the core logical declarations.
+        Create a standard environment with the core logical declarations.
         """
         env = cls()
 

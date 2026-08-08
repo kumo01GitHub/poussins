@@ -20,12 +20,12 @@ from poussins.tactics.cases import (
 
 
 @pytest.fixture
-def default_env() -> Environment:
-    return Environment.default()
+def standard_env() -> Environment:
+    return Environment.standard()
 
 
-def test_cases_splits_on_inductive_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_splits_on_inductive_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("True", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -35,15 +35,15 @@ def test_cases_splits_on_inductive_hypothesis(default_env: Environment) -> None:
     assert manager.current_state.current_goal.context["h"] == EConst("True", ())
 
 
-def test_cases_rejects_unknown_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_unknown_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         cases(manager, "missing")
 
 
-def test_cases_rejects_empty_patterns(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_empty_patterns(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("True", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -51,8 +51,8 @@ def test_cases_rejects_empty_patterns(default_env: Environment) -> None:
         cases(manager, "h", patterns=((),))
 
 
-def test_cases_rejects_too_many_branch_names(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_too_many_branch_names(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("True", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -71,8 +71,8 @@ def test_cases_handles_closed_and_missing_goals() -> None:
         cases(manager, "h")
 
 
-def test_cases_rejects_unknown_hypothesis_head(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_unknown_hypothesis_head(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": ESort(UnivLevelZero())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -80,8 +80,8 @@ def test_cases_rejects_unknown_hypothesis_head(default_env: Environment) -> None
         cases(manager, "h")
 
 
-def test_cases_rejects_non_inductive_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_non_inductive_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("False", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -89,8 +89,8 @@ def test_cases_rejects_non_inductive_hypothesis(default_env: Environment) -> Non
         cases(manager, "h")
 
 
-def test_cases_rejects_unknown_inductive_head(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_unknown_inductive_head(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("Missing", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -98,8 +98,8 @@ def test_cases_rejects_unknown_inductive_head(default_env: Environment) -> None:
         cases(manager, "h")
 
 
-def test_cases_rejects_inductive_type_without_constructors(default_env: Environment) -> None:
-    env = Environment.default()
+def test_cases_rejects_inductive_type_without_constructors(standard_env: Environment) -> None:
+    env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=()))
     manager = ProofManager(EConst("True", ()), env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("Foo", ())})
@@ -109,8 +109,8 @@ def test_cases_rejects_inductive_type_without_constructors(default_env: Environm
         cases(manager, "h")
 
 
-def test_cases_rejects_unknown_constructor(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_rejects_unknown_constructor(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EConst("True", ())})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -118,8 +118,8 @@ def test_cases_rejects_unknown_constructor(default_env: Environment) -> None:
         cases(manager, "h", patterns=(("missing",),))
 
 
-def test_cases_handles_nested_application_hypothesis(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_handles_nested_application_hypothesis(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(statement=EConst("True", ()), context={"h": EApp(EConst("True", ()), EConst("True", ()))})
     manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
 
@@ -127,8 +127,8 @@ def test_cases_handles_nested_application_hypothesis(default_env: Environment) -
         cases(manager, "h")
 
 
-def test_cases_handles_branch_binders_and_substitutions(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_cases_handles_branch_binders_and_substitutions(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
     subgoal = Goal(
         statement=EConst("True", ()),
         context={"h": EApp(EApp(EConst("And", ()), EConst("True", ())), EConst("True", ()))},

@@ -5,7 +5,7 @@ from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 
 
-env = Environment.default()
+env = Environment.standard()
 
 # Prove that equality is reflexive for an arbitrary natural number using tactics.
 statement = Prop.forall(("n", Nat.type()), Nat.eq(Nat("n"), Nat("n")))

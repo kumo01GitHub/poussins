@@ -10,12 +10,12 @@ from poussins.tactics.logic import exfalso
 
 
 @pytest.fixture
-def default_env() -> Environment:
-    return Environment.default()
+def standard_env() -> Environment:
+    return Environment.standard()
 
 
-def test_exfalso_replaces_goal_with_false(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_exfalso_replaces_goal_with_false(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     exfalso(manager)
 

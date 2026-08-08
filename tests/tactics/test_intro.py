@@ -11,12 +11,12 @@ from poussins.tactics.intro import intro, intros
 
 
 @pytest.fixture
-def default_env() -> Environment:
-    return Environment.default()
+def standard_env() -> Environment:
+    return Environment.standard()
 
 
-def test_intro_adds_variable_to_context(default_env: Environment) -> None:
-    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), default_env)
+def test_intro_adds_variable_to_context(standard_env: Environment) -> None:
+    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), standard_env)
 
     intro(manager, "h")
 
@@ -26,8 +26,8 @@ def test_intro_adds_variable_to_context(default_env: Environment) -> None:
     assert current_goal.context["h"] == ESort(UnivLevelZero())
 
 
-def test_intro_rejects_duplicate_variable_name(default_env: Environment) -> None:
-    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), default_env)
+def test_intro_rejects_duplicate_variable_name(standard_env: Environment) -> None:
+    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), standard_env)
 
     intro(manager, "x")
 
@@ -35,8 +35,8 @@ def test_intro_rejects_duplicate_variable_name(default_env: Environment) -> None
         intro(manager, "x")
 
 
-def test_intro_allows_shadowing_global_name(default_env: Environment) -> None:
-    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), default_env)
+def test_intro_allows_shadowing_global_name(standard_env: Environment) -> None:
+    manager = ProofManager(EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), standard_env)
 
     intro(manager, "True")
 
@@ -45,9 +45,9 @@ def test_intro_allows_shadowing_global_name(default_env: Environment) -> None:
     assert current_goal.has_local_hypothesis("True")
 
 
-def test_intros_adds_multiple_variables(default_env: Environment) -> None:
+def test_intros_adds_multiple_variables(standard_env: Environment) -> None:
     goal = EPi("x", ESort(UnivLevelZero()), EPi("y", ESort(UnivLevelZero()), ESort(UnivLevelZero())))
-    manager = ProofManager(goal, default_env)
+    manager = ProofManager(goal, standard_env)
 
     intros(manager, ["h1", "h2"])
 
@@ -57,8 +57,8 @@ def test_intros_adds_multiple_variables(default_env: Environment) -> None:
     assert current_goal.context["h2"] == ESort(UnivLevelZero())
 
 
-def test_intro_rejects_non_product_goal(default_env: Environment) -> None:
-    manager = ProofManager(EConst("True", ()), default_env)
+def test_intro_rejects_non_product_goal(standard_env: Environment) -> None:
+    manager = ProofManager(EConst("True", ()), standard_env)
 
     with pytest.raises(TacticError):
         intro(manager, "h")
