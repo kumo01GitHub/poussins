@@ -3,6 +3,8 @@ Framework-level base class providing method-style tactic access for Theorem and 
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
+import functools
+from typing import Any, Callable
 
 from ..ast import Expr, EVar
 from ..environment import Environment
@@ -18,6 +20,29 @@ from ..tactics import (
     induction,
 )
 from ..utils.logging import getLogger
+
+
+def log_tactic(func: Callable[..., Any]) -> Callable[..., Any]:
+    @functools.wraps(func)
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
+
+        result = func(self, *args, **kwargs)
+
+        self.logger.info(f"After '{func.__name__}':")
+        current_goal = self.current_state.current_goal
+        if current_goal is None:
+            self.logger.info(f"==> None (proof is closed)")
+        else:
+            self.logger.info(f"    {current_goal.statement}")
+            self.logger.info("-" * 50)
+            if current_goal.local_context:
+                for name, expr in current_goal.local_context.items():
+                    self.logger.info(f"    {name}: {expr}")
+
+        return result
+
+    return wrapper
 
 
 class ProofScript(ABC):
@@ -64,89 +89,80 @@ class ProofScript(ABC):
         """
         pass
 
+    @log_tactic
     def intro(self, name: str) -> None:
         """
         Introduce a hypothesis with the given name into the local context.
         """
-        self._log_before_tactic("intro", [name])
         intro(self.manager, name)
-        self._log_after_tactic("intro")
 
+    @log_tactic
     def intros(self, names: list[str]) -> None:
         """
         Introduce multiple hypotheses into the local context.
         """
-        self._log_before_tactic("intros", names)
         intros(self.manager, names)
-        self._log_after_tactic("intros")
 
+    @log_tactic
     def apply(self, expr_or_name: Expr | str) -> None:
         """
         Apply a theorem, hypothesis, or expression to the current goal.
         """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        self._log_before_tactic("apply", [expr])
         apply(self.manager, expr)
-        self._log_after_tactic("apply")
 
+    @log_tactic
     def exact(self, expr_or_name: Expr | str) -> None:
         """
         Close the current goal with the given expression.
         """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        self._log_before_tactic("exact", [expr])
         exact(self.manager, expr)
-        self._log_after_tactic("exact")
 
+    @log_tactic
     def change(self, expr_or_name: Expr | str, hypothesis_name: str | None = None) -> None:
         """
         Replace the current goal, or a local hypothesis type, with a definitionally equal expression.
         """
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        self._log_before_tactic("change", [expr, hypothesis_name])
         change(self.manager, expr, hypothesis_name)
-        self._log_after_tactic("change")
 
+    @log_tactic
     def assumption(self) -> None:
         """
         Solve the current goal using a matching hypothesis.
         """
-        self._log_before_tactic("assumption")
         assumption(self.manager)
-        self._log_after_tactic("assumption")
 
+    @log_tactic
     def constructor(self, index: int | None = None) -> None:
         """
         Apply an inductive constructor to the current goal.
         """
-        self._log_before_tactic("constructor", [index])
         constructor(self.manager, index)
-        self._log_after_tactic("constructor")
 
+    @log_tactic
     def left(self) -> None:
         """
         Select the left branch of a disjunction goal.
         """
-        self._log_before_tactic("left")
         left(self.manager)
-        self._log_after_tactic("left")
 
+    @log_tactic
     def right(self) -> None:
         """
         Select the right branch of a disjunction goal.
         """
-        self._log_before_tactic("right")
         right(self.manager)
-        self._log_after_tactic("right")
 
+    @log_tactic
     def split(self) -> None:
         """
         Split a conjunction goal into two subgoals.
         """
-        self._log_before_tactic("split")
         split(self.manager)
-        self._log_after_tactic("split")
 
+    @log_tactic
     def cases(
         self,
         hypothesis_name: str,
@@ -155,43 +171,18 @@ class ProofScript(ABC):
         """
         Case-split on an inductive hypothesis.
         """
-        self._log_before_tactic("cases", [hypothesis_name, patterns])
         cases(self.manager, hypothesis_name, patterns)
-        self._log_after_tactic("cases")
 
+    @log_tactic
     def exfalso(self) -> None:
         """
         Switch the current goal to False.
         """
-        self._log_before_tactic("exfalso")
         exfalso(self.manager)
-        self._log_after_tactic("exfalso")
 
+    @log_tactic
     def induction(self, hypothesis_name: str) -> None:
         """
         Perform induction on a Nat-valued hypothesis.
         """
-        self._log_before_tactic("induction", [hypothesis_name])
         induction(self.manager, hypothesis_name)
-        self._log_after_tactic("induction")
-
-    def _log_before_tactic(self, tactic_name: str, args: list | None = None) -> None:
-        """
-        Log the current goal before applying a tactic.
-        """
-        self.logger.info(f"Executing '{tactic_name}' tactic with: {args}")
-
-    def _log_after_tactic(self, tactic_name: str) -> None:
-        """
-        Log the current goal after applying a tactic.
-        """
-        self.logger.info(f"After '{tactic_name}':")
-        current_goal = self.current_state.current_goal
-        if current_goal is None:
-            self.logger.info(f"==> None (proof is closed)")
-        else:
-            self.logger.info(f"    {current_goal.statement}")
-            self.logger.info("-" * 50)
-            if current_goal.local_context:
-                for name, expr in current_goal.local_context.items():
-                    self.logger.info(f"    {name}: {expr}")
