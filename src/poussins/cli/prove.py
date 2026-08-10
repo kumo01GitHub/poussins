@@ -1,15 +1,18 @@
 """
 Batch proof execution subcommand for poussins CLI.
 """
+import importlib.util
+import sys
+import os
+
+from ..utils.logging import getLogger
 
 
 def run_prove(filepath: str):
     """
     Run batch proof execution: import the file, collect all theorems/lemmas, and log their status.
     """
-    import importlib.util
-    import sys
-    import os
+    logger = getLogger(__name__)
 
     file_abspath = os.path.abspath(filepath)
     file_dir = os.path.dirname(file_abspath)
@@ -21,5 +24,5 @@ def run_prove(filepath: str):
     try:
         spec.loader.exec_module(module)
     except Exception as e:
-        print(f"[poussins] Error executing {filepath}: {type(e).__name__}: {e}")
+        logger.error(f"Error executing {filepath}: {type(e).__name__}: {e}")
         return
