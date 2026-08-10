@@ -29,11 +29,12 @@ def log_tactic(func: Callable[..., Any]) -> Callable[..., Any]:
 
         result = func(self, *args, **kwargs)
 
-        self.logger.info(f"After '{func.__name__}':")
+        self.logger.info(f"After '{func.__name__}'")
         current_goal = self.current_state.current_goal
         if current_goal is None:
             self.logger.info(f"==> None (proof is closed)")
         else:
+            self.logger.info(f"==> Current goal ID: {current_goal.id}")
             self.logger.info(f"    {current_goal.statement}")
             self.logger.info("-" * 50)
             if current_goal.local_context:
