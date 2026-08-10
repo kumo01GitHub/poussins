@@ -65,6 +65,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 
 - `intro(name)`: introduce one binder/hypothesis
 - `intros([names...])`: introduce multiple binders
+- `revert(hyp_names)`: revert hypothesis/hypotheses from the local context back into the goal statement as Pi-types
 - `exact(expr_or_name)`: close current goal with a term/hypothesis
 - `assumption()`: close goal from a matching local hypothesis
 - `apply(expr_or_name)`: apply theorem/hypothesis and create subgoals
@@ -72,6 +73,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
 - `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
 - `exfalso()`: change target to `False` and prove contradiction first
+- `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
 - `undo()`: rollback one proof step
 
 ### Induction and the Nat DSL

@@ -7,8 +7,9 @@ from .change import change
 from .constructor import constructor, left, right, split
 from .exact import exact, assumption
 from .intro import intro, intros
-from .logic import exfalso
 from .induction import induction
+from .logic import exfalso
+from .revert import revert
 
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "assumption",
     "intro",
     "intros",
+    "induction",
     "exfalso",
-    "induction"
+    "revert",
 ]
