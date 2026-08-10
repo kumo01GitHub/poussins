@@ -20,5 +20,5 @@ def change(manager: ProofManager, expr: Expr, hypothesis_name: str | None = None
             manager.change_goal(expr)
         else:
             manager.change_hypothesis(hypothesis_name, expr)
-    except (KernelStateError, KernelValueError) as exc:
-        raise TacticError(str(exc)) from exc
+    except (KernelStateError, KernelValueError) as e:
+        raise TacticError(str(e)) from e

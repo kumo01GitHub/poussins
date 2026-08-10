@@ -62,4 +62,4 @@ def apply(manager: ProofManager, expr: Expr) -> None:
         else:
             manager.refine_goal(assignment, implicit_subgoals)
     except Exception as e:
-        raise TacticError(f"apply failed during kernel verification: {e}")
+        raise TacticError(f"apply failed during kernel verification") from e

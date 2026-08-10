@@ -24,5 +24,4 @@ def run_prove(filepath: str):
     try:
         spec.loader.exec_module(module)
     except Exception as e:
-        logger.error(f"Error executing {filepath}: {type(e).__name__}: {e}")
-        return
+        logger.exception(f"Error executing {filepath}: {type(e).__name__}: {e}")
