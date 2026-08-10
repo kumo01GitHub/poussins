@@ -8,6 +8,7 @@ from .proof_script import ProofScript
 from ..ast import Expr
 from ..environment import Environment, ConstantDeclaration
 from ..errors import FrameworkError
+from ..utils.logging import getLogger
 
 
 class Theorem(ProofScript):
@@ -40,6 +41,9 @@ class Theorem(ProofScript):
         self.level_params = level_params
         super().__init__(Prop.to_expr(statement), env)
 
+        self.logger = getLogger(__name__)
+        self.logger.info(f"Theorem '{self.name}': {self.statement}")
+
     def qed(self) -> None:
         """
         Verify that the proof is closed, extract the final proof term,
@@ -61,6 +65,8 @@ class Theorem(ProofScript):
 
         try:
             self.env.add(declaration)
+            self.logger.info(f"Theorem '{self.name}' is successfully proved: {self.statement}")
+            self.logger.info(f"==> {proof_term}")
         except ValueError as e:
             raise FrameworkError(f"Failed to register theorem: {e}")
 
@@ -92,6 +98,9 @@ class Example(ProofScript):
         pure_expr = Prop.to_expr(statement)
         super().__init__(pure_expr, env)
 
+        self.logger = getLogger(__name__)
+        self.logger.info(f"Example: {self.statement}")
+
     def qed(self) -> None:
         """
         Verify the anonymity proof is complete.
@@ -101,3 +110,6 @@ class Example(ProofScript):
 
         if self.manager.current_proof_term is None:
             raise FrameworkError("Example internal error: Failed to extract a valid proof term.")
+
+        self.logger.info(f"Example is successfully proved: {self.statement}")
+        self.logger.info(f"==> {self.manager.current_proof_term}")

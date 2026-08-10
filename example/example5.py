@@ -9,12 +9,11 @@ env = Environment.standard()
 p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
 
 example = Example((p & (q | r)) >> p, env)
+
 example.intro("hAnd")
 example.cases("hAnd", patterns=(("And.intro", "hP", "hOr"),))
 example.cases("hOr", patterns=(("Or.inl", "hQ"), ("Or.inr", "hR")))
 example.exact("hP")
 example.exact("hP")
-example.qed()
 
-print("Example has been successfully proved ✨:")
-print(f"    {example.manager.current_proof_term}")
+example.qed()

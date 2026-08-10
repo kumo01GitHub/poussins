@@ -18,5 +18,3 @@ example.constructor()
 example.constructor()
 
 example.qed()
-print("Example has been successfully proved ✨:")
-print(f"    {example.manager.current_proof_term}")
