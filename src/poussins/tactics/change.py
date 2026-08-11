@@ -21,4 +21,4 @@ def change(manager: ProofManager, expr: Expr, hypothesis_name: str | None = None
         else:
             manager.change_hypothesis(hypothesis_name, expr)
     except (KernelStateError, KernelValueError) as e:
-        raise TacticError(str(e)) from e
+        raise TacticError(f"change failed during kernel verification: {e}") from e

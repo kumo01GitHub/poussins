@@ -18,6 +18,7 @@ from ..tactics import (
     cases,
     exfalso,
     induction,
+    refine,
     revert,
 )
 from ..utils.logging import getLogger
@@ -188,6 +189,13 @@ class ProofScript(ABC):
         Perform induction on a Nat-valued hypothesis.
         """
         induction(self.manager, hypothesis_name)
+
+    @log_tactic
+    def refine(self, expr: Expr) -> None:
+        """
+        Refine the current goal using an expression that may contain metavariables.
+        """
+        refine(self.manager, expr)
 
     @log_tactic
     def revert(self, hyp_names: str | list[str]) -> None:

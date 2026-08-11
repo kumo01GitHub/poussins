@@ -69,6 +69,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `exact(expr_or_name)`: close current goal with a term/hypothesis
 - `assumption()`: close goal from a matching local hypothesis
 - `apply(expr_or_name)`: apply theorem/hypothesis and create subgoals
+- `refine(expr)`: refine the current goal using an expression that may contain metavariables (e.g. `EMetaVar("m")`), creating new subgoals for each unsolved metavariable
 - `constructor(index=None)`: apply a matching constructor (or choose 1-based constructor index)
 - `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
 - `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression

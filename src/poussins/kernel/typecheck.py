@@ -2,14 +2,13 @@
 Stateless kernel routines for inference, checking, and unification.
 """
 from __future__ import annotations
-
 from collections.abc import Mapping
 
 from .proof_state import MetaVar
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
     UnivLevelZero, UnivLevelSucc, UnivLevelIMax,
-    collect_free_vars, substitute_metavar, substitute_expr_var
+    collect_free_vars, substitute_metavar, substitute_expr_var, collect_metavar_ids
 )
 from ..errors import KernelTypeError
 
@@ -365,3 +364,42 @@ def unify(
 
         case _:
             raise KernelTypeError(f"Unification failed: expressions are structurally distinct: {t1_whnf} vs {t2_whnf}")
+
+
+def infer_metavar_types(
+    expr: Expr,
+    expected_type: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar],
+    definitions: Definitions = None,
+) -> dict[str, Expr]:
+    """
+    Infer the expected types for each metavariable in an expression.
+    """
+    meta_types: dict[str, Expr] = {}
+
+    def _walk(e: Expr, expected: Expr, ctx: dict[str, Expr]) -> None:
+        e_whnf = whnf(e, metavars, definitions)
+        match e_whnf:
+            case EMetaVar(mvar_id):
+                meta_types[mvar_id] = expected
+            case EApp(fn, arg):
+                try:
+                    fn_type = infer_type(fn, ctx, metavars, definitions)
+                    fn_type_whnf = whnf(fn_type, metavars, definitions)
+
+                    if hasattr(fn_type_whnf, "domain"):
+                        _walk(arg, fn_type_whnf.domain, ctx)
+                    _walk(fn, fn_type, ctx)
+                except Exception:
+                    pass
+            case _:
+                pass
+
+    _walk(expr, expected_type, context)
+
+    for m_id in collect_metavar_ids(expr):
+        if m_id not in meta_types:
+            meta_types[m_id] = expected_type
+
+    return meta_types

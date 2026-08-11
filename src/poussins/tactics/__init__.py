@@ -9,6 +9,7 @@ from .exact import exact, assumption
 from .intro import intro, intros
 from .induction import induction
 from .logic import exfalso
+from .refine import refine
 from .revert import revert
 
 
@@ -26,5 +27,6 @@ __all__ = [
     "intros",
     "induction",
     "exfalso",
+    "refine",
     "revert",
 ]
