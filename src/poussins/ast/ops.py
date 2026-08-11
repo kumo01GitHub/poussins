@@ -131,26 +131,35 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
     return subst(expr)
 
 
-def collect_meta_var_ids(expr: Expr) -> set[str]:
+def collect_metavar_ids(expr: Expr) -> list[str]:
     """
     Collect all unique meta-variable goal IDs present in the expression.
     """
-    match expr:
-        case EMetaVar(goal_id):
-            return {goal_id}
-        case ESort(_) | EVar(_) | EConst(_):
-            return set()
-        case EPi(_, domain, body) | ELam(_, domain, body):
-            return collect_meta_var_ids(domain) | collect_meta_var_ids(body)
-        case EApp(fn, arg):
-            return collect_meta_var_ids(fn) | collect_meta_var_ids(arg)
-        case EMatch(_, discriminee, motive, cases):
-            ids = collect_meta_var_ids(discriminee) | collect_meta_var_ids(motive)
-            for c in cases:
-                ids |= collect_meta_var_ids(c)
-            return ids
-        case _:
-            raise NotImplementedError(f"Unknown expression node: {expr}")
+    ordered_ids: list[str] = []
+
+    def _collect(e: Expr) -> None:
+        match e:
+            case EMetaVar(goal_id):
+                if goal_id not in ordered_ids:
+                    ordered_ids.append(goal_id)
+            case ESort(_) | EVar(_) | EConst(_):
+                pass
+            case EPi(_, domain, body) | ELam(_, domain, body):
+                _collect(domain)
+                _collect(body)
+            case EApp(fn, arg):
+                _collect(fn)
+                _collect(arg)
+            case EMatch(_, discriminee, motive, cases):
+                _collect(discriminee)
+                _collect(motive)
+                for case_expr in cases:
+                    _collect(case_expr)
+            case _:
+                raise NotImplementedError(f"Unknown expression node: {e}")
+
+    _collect(expr)
+    return ordered_ids
 
 
 def collect_free_vars(expr: Expr) -> set[str]:

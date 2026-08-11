@@ -7,7 +7,7 @@ from __future__ import annotations
 from .proof_state import ProofState, MetaVar
 from .goal import Goal
 from .typecheck import infer_type, unify, is_def_eq
-from ..ast import Expr, collect_meta_var_ids
+from ..ast import Expr, collect_metavar_ids
 from ..environment import Environment, ConstantDeclaration
 from ..errors import KernelStateError, KernelValueError
 
@@ -93,29 +93,24 @@ class ProofEngine:
         candidate_metavars = state.metavars | {g.id: MetaVar(statement=g.statement) for g in subgoals}
         candidate_metavars[current_goal.id] = MetaVar(statement=current_goal.statement, assignment=assignment)
 
-        meta_var_ids = collect_meta_var_ids(assignment)
-        assigned_ids = {mid for mid, m in state.metavars.items() if m.is_assigned}
-        active_meta_ids = meta_var_ids - assigned_ids
+        assigned_metavar_ids = {mid for mid, m in state.metavars.items() if m.is_assigned}
+        metavar_ids_in_expr = collect_metavar_ids(assignment)
+        active_metavar_ids = [mid for mid in metavar_ids_in_expr if mid not in assigned_metavar_ids]
 
-        other_goal_ids = {g.id for g in state.goals[1:]}
-        subgoal_ids = {g.id for g in subgoals}
-        untracked_ids = active_meta_ids - subgoal_ids - other_goal_ids
+        subgoal_ids = [g.id for g in subgoals]
 
-        if untracked_ids:
+        if active_metavar_ids != subgoal_ids:
             raise KernelValueError(
-                f"Found untracked or implicit meta-variables in the assignment: {untracked_ids}. "
-                f"All active meta-variables in the proof term must be explicitly registered as subgoals."
+                f"Subgoal mismatch with assignment expressions.\n"
+                f"  Expected from assignment (in order): {active_metavar_ids}\n"
+                f"  Provided subgoals:                   {subgoal_ids}"
             )
-
-        if not subgoal_ids.issubset(active_meta_ids):
-            raise KernelValueError("Some provided subgoals are missing from the assignment expression.")
 
         for g in subgoals:
             if g.id in state.metavars:
                 raise KernelStateError(f"Meta-variable ?{g.id} is already registered in the proof state.")
 
         inferred_type = infer_type(assignment, current_goal.context, candidate_metavars, self.definitions)
-
         final_metavars = unify(inferred_type, current_goal.statement, current_goal.context, candidate_metavars, self.definitions)
 
         all_potential_goals = subgoals + list(state.goals[1:])
