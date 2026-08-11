@@ -10,7 +10,6 @@ env = Environment.standard()
 # Prove that equality is reflexive for an arbitrary natural number using tactics.
 statement = Prop.forall(("n", Nat.type()), Nat.eq(Nat("n"), Nat("n")))
 example = Example(statement, env)
-print(f"Example: {example.statement}")
 
 example.intro("n")
 example.induction("n")

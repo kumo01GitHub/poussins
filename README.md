@@ -17,20 +17,5 @@ uv run -m poussins --help
 Run an example proof:
 
 ```bash
-uv run -m poussins prove example/example1.py
-```
-
-## Common Commands
-
-```bash
-# CLI
-uv run -m poussins prove path/to/proofs.py
-
-# Tests and lint
-uv run pytest
-uv run ruff check .
-
-# Package
-uv build
-uv publish
+uv run -m poussins prove example/hilbert_s.py
 ```

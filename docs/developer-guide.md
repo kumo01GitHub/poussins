@@ -224,6 +224,21 @@ Tactics are thin adapters over `ProofManager`. Keep them narrow and do not move 
 - Public exports are updated if API is intended to be public.
 - Examples still run with `uv run python example/...`.
 
+## Common Commands
+
+```bash
+# CLI
+uv run -m poussins prove path/to/proofs.py
+
+# Tests and lint
+uv run pytest
+uv run ruff check .
+
+# Package
+uv build
+uv publish
+```
+
 ---
 
 Back to [README](../README.md).
