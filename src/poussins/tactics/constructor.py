@@ -7,8 +7,8 @@ from .apply import apply
 from ..ast import EConst, EApp, EPi
 from ..errors import TacticError
 from ..kernel import ProofManager, whnf, infer_type
-from ..environment import Environment, InductiveDeclaration, ConstructorDeclaration
-
+from ..environment import InductiveDeclaration, ConstructorDeclaration
+from ..environment.library import LogicDeclaration
 
 def _definitions(manager: ProofManager):
     engine = getattr(manager, "engine", None)
@@ -156,8 +156,8 @@ def left(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name=Environment.OR_DECLARATION.name,
-        constructor_name=Environment.OR_INL_DECLARATION.name,
+        inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
+        constructor_name=LogicDeclaration.OR_INL_DECLARATION.declaration.name,
         tactic_name="left",
     )
 
@@ -171,8 +171,8 @@ def right(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name=Environment.OR_DECLARATION.name,
-        constructor_name=Environment.OR_INR_DECLARATION.name,
+        inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
+        constructor_name=LogicDeclaration.OR_INR_DECLARATION.declaration.name,
         tactic_name="right",
     )
 
@@ -186,7 +186,7 @@ def split(manager: ProofManager) -> None:
 
     _apply_named_constructor(
         manager,
-        inductive_name=Environment.AND_DECLARATION.name,
-        constructor_name=Environment.AND_INTRO_DECLARATION.name,
+        inductive_name=LogicDeclaration.AND_DECLARATION.declaration.name,
+        constructor_name=LogicDeclaration.AND_INTRO_DECLARATION.declaration.name,
         tactic_name="split",
     )

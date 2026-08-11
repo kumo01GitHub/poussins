@@ -189,10 +189,10 @@ Keep the root `poussins` package small and user-oriented.
 
 When adding a new user-facing inductive type such as `Bool` or `List`, split the work between `environment/` and `framework/`.
 
-1. Add declarations in `src/poussins/environment/environment.py`.
-  - Add one `InductiveDeclaration` for the inductive name itself.
-  - Add one `ConstructorDeclaration` per constructor.
-  - Register all of them in `Environment.default()`.
+1. Add declarations using the Enum-based structure under `src/poussins/environment/library/`.
+   - Define members in the corresponding declaration Enum (e.g., `DatatypeDeclaration` or a new module).
+   - Add one `InductiveDeclaration` for the type itself and `ConstructorDeclaration` members for each constructor.
+   - Register the new Enum or its items in `Environment.standard()`.
 2. Keep `InductiveDeclaration.type` as the full type former of the inductive name.
   - Nullary inductives use a sort directly, for example `Nat : Type`.
   - Parameterized inductives use a Pi-shaped expression, for example `Eq : Π A : Type, A -> A -> Prop`.

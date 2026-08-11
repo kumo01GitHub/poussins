@@ -34,7 +34,7 @@ def log_tactic(func: Callable[..., Any]) -> Callable[..., Any]:
         self.logger.info(f"After '{func.__name__}'")
         current_goal = self.current_state.current_goal
         if current_goal is None:
-            self.logger.info(f"==> None (proof is closed)")
+            self.logger.info("==> None (proof is closed)")
         else:
             self.logger.info(f"==> Current goal ID: {current_goal.id}")
             self.logger.info(f"    {current_goal.statement}")

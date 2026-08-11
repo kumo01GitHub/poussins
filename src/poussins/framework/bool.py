@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from ..ast import EConst
-from ..environment import Environment
+from ..environment.library import BoolDeclaration
 from .inductive_type import InductiveType
 
 
@@ -18,9 +18,9 @@ class Bool(InductiveType):
     Immutable wrapper for boolean expressions.
     """
 
-    TYPE_NAME: ClassVar[str] = Environment.BOOL_DECLARATION.name
-    TRUE_NAME: ClassVar[str] = Environment.BOOL_TRUE_DECLARATION.name
-    FALSE_NAME: ClassVar[str] = Environment.BOOL_FALSE_DECLARATION.name
+    TYPE_NAME: ClassVar[str] = BoolDeclaration.BOOL_DECLARATION.declaration.name
+    TRUE_NAME: ClassVar[str] = BoolDeclaration.BOOL_TRUE_DECLARATION.declaration.name
+    FALSE_NAME: ClassVar[str] = BoolDeclaration.BOOL_FALSE_DECLARATION.declaration.name
 
     @classmethod
     def true(cls) -> "Bool":

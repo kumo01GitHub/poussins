@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from ..ast import EApp, EConst, EVar, Expr
-from ..environment import Environment
+from ..environment.library import EqualityDeclaration
 
 
 @dataclass(frozen=True)
@@ -20,7 +20,7 @@ class InductiveType(ABC):
     """
 
     TYPE_NAME: ClassVar[str] = ""
-    EQ_NAME: ClassVar[str] = Environment.EQ_DECLARATION.name
+    EQ_NAME: ClassVar[str] = EqualityDeclaration.EQ_DECLARATION.declaration.name
 
     expr: Expr
 

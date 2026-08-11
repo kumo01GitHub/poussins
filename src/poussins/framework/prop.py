@@ -21,6 +21,7 @@ from ..ast import (
     Expr, EVar, EConst, EPi, EApp
 )
 from ..environment import Environment, ConstantDeclaration
+from ..environment.library import Sort
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ class Prop:
                     ConstantDeclaration(
                         name=expr_or_name,
                         level_params=(),
-                        type=Environment.PROP_SORT,
+                        type=Sort.PROP.sort,
                         value=EConst("P", ())
                     )
                 )

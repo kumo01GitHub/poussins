@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from ..ast import EApp, EConst, Expr
-from ..environment import Environment
+from ..environment.library import NatDeclaration
 from .inductive_type import InductiveType
 
 
@@ -18,9 +18,9 @@ class Nat(InductiveType):
     Immutable wrapper for natural number expressions.
     """
 
-    TYPE_NAME: ClassVar[str] = Environment.NAT_DECLARATION.name
-    ZERO_NAME: ClassVar[str] = Environment.NAT_ZERO_DECLARATION.name
-    SUCC_NAME: ClassVar[str] = Environment.NAT_SUCC_DECLARATION.name
+    TYPE_NAME: ClassVar[str] = NatDeclaration.NAT_DECLARATION.declaration.name
+    ZERO_NAME: ClassVar[str] = NatDeclaration.NAT_ZERO_DECLARATION.declaration.name
+    SUCC_NAME: ClassVar[str] = NatDeclaration.NAT_SUCC_DECLARATION.declaration.name
 
     @classmethod
     def zero(cls) -> "Nat":
