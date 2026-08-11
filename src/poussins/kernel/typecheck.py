@@ -9,7 +9,7 @@ from .proof_state import MetaVar
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
     UnivLevelZero, UnivLevelSucc, UnivLevelIMax,
-    collect_free_vars, substitute_meta_var, substitute_expr_var
+    collect_free_vars, substitute_metavar, substitute_expr_var
 )
 from ..errors import KernelTypeError
 
@@ -24,7 +24,7 @@ def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     current = expr
     for goal_id, m in metavars.items():
         if m.is_assigned:
-            current = substitute_meta_var(current, goal_id, m.assignment)
+            current = substitute_metavar(current, goal_id, m.assignment)
     return current
 
 

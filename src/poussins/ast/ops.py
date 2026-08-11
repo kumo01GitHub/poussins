@@ -15,7 +15,7 @@ from .expr import (
 )
 
 
-def has_meta_var(expr: Expr) -> bool:
+def has_metavar(expr: Expr) -> bool:
     """
     Check if the expression contains any meta-variables (holes).
     """
@@ -25,20 +25,20 @@ def has_meta_var(expr: Expr) -> bool:
         case ESort(_) | EVar(_) | EConst(_):
             return False
         case EPi(_, domain, body) | ELam(_, domain, body):
-            return has_meta_var(domain) or has_meta_var(body)
+            return has_metavar(domain) or has_metavar(body)
         case EApp(fn, arg):
-            return has_meta_var(fn) or has_meta_var(arg)
+            return has_metavar(fn) or has_metavar(arg)
         case EMatch(_, discriminee, motive, cases):
             return (
-                has_meta_var(discriminee)
-                or has_meta_var(motive)
-                or any(has_meta_var(c) for c in cases)
+                has_metavar(discriminee)
+                or has_metavar(motive)
+                or any(has_metavar(c) for c in cases)
             )
         case _:
             raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
-def substitute_meta_var(expr: Expr, target_goal_id: str, replacement: Expr) -> Expr:
+def substitute_metavar(expr: Expr, target_goal_id: str, replacement: Expr) -> Expr:
     """
     Substitute all occurrences of the meta-variable with the given goal_id in the expression with the replacement expression.
     """
@@ -50,26 +50,26 @@ def substitute_meta_var(expr: Expr, target_goal_id: str, replacement: Expr) -> E
         case EPi(var, domain, body):
             return EPi(
                 var,
-                substitute_meta_var(domain, target_goal_id, replacement),
-                substitute_meta_var(body, target_goal_id, replacement)
+                substitute_metavar(domain, target_goal_id, replacement),
+                substitute_metavar(body, target_goal_id, replacement)
             )
         case ELam(var, domain, body):
             return ELam(
                 var,
-                substitute_meta_var(domain, target_goal_id, replacement),
-                substitute_meta_var(body, target_goal_id, replacement)
+                substitute_metavar(domain, target_goal_id, replacement),
+                substitute_metavar(body, target_goal_id, replacement)
             )
         case EApp(fn, arg):
             return EApp(
-                substitute_meta_var(fn, target_goal_id, replacement),
-                substitute_meta_var(arg, target_goal_id, replacement)
+                substitute_metavar(fn, target_goal_id, replacement),
+                substitute_metavar(arg, target_goal_id, replacement)
             )
         case EMatch(inductive_name, discriminee, motive, cases):
             return EMatch(
                 inductive_name,
-                substitute_meta_var(discriminee, target_goal_id, replacement),
-                substitute_meta_var(motive, target_goal_id, replacement),
-                tuple(substitute_meta_var(c, target_goal_id, replacement) for c in cases)
+                substitute_metavar(discriminee, target_goal_id, replacement),
+                substitute_metavar(motive, target_goal_id, replacement),
+                tuple(substitute_metavar(c, target_goal_id, replacement) for c in cases)
             )
         case _:
             raise NotImplementedError(f"Unknown expression node: {expr}")
