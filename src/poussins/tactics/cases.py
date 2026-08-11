@@ -20,11 +20,6 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 
 
-def _definitions(manager: ProofManager):
-    engine = getattr(manager, "engine", None)
-    return None if engine is None else engine.definitions
-
-
 def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
     """
     Produce a fresh binder name that does not collide with the current context.
@@ -149,7 +144,7 @@ def cases(
     if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"cases failed: Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, _definitions(manager))
+    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.engine.definitions)
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn

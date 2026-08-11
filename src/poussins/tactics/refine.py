@@ -8,11 +8,6 @@ from ..errors import TacticError
 from ..kernel import Goal, ProofManager, infer_metavar_types
 
 
-def _definitions(manager: ProofManager):
-    engine = getattr(manager, "engine", None)
-    return None if engine is None else engine.definitions
-
-
 def refine(manager: ProofManager, expr: Expr) -> None:
     """ Refine the current goal using an expression that may contain metavariables. """
     if manager.is_closed:
@@ -28,7 +23,7 @@ def refine(manager: ProofManager, expr: Expr) -> None:
         expected_type=current_goal.statement,
         context=current_goal.context,
         metavars=state.metavars,
-        definitions=_definitions(manager),
+        definitions=manager.engine.definitions,
     )
 
     user_meta_ids = collect_metavar_ids(expr)

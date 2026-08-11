@@ -8,11 +8,6 @@ from ..errors import TacticError
 from ..kernel import ProofManager, Goal, whnf
 
 
-def _definitions(manager: ProofManager):
-    engine = getattr(manager, "engine", None)
-    return None if engine is None else engine.definitions
-
-
 def intro(manager: ProofManager, var_name: str) -> None:
     """
     Introduce one variable from a dependent product goal.
@@ -25,7 +20,7 @@ def intro(manager: ProofManager, var_name: str) -> None:
     if current_goal is None:
         raise TacticError("intro failed: No active goals remain.")
 
-    goal_expr = whnf(current_goal.statement, state.metavars, _definitions(manager))
+    goal_expr = whnf(current_goal.statement, state.metavars, manager.engine.definitions)
     if not isinstance(goal_expr, EPi):
         raise TacticError(f"intro failed: Current goal is not a product type (EPi). Found: {goal_expr}")
 

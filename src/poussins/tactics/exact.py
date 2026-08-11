@@ -6,11 +6,6 @@ from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq
 
 
-def _definitions(manager: ProofManager):
-    engine = getattr(manager, "engine", None)
-    return None if engine is None else engine.definitions
-
-
 def exact(manager: ProofManager, expr: Expr) -> None:
     """
     Close the current goal with the given expression.
@@ -38,7 +33,7 @@ def assumption(manager: ProofManager) -> None:
     metavars = state.metavars
 
     for hyp_name, hyp_type in current_goal.local_context.items():
-        if is_def_eq(hyp_type, target, context, metavars, _definitions(manager)):
+        if is_def_eq(hyp_type, target, context, metavars, manager.engine.definitions):
             manager.close_goal(EVar(hyp_name))
             return
 

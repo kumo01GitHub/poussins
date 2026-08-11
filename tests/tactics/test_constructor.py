@@ -208,6 +208,7 @@ def test_goal_head_name_raises_when_head_has_no_name() -> None:
     manager = SimpleNamespace(
         is_closed=False,
         current_state=SimpleNamespace(current_goal=Goal(statement=ESort(UnivLevelZero()), context={}), metavars={}),
+        engine=SimpleNamespace(definitions={}),
     )
 
     with pytest.raises(TacticError):
@@ -223,6 +224,7 @@ def test_goal_head_name_uses_nested_application() -> None:
             current_goal=Goal(statement=EApp(EApp(EConst("And", ()), EConst("True", ())), EConst("True", ())), context={}),
             metavars={},
         ),
+        engine=SimpleNamespace(definitions={}),
     )
 
     from poussins.tactics.constructor import _goal_head_name
@@ -268,6 +270,7 @@ def test_named_constructor_rejects_non_constructor_declaration() -> None:
         is_closed=False,
         current_state=SimpleNamespace(current_goal=Goal(statement=EConst("And", ()), context={}), metavars={}),
         env=DummyEnv(),
+        engine=SimpleNamespace(definitions={})
     )
 
     from poussins.tactics.constructor import _apply_named_constructor

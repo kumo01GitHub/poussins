@@ -40,7 +40,7 @@ def test_apply_raises_when_current_goal_is_missing(standard_env: Environment) ->
                 metavars={},
             )
 
-        def close_goal(self, assignment):
+        def close_goal(self, _):
             raise RuntimeError("boom")
 
         def refine_goal(self, assignment, subgoals):
@@ -71,6 +71,7 @@ def test_apply_wraps_kernel_failure(standard_env: Environment) -> None:
                 ),
                 metavars={},
             )
+            self.engine = SimpleNamespace(definitions={})
 
         def close_goal(self, assignment):
             raise RuntimeError("boom")

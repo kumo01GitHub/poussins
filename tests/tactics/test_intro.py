@@ -85,6 +85,7 @@ def test_intro_rejects_duplicate_context_name() -> None:
             current_goal=Goal(statement=EPi("x", ESort(UnivLevelZero()), ESort(UnivLevelZero())), context={"h": ESort(UnivLevelZero())}),
             metavars={},
         ),
+        engine=SimpleNamespace(definitions={}),
     )
 
     with pytest.raises(TacticError):

@@ -103,6 +103,7 @@ def test_induction_rejects_head_without_name() -> None:
     manager = SimpleNamespace(
         is_closed=False,
         current_state=SimpleNamespace(current_goal=Goal(statement=ESort(UnivLevelZero()), context={"x": ESort(UnivLevelZero())}), metavars={}),
+        engine=SimpleNamespace(definitions={}),
     )
 
     with pytest.raises(TacticError):

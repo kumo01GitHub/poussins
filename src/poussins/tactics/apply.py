@@ -11,11 +11,6 @@ from ..kernel import ProofManager, Goal, infer_type, whnf
 from ..errors import TacticError
 
 
-def _definitions(manager: ProofManager):
-    engine = getattr(manager, "engine", None)
-    return None if engine is None else engine.definitions
-
-
 def apply(manager: ProofManager, expr: Expr) -> None:
     """
     Apply an expression to the current goal.
@@ -30,9 +25,9 @@ def apply(manager: ProofManager, expr: Expr) -> None:
 
     implicit_subgoals: list[Goal] = []
     current_type = whnf(
-        infer_type(expr, current_goal.context, state.metavars, _definitions(manager)),
+        infer_type(expr, current_goal.context, state.metavars, manager.engine.definitions),
         state.metavars,
-        _definitions(manager),
+        manager.engine.definitions,
     )
     assignment = expr
 
@@ -53,7 +48,7 @@ def apply(manager: ProofManager, expr: Expr) -> None:
                 replacement=EMetaVar(new_goal.id)
             ),
             state.metavars,
-            _definitions(manager),
+            manager.engine.definitions,
         )
 
     try:
