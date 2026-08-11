@@ -16,7 +16,7 @@ from ..errors import KernelTypeError
 Definitions = Mapping[str, Expr | None] | None
 
 
-def instantiate_meta(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
+def instantiate_metavar(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     """
     Instantiate assigned metavariables in an expression.
     """
@@ -36,7 +36,7 @@ def whnf(
     """
     Reduce an expression to weak head normal form.
     """
-    expr = instantiate_meta(expr, metavars)
+    expr = instantiate_metavar(expr, metavars)
 
     match expr:
         case EConst(name, _):
@@ -59,7 +59,7 @@ def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
     """
     current = expr
     while True:
-        next_term = instantiate_meta(current, metavars)
+        next_term = instantiate_metavar(current, metavars)
         if next_term == current:
             break
         current = next_term
@@ -95,7 +95,7 @@ def infer_type(
     """
     Infer the type of an expression.
     """
-    expr = instantiate_meta(expr, metavars)
+    expr = instantiate_metavar(expr, metavars)
 
     match expr:
         case EMetaVar(goal_id):

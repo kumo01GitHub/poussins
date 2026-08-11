@@ -20,7 +20,7 @@ from poussins.kernel.typecheck import (
     check_type,
     infer_type,
     instantiate,
-    instantiate_meta,
+    instantiate_metavar,
     is_alpha_eq,
     is_def_eq,
     is_universe_leq,
@@ -37,14 +37,14 @@ def _type1() -> ESort:
     return ESort(UnivLevelSucc(UnivLevelZero()))
 
 
-def test_instantiate_meta_replaces_assigned_metavars() -> None:
+def test_instantiate_metavar_replaces_assigned_metavars() -> None:
     expr = EApp(EMetaVar("g1"), EMetaVar("g2"))
     metavars = {
         "g1": MetaVar(statement=_prop(), assignment=EConst("f", ())),
         "g2": MetaVar(statement=_prop()),
     }
 
-    result = instantiate_meta(expr, metavars)
+    result = instantiate_metavar(expr, metavars)
 
     assert result == EApp(EConst("f", ()), EMetaVar("g2"))
 
