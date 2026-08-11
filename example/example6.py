@@ -1,19 +1,25 @@
 """
-Example proof that exercises the Nat DSL and the induction tactic.
+Example proof demonstrating equality and addition properties for natural numbers.
 """
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 
-
 env = Environment.standard()
 
-# Prove that equality is reflexive for an arbitrary natural number using tactics.
-statement = Prop.forall(("n", Nat.type()), Nat.eq(Nat("n"), Nat("n")))
+n, m, k = Nat("n"), Nat("m"), Nat("k")
+
+statement = Prop.forall(
+    ("n", Nat.type()),
+    ("m", Nat.type()),
+    ("k", Nat.type()),
+    Prop(Nat.eq(n, m)) >> Prop(Nat.eq(n + k, m + k)),
+)
+
 example = Example(statement, env)
 
-example.intro("n")
-example.induction("n")
-example.constructor()
-example.constructor()
+example.intros(["n", "m", "k", "h"])
+
+example.rewrite("h")
+example.rfl()
 
 example.qed()

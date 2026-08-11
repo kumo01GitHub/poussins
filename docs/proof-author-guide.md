@@ -75,6 +75,8 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
 - `exfalso()`: change target to `False` and prove contradiction first
 - `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
+-　`reflexivity() / rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
+-　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.
 - `undo()`: rollback one proof step
 
 ### Induction and the Nat DSL

@@ -20,6 +20,8 @@ from ..tactics import (
     induction,
     refine,
     revert,
+    reflexivity, rfl,
+    rewrite, rw,
 )
 from ..utils.logging import getLogger
 
@@ -203,3 +205,31 @@ class ProofScript(ABC):
         Revert one or more hypotheses from the local context back into the goal.
         """
         revert(self.manager, hyp_names)
+
+    @log_tactic
+    def reflexivity(self) -> None:
+        """
+        Solve the current goal if it is an equality of definitionally equal terms.
+        """
+        reflexivity(self.manager)
+
+    @log_tactic
+    def rfl(self) -> None:
+        """
+        Solve the current goal if it is an equality of definitionally equal terms.
+        """
+        rfl(self.manager)
+
+    @log_tactic
+    def rewrite(self, hyp_name: str) -> None:
+        """
+        Rewrite occurrences of LHS with RHS in the current goal using an equality hypothesis.
+        """
+        rewrite(self.manager, hyp_name)
+
+    @log_tactic
+    def rw(self, hyp_name: str) -> None:
+        """
+        Rewrite occurrences of LHS with RHS in the current goal using an equality hypothesis.
+        """
+        rw(self.manager, hyp_name)

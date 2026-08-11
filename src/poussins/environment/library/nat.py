@@ -2,8 +2,8 @@ from __future__ import annotations
 from enum import Enum
 
 from .sort import Sort
-from ..declaration import ConstructorDeclaration, Declaration, InductiveDeclaration
-from ...ast.expr import EConst, EPi
+from ..declaration import ConstantDeclaration, ConstructorDeclaration, Declaration, InductiveDeclaration
+from ...ast.expr import EConst, ELam, EPi, EVar
 
 
 class NatDeclaration(Enum):
@@ -33,6 +33,22 @@ class NatDeclaration(Enum):
         level_params=(),
         inductive_name="Nat",
         type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
+    )
+
+    """Nat.add definition declaration for natural numbers."""
+    NAT_ADD_DECLARATION = ConstantDeclaration(
+        name="Nat.add",
+        level_params=(),
+        type=EPi("n", EConst("Nat", ()), EPi("m", EConst("Nat", ()), EConst("Nat", ()))),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+                ELam(
+                "m",
+                EConst("Nat", ()),
+                EVar("m"),
+            ),
+        ),
     )
 
 

@@ -10,7 +10,9 @@ from .intro import intro, intros
 from .induction import induction
 from .logic import exfalso
 from .refine import refine
+from .reflexivity import reflexivity, rfl
 from .revert import revert
+from .rewrite import rewrite, rw
 
 
 __all__ = [
@@ -29,4 +31,8 @@ __all__ = [
     "exfalso",
     "refine",
     "revert",
+    "reflexivity",
+    "rfl",
+    "rewrite",
+    "rw",
 ]
