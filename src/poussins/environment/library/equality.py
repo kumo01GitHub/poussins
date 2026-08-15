@@ -2,13 +2,17 @@ from __future__ import annotations
 from enum import Enum
 
 from .sort import Sort
-from ..declaration import ConstructorDeclaration, Declaration, InductiveDeclaration
-from ...ast.expr import EConst, EPi, EVar, EApp
+from ..declaration import (
+    ConstructorDeclaration,
+    Declaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
+from ...ast import EConst, EPi, EVar, EApp, ESort, UnivLevelParam
+
 
 class EqualityDeclaration(Enum):
-    """
-    Inductive declaration for propositional equality.
-    """
+    """ Inductive declaration for propositional equality. """
 
     """Eq inductive declaration for propositional equality."""
     EQ_DECLARATION = InductiveDeclaration(
@@ -17,6 +21,7 @@ class EqualityDeclaration(Enum):
         type=EPi("A", Sort.TYPE.sort, EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort))),
         constructor_names=("Eq.refl",),
     )
+
     """Eq.refl constructor declaration for propositional equality."""
     EQ_REFL_DECLARATION = ConstructorDeclaration(
         name="Eq.refl",
@@ -31,6 +36,29 @@ class EqualityDeclaration(Enum):
                 EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("x")),
             ),
         ),
+    )
+
+    """Eq.rec recursor declaration for propositional equality (J-rule / Path Induction)."""
+    EQ_REC_DECLARATION = RecursorDeclaration(
+        name="Eq.rec",
+        level_params=("u",),
+        inductive_name="Eq",
+        num_params=2,
+        num_indices=1,
+        num_minors=1,
+        type=EPi("A", Sort.TYPE.sort,
+            EPi("x", EVar("A"),
+                EPi("motive", EPi("y", EVar("A"), EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")), ESort(UnivLevelParam("u")))),
+                    EPi("minor", EApp(EApp(EVar("motive"), EVar("x")), EApp(EApp(EConst("Eq.refl", ()), EVar("A")), EVar("x"))),
+                        EPi("y", EVar("A"),
+                            EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")),
+                                EApp(EApp(EVar("motive"), EVar("y")), EVar("h"))
+                            )
+                        )
+                    )
+                )
+            )
+        )
     )
 
     @property

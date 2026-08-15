@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from .proof_state import MetaVar
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
-    UnivLevelZero, UnivLevelSucc, UnivLevelIMax,
+    UnivLevelZero, UnivLevelSucc, UnivLevelIMax, UnivLevelParam,
     collect_free_vars, substitute_metavar, substitute_expr_var, collect_metavar_ids
 )
 from ..errors import KernelTypeError
@@ -37,7 +37,6 @@ def whnf(
     Reduce an expression to weak head normal form.
     """
     expr = instantiate_metavar(expr, metavars)
-
     match expr:
         case EConst(name, _):
             if definitions is not None and name in definitions and definitions[name] is not None and name not in unfolding:
@@ -86,6 +85,41 @@ def is_universe_leq(level_left: object, level_right: object) -> bool:
             return False
 
 
+def unify_univ_levels(l1: object, l2: object, univ_subst: dict[str, object]) -> dict[str, object] | None:
+    """
+    Unify two universe levels, updating the substitution map (univ_subst) for parameters.
+    Return the updated substitution map if successful, or None if unification fails.
+    """
+    if isinstance(l1, UnivLevelParam) and l1.name in univ_subst:
+        l1 = univ_subst[l1.name]
+    if isinstance(l2, UnivLevelParam) and l2.name in univ_subst:
+        l2 = univ_subst[l2.name]
+
+    if l1 == l2:
+        return univ_subst
+
+    if isinstance(l1, UnivLevelParam):
+        return univ_subst | {l1.name: l2}
+    if isinstance(l2, UnivLevelParam):
+        return univ_subst | {l2.name: l1}
+
+    match (l1, l2):
+        case (UnivLevelSucc(p1), UnivLevelSucc(p2)):
+            return unify_univ_levels(p1, p2, univ_subst)
+        case (UnivLevelIMax(a1, b1), UnivLevelIMax(a2, b2)):
+            subst = unify_univ_levels(a1, a2, univ_subst)
+            if subst is None:
+                return None
+            return unify_univ_levels(b1, b2, subst)
+        case _:
+            return None
+
+
+def is_def_eq_univ(l1: object, l2: object) -> bool:
+    """宇宙レベル同士が定義上等しいか（パラメータを許容して）判定する"""
+    return unify_univ_levels(l1, l2, {}) is not None
+
+
 def infer_type(
     expr: Expr,
     context: dict[str, Expr],
@@ -102,55 +136,41 @@ def infer_type(
             if goal_id not in metavars:
                 raise KernelTypeError(f"Unknown meta-variable ?{goal_id}")
             return metavars[goal_id].statement
-
         case ESort(level):
             return ESort(UnivLevelSucc(level))
-
         case EVar(name) | EConst(name, _):
             t = context.get(name)
             if t is None:
                 raise KernelTypeError(f"Unknown identifier '{name}' (neither local variable nor verified constant).")
             return t
-
         case EPi(var, domain, body):
             sort_a = infer_type(domain, context, metavars, definitions)
             sort_a_whnf = whnf(sort_a, metavars, definitions)
             if not isinstance(sort_a_whnf, ESort):
                 raise KernelTypeError("The domain of a dependent product must be a Sort.")
-
             sort_b = infer_type(body, context | {var: domain}, metavars, definitions)
             sort_b_whnf = whnf(sort_b, metavars, definitions)
             if not isinstance(sort_b_whnf, ESort):
                 raise KernelTypeError("The body of a dependent product must be a Sort.")
-
             return ESort(UnivLevelIMax(sort_a_whnf.level, sort_b_whnf.level))
-
         case ELam(var, domain, body):
             extended_context = context | {var: domain}
             body_type = infer_type(body, extended_context, metavars, definitions)
-
             infer_type(EPi(var, domain, body_type), context, metavars, definitions)
             return EPi(var, domain, body_type)
-
         case EApp(fn, arg):
             fn_type = infer_type(fn, context, metavars, definitions)
             arg_type = infer_type(arg, context, metavars, definitions)
-
             fn_type_whnf = whnf(fn_type, metavars, definitions)
-
             if not isinstance(fn_type_whnf, EPi):
                 raise KernelTypeError(f"Expected function type (EPi), but found: {fn_type_whnf}")
-
             expected_domain = whnf(fn_type_whnf.domain, metavars, definitions)
             actual_arg_type = whnf(arg_type, metavars, definitions)
             if not is_def_eq(expected_domain, actual_arg_type, context, metavars, definitions):
                 raise KernelTypeError(f"Argument type mismatch. Expected: {expected_domain}, Found: {actual_arg_type}")
-
             return substitute_expr_var(fn_type_whnf.body, fn_type_whnf.var, arg)
-
         case EMatch(_, discriminee, motive, _):
             return EApp(motive, discriminee)
-
         case _:
             raise NotImplementedError(f"Unknown expression node: {expr}")
 
@@ -191,31 +211,24 @@ def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = 
                 except ValueError:
                     return False
             return n1 == n2
-
         case (ESort(l1), ESort(l2)):
             return l1 == l2
-
         case (EConst(n1, lv1), EConst(n2, lv2)):
             return n1 == n2 and lv1 == lv2
-
         case (EMetaVar(g1), EMetaVar(g2)):
             return g1 == g2
-
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
             if not is_alpha_eq(d1, d2, bvars1, bvars2):
                 return False
             return is_alpha_eq(b1, b2, [v1] + bvars1, [v2] + bvars2)
-
         case (EApp(f1, a1), EApp(f2, a2)):
             return is_alpha_eq(f1, f2, bvars1, bvars2) and is_alpha_eq(a1, a2, bvars1, bvars2)
-
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2 or not is_alpha_eq(d1, d2, bvars1, bvars2) or not is_alpha_eq(m1, m2, bvars1, bvars2):
                 return False
             if len(c1) != len(c2):
                 return False
             return all(is_alpha_eq(b1, b2, bvars1, bvars2) for b1, b2 in zip(c1, c2))
-
         case _:
             return False
 
@@ -232,61 +245,49 @@ def is_def_eq(
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
-
     if is_alpha_eq(t1, t2):
         return True
-
     t1_whnf = whnf(t1, metavars, definitions)
     t2_whnf = whnf(t2, metavars, definitions)
-
     if t1_whnf != t1 or t2_whnf != t2:
         if is_alpha_eq(t1_whnf, t2_whnf):
             return True
-
-    if isinstance(t1_whnf, ELam) and isinstance(t2_whnf, EVar):
-        if not isinstance(t1_whnf.body, EApp):
-            return False
-        if not isinstance(t1_whnf.body.arg, EVar):
-            return False
-        if t1_whnf.body.arg.name != t1_whnf.var:
-            return False
-        if t1_whnf.body.arg.name in collect_free_vars(t1_whnf.body.fn):
-            return False
-        return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars, definitions)
-
-    if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
-        if not isinstance(t2_whnf.body, EApp):
-            return False
-        if not isinstance(t2_whnf.body.arg, EVar):
-            return False
-        if t2_whnf.body.arg.name != t2_whnf.var:
-            return False
-        if t2_whnf.body.arg.name in collect_free_vars(t2_whnf.body.fn):
-            return False
-        return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars, definitions)
-
+        if isinstance(t1_whnf, ELam) and isinstance(t2_whnf, EVar):
+            if not isinstance(t1_whnf.body, EApp):
+                return False
+            if not isinstance(t1_whnf.body.arg, EVar):
+                return False
+            if t1_whnf.body.arg.name != t1_whnf.var:
+                return False
+            if t1_whnf.body.arg.name in collect_free_vars(t1_whnf.body.fn):
+                return False
+            return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars, definitions)
+        if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
+            if not isinstance(t2_whnf.body, EApp):
+                return False
+            if not isinstance(t2_whnf.body.arg, EVar):
+                return False
+            if t2_whnf.body.arg.name != t2_whnf.var:
+                return False
+            if t2_whnf.body.arg.name in collect_free_vars(t2_whnf.body.fn):
+                return False
+            return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars, definitions)
     if type(t1_whnf) is not type(t2_whnf):
         return False
-
     match (t1_whnf, t2_whnf):
         case (ESort(level1), ESort(level2)):
-            return level1 == level2
-
+            return is_def_eq_univ(level1, level2)
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
                 is_def_eq(f1, f2, context, metavars, definitions) and
                 is_def_eq(a1, a2, context, metavars, definitions)
             )
-
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
             if not is_def_eq(d1, d2, context, metavars, definitions):
                 return False
-
             if v1 != v2:
                 b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
-
             return is_def_eq(b1, b2, context | {v1: d1}, metavars, definitions)
-
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 return False
@@ -297,7 +298,6 @@ def is_def_eq(
             if len(c1) != len(c2):
                 return False
             return all(is_def_eq(b1, b2, context, metavars, definitions) for b1, b2 in zip(c1, c2))
-
         case _:
             return False
 
@@ -314,15 +314,12 @@ def unify(
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
-
     if is_alpha_eq(t1, t2):
         return metavars
-
     if isinstance(t1, EMetaVar):
         mvar_id = t1.goal_id
         if mvar_id in metavars and not metavars[mvar_id].is_assigned:
             return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t2)}
-
     if isinstance(t2, EMetaVar):
         mvar_id = t2.goal_id
         if mvar_id in metavars and not metavars[mvar_id].is_assigned:
@@ -330,7 +327,6 @@ def unify(
 
     t1_whnf = whnf(t1, metavars, definitions)
     t2_whnf = whnf(t2, metavars, definitions)
-
     if t1_whnf != t1 or t2_whnf != t2:
         if is_alpha_eq(t1_whnf, t2_whnf):
             return metavars
@@ -341,16 +337,19 @@ def unify(
         raise KernelTypeError(f"Unification failed: type mismatch between {t1_whnf} and {t2_whnf}")
 
     match (t1_whnf, t2_whnf):
+        case (ESort(l1), ESort(l2)):
+            subst = unify_univ_levels(l1, l2, {})
+            if subst is not None:
+                return metavars
+            raise KernelTypeError(f"Unification failed: universe level mismatch between {l1} and {l2}")
         case (EApp(f1, a1), EApp(f2, a2)):
             current_metavars = unify(f1, f2, context, metavars, definitions)
             return unify(a1, a2, context, current_metavars, definitions)
-
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
             current_metavars = unify(d1, d2, context, metavars, definitions)
             if v1 != v2:
                 b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
             return unify(b1, b2, context | {v1: d1}, current_metavars, definitions)
-
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 raise KernelTypeError("Unification failed: match inductive type mismatch")
@@ -361,7 +360,6 @@ def unify(
             for b1, b2 in zip(c1, c2):
                 current_metavars = unify(b1, b2, context, current_metavars, definitions)
             return current_metavars
-
         case _:
             raise KernelTypeError(f"Unification failed: expressions are structurally distinct: {t1_whnf} vs {t2_whnf}")
 
@@ -387,7 +385,6 @@ def infer_metavar_types(
                 try:
                     fn_type = infer_type(fn, ctx, metavars, definitions)
                     fn_type_whnf = whnf(fn_type, metavars, definitions)
-
                     if hasattr(fn_type_whnf, "domain"):
                         _walk(arg, fn_type_whnf.domain, ctx)
                     _walk(fn, fn_type, ctx)
@@ -397,9 +394,7 @@ def infer_metavar_types(
                 pass
 
     _walk(expr, expected_type, context)
-
     for m_id in collect_metavar_ids(expr):
         if m_id not in meta_types:
             meta_types[m_id] = expected_type
-
     return meta_types

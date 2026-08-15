@@ -1,15 +1,18 @@
 """
 Public environment exports for poussins.
 """
-from .declaration import Declaration, ConstantDeclaration, InductiveDeclaration, ConstructorDeclaration, QuotDeclaration
+from .declaration import Declaration, AxiomDeclaration, DefinitionDeclaration, TheoremDeclaration, InductiveDeclaration, ConstructorDeclaration, RecursorDeclaration, QuotDeclaration
 from .environment import Environment
 
 
 __all__ = [
     "Declaration",
-    "ConstantDeclaration",
+    "AxiomDeclaration",
+    "DefinitionDeclaration",
+    "TheoremDeclaration",
     "InductiveDeclaration",
     "ConstructorDeclaration",
+    "RecursorDeclaration",
     "QuotDeclaration",
     "Environment",
 ]

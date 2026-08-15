@@ -1,8 +1,7 @@
 """
 Prop: public-facing propositional formula DSL.
-
-Wraps the internal Expr AST with Python operator overloads so that
-propositions can be written naturally in Python code:
+Wraps the internal Expr AST with Python operator overloads so that propositions
+can be written naturally in Python code:
 
     p, q, r = Prop("P"), Prop("Q"), Prop("R")
     p >> (q >> r)  # P → (Q → R)  (implication)
@@ -18,9 +17,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..ast import (
-    Expr, EVar, EConst, EPi, EApp
+    Expr,
+    EVar,
+    EConst,
+    EPi,
+    EApp,
 )
-from ..environment import Environment, ConstantDeclaration
+from ..environment import Environment, DefinitionDeclaration
 from ..environment.library import Sort
 
 
@@ -42,11 +45,11 @@ class Prop:
             object.__setattr__(self, "expr", EVar(expr_or_name))
             if env is not None and env.get(expr_or_name) is None:
                 env.add(
-                    ConstantDeclaration(
+                    DefinitionDeclaration(
                         name=expr_or_name,
                         level_params=(),
                         type=Sort.PROP.sort,
-                        value=EConst("P", ())
+                        value=EConst("P", ()),
                     )
                 )
 
@@ -153,10 +156,6 @@ class Prop:
                 expr = EPi(name, cls.to_expr(typ), expr)
             return cls(expr)
 
-        if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], str):
-            name, typ = binding_args[0]
-            return cls(EPi(name, cls.to_expr(typ), cls.to_expr(body)))
-
         if len(binding_args) >= 2 and isinstance(binding_args[0], str):
             var_name, domain = binding_args[0], binding_args[1]
             expr = cls.to_expr(body)
@@ -183,27 +182,19 @@ class Prop:
     # ------------------------------------------------------------------
 
     def __rshift__(self, other: Prop | Expr) -> Prop:
-        """
-        P >> Q  →  P → Q  (implication).
-        """
+        """ P >> Q  →  P → Q  (implication). """
         return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(other)))
 
     def __and__(self, other: Prop | Expr) -> Prop:
-        """
-        P & Q  →  P ∧ Q  (conjunction).
-        """
+        """ P & Q  →  P ∧ Q  (conjunction). """
         return Prop(EApp(EApp(EConst("And", levels=()), self.expr), self.to_expr(other)))
 
     def __or__(self, other: Prop | Expr) -> Prop:
-        """
-        P | Q  →  P ∨ Q  (disjunction).
-        """
+        """ P | Q  →  P ∨ Q  (disjunction). """
         return Prop(EApp(EApp(EConst("Or", levels=()), self.expr), self.to_expr(other)))
 
     def __invert__(self) -> Prop:
-        """
-        ~P  →  P → ⊥  (negation).
-        """
+        """ ~P  →  P → ⊥  (negation). """
         return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(self.bottom())))
 
     # ------------------------------------------------------------------

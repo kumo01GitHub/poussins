@@ -6,22 +6,18 @@ from __future__ import annotations
 from .prop import Prop
 from .proof_script import ProofScript
 from ..ast import Expr
-from ..environment import Environment, ConstantDeclaration
+from ..environment import Environment, TheoremDeclaration
 from ..errors import FrameworkError
 from ..utils.logging import getLogger
 
 
 class Theorem(ProofScript):
-    """
-    A named proposition together with an interactive proof session.
-
-    Tactics can be applied as methods (via ProofScript) or as standalone
-    functions — both styles are equivalent::
+    """ A named proposition together with an interactive proof session.
+    Tactics can be applied as methods (via ProofScript) or as standalone functions — both styles are equivalent::
 
         th = Theorem("mp", (p >> q) >> p >> q, env)
         th.intro("hpq")          # method style
         intro(th.manager, "hpq")  # function style — also valid
-
         th.intro("hp")
         th.exact(EVar("hp"))
         th.qed(env)              # seals the proof and registers into env
@@ -32,7 +28,7 @@ class Theorem(ProofScript):
         name: str,
         statement: Prop | Expr,
         env: Environment,
-        level_params: tuple[str, ...] = ()
+        level_params: tuple[str, ...] = (),
     ) -> None:
         """
         Create a theorem with a name, statement, environment, and universe parameters.
@@ -40,7 +36,6 @@ class Theorem(ProofScript):
         self.name = name
         self.level_params = level_params
         super().__init__(Prop.to_expr(statement), env)
-
         self.logger = getLogger(__name__)
         self.logger.info(f"Theorem '{self.name}': {self.statement}")
 
@@ -50,17 +45,21 @@ class Theorem(ProofScript):
         and register it into the given environment.
         """
         if not self.is_closed:
-            raise FrameworkError(f"Theorem '{self.name}' cannot be closed: The proof is not finished.")
+            raise FrameworkError(
+                f"Theorem '{self.name}' cannot be closed: The proof is not finished."
+            )
 
         proof_term = self.manager.current_proof_term
         if proof_term is None:
-            raise FrameworkError(f"Theorem '{self.name}' internal error: Failed to extract a valid proof term.")
+            raise FrameworkError(
+                f"Theorem '{self.name}' internal error: Failed to extract a valid proof term."
+            )
 
-        declaration = ConstantDeclaration(
+        declaration = TheoremDeclaration(
             name=self.name,
             level_params=self.level_params,
             type=self.statement,
-            value=proof_term
+            value=proof_term,
         )
 
         try:
@@ -83,15 +82,10 @@ Property = Theorem
 class Example(ProofScript):
     """
     An anonymous proof for exploration or testing.
-
     Like Theorem but without a name and without registering to Environment.
     """
 
-    def __init__(
-        self,
-        statement: Prop | Expr,
-        env: Environment
-    ) -> None:
+    def __init__(self, statement: Prop | Expr, env: Environment) -> None:
         """
         Create an anonymous proof script for the given statement.
         """
