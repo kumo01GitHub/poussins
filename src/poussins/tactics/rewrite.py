@@ -14,18 +14,18 @@ def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
     """Recursively replace occurrences of `target` with `replacement` in `expr`."""
     if expr == target:
         return replacement
-    if isinstance(expr, EApp):
+    elif isinstance(expr, EApp):
         return EApp(
             _replace_expr(expr.fn, target, replacement),
             _replace_expr(expr.arg, target, replacement),
         )
-    if isinstance(expr, ELam):
+    elif isinstance(expr, ELam):
         return ELam(
             expr.var_name,
             _replace_expr(expr.var_type, target, replacement),
             _replace_expr(expr.body, target, replacement),
         )
-    if isinstance(expr, EPi):
+    elif isinstance(expr, EPi):
         return EPi(
             expr.var_name,
             _replace_expr(expr.var_type, target, replacement),
