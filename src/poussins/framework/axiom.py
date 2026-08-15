@@ -27,7 +27,7 @@ class Axiom:
         """
         self.name = name
         self.level_params = level_params
-        self.statement = statement.to_expr() if isinstance(statement, Prop) else statement
+        self.statement = Prop.to_expr(statement)
         self.env = env
         self.logger = getLogger(__name__)
 
