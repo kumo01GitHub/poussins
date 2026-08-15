@@ -31,6 +31,7 @@ def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
             _replace_expr(expr.var_type, target, replacement),
             _replace_expr(expr.body, target, replacement),
         )
+
     return expr
 
 
