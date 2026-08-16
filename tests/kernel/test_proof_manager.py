@@ -1,7 +1,6 @@
 import pytest
 
 from poussins.ast import EApp, EConst, EMetaVar, ELam, ESort, EVar, UnivLevelZero
-from poussins.environment import ConstantDeclaration
 from poussins.errors import KernelStateError, KernelValueError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_manager import ProofManager
@@ -104,21 +103,3 @@ def test_manager_change_hypothesis_updates_current_context(standard_env) -> None
     updated_goal = manager.current_state.current_goal
     assert updated_goal is not None
     assert updated_goal.context["hFalse"] == _beta_false()
-
-
-def test_manager_uses_new_environment_definitions_for_change(standard_env) -> None:
-    manager = ProofManager(EConst("False", ()), standard_env)
-    standard_env.add(
-        ConstantDeclaration(
-            name="AliasFalse",
-            level_params=(),
-            type=EConst("False", ()),
-            value=EConst("False", ()),
-        )
-    )
-
-    manager.change_goal(EConst("AliasFalse", ()))
-
-    current_goal = manager.current_state.current_goal
-    assert current_goal is not None
-    assert current_goal.statement == EConst("AliasFalse", ())

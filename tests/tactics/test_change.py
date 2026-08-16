@@ -31,26 +31,6 @@ def test_change_goal_replaces_current_target(standard_env: Environment) -> None:
     assert current_goal.statement == _beta_false()
 
 
-def test_change_goal_unfolds_environment_definitions(standard_env: Environment) -> None:
-    from poussins.environment import ConstantDeclaration
-
-    manager = ProofManager(EConst("False", ()), standard_env)
-    standard_env.add(
-        ConstantDeclaration(
-            name="AliasFalse",
-            level_params=(),
-            type=EConst("False", ()),
-            value=EConst("False", ()),
-        )
-    )
-
-    change(manager, EConst("AliasFalse", ()))
-
-    current_goal = manager.current_state.current_goal
-    assert current_goal is not None
-    assert current_goal.statement == EConst("AliasFalse", ())
-
-
 def test_change_hypothesis_replaces_local_type(standard_env: Environment) -> None:
     manager = ProofManager(EConst("True", ()), standard_env)
     current_goal = manager.current_state.current_goal

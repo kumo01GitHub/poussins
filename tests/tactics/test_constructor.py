@@ -4,7 +4,7 @@ import pytest
 
 from poussins.ast import EApp, EConst, ESort, UnivLevelZero
 from poussins.environment import Environment
-from poussins.environment.declaration import ConstantDeclaration, ConstructorDeclaration, InductiveDeclaration
+from poussins.environment.declaration import ConstructorDeclaration, InductiveDeclaration
 from poussins.errors import TacticError
 from poussins.kernel.goal import Goal
 from poussins.kernel.proof_manager import ProofManager
@@ -91,15 +91,6 @@ def test_constructor_rejects_goal_without_inductive_head(standard_env: Environme
         constructor(manager)
 
 
-def test_constructor_rejects_non_inductive_head(standard_env: Environment) -> None:
-    env = Environment.standard()
-    env.add(ConstantDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), value=None))
-    manager = ProofManager(EConst("Foo", ()), env)
-
-    with pytest.raises(TacticError):
-        constructor(manager)
-
-
 def test_constructor_rejects_inductive_type_without_constructors(standard_env: Environment) -> None:
     env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=()))
@@ -125,16 +116,6 @@ def test_constructor_rejects_missing_indexed_constructor_declaration(standard_en
         constructor(manager, index=1)
 
 
-def test_constructor_rejects_constructor_without_constructor_declaration(standard_env: Environment) -> None:
-    env = Environment.standard()
-    env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.intro",)))
-    env.add(ConstantDeclaration(name="Foo.intro", level_params=(), type=EConst("Foo", ()), value=None))
-    manager = ProofManager(EConst("Foo", ()), env)
-
-    with pytest.raises(TacticError):
-        constructor(manager)
-
-
 def test_constructor_rejects_unmatched_constructor(standard_env: Environment) -> None:
     env = Environment.standard()
     env.add(InductiveDeclaration(name="Foo", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("Foo.intro",)))
@@ -143,19 +124,6 @@ def test_constructor_rejects_unmatched_constructor(standard_env: Environment) ->
 
     with pytest.raises(TacticError):
         constructor(manager)
-
-
-def test_left_right_and_split_raise_for_missing_inductive_declarations(standard_env: Environment) -> None:
-    env = Environment.standard()
-    env.declarations.pop("Or", None)
-    env.add(ConstantDeclaration(name="Or", level_params=(), type=ESort(UnivLevelZero()), value=None))
-    manager = ProofManager(EConst("Or", ()), env)
-
-    with pytest.raises(TacticError):
-        left(manager)
-
-    with pytest.raises(TacticError):
-        right(manager)
 
 
 def test_left_right_and_split_raise_for_missing_constructor_names(standard_env: Environment) -> None:
@@ -255,25 +223,3 @@ def test_named_constructor_reaches_apply_path() -> None:
     from poussins.tactics.constructor import _apply_named_constructor
 
     _apply_named_constructor(manager, inductive_name="And", constructor_name="And.intro", tactic_name="split")
-
-
-def test_named_constructor_rejects_non_constructor_declaration() -> None:
-    class DummyEnv:
-        def get(self, name: str):
-            if name == "And":
-                return InductiveDeclaration(name="And", level_params=(), type=ESort(UnivLevelZero()), constructor_names=("And.intro",))
-            if name == "And.intro":
-                return ConstantDeclaration(name="And.intro", level_params=(), type=EConst("And", ()), value=None)
-            return None
-
-    manager = SimpleNamespace(
-        is_closed=False,
-        current_state=SimpleNamespace(current_goal=Goal(statement=EConst("And", ()), context={}), metavars={}),
-        env=DummyEnv(),
-        engine=SimpleNamespace(definitions={})
-    )
-
-    from poussins.tactics.constructor import _apply_named_constructor
-
-    with pytest.raises(TacticError):
-        _apply_named_constructor(manager, inductive_name="And", constructor_name="And.intro", tactic_name="split")

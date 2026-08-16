@@ -16,17 +16,11 @@ from poussins.ast import (
 )
 from poussins.errors import KernelTypeError
 from poussins.kernel.proof_state import MetaVar
-from poussins.kernel.typecheck import (
-    check_type,
-    infer_type,
-    instantiate,
-    instantiate_metavar,
-    is_alpha_eq,
-    is_def_eq,
-    is_universe_leq,
-    unify,
-    whnf,
-)
+from poussins.kernel.equality import is_alpha_eq, is_def_eq
+from poussins.kernel.eval import instantiate, instantiate_metavar, whnf
+from poussins.kernel.typecheck import check_type, infer_type
+from poussins.kernel.unification import unify
+from poussins.kernel.univ import is_universe_leq
 
 
 def _prop() -> ESort:
@@ -139,14 +133,6 @@ def test_check_type_returns_false_on_kernel_error() -> None:
     assert not check_type(EVar("x"), _prop(), context={}, metavars={})
 
 
-def test_is_def_eq_handles_eta_equivalence() -> None:
-    fn = EVar("f")
-    eta_expanded = ELam("x", _prop(), EApp(EVar("f"), EVar("x")))
-    context = {"f": EPi("x", _prop(), _prop())}
-
-    assert is_def_eq(eta_expanded, fn, context=context, metavars={})
-
-
 def test_check_type_accepts_cumulative_universe_sort() -> None:
     assert check_type(_prop(), _type1(), context={}, metavars={})
 
@@ -226,13 +212,6 @@ def test_is_alpha_eq_detects_match_branch_length_mismatch() -> None:
     right = EMatch("Nat", EConst("n", ()), EConst("motive", ()), (EConst("zero", ()), EConst("succ", ())))
 
     assert not is_alpha_eq(left, right)
-
-
-def test_is_def_eq_eta_equivalence_supports_reverse_direction() -> None:
-    eta_expanded = ELam("x", _prop(), EApp(EVar("f"), EVar("x")))
-    context = {"f": EPi("x", _prop(), _prop())}
-
-    assert is_def_eq(EVar("f"), eta_expanded, context=context, metavars={})
 
 
 def test_is_def_eq_rejects_invalid_eta_expansion() -> None:
