@@ -14,25 +14,27 @@ def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
     """Recursively replace occurrences of `target` with `replacement` in `expr`."""
     if expr == target:
         return replacement
-    elif isinstance(expr, EApp):
-        return EApp(
-            _replace_expr(expr.fn, target, replacement),
-            _replace_expr(expr.arg, target, replacement),
-        )
-    elif isinstance(expr, ELam):
-        return ELam(
-            expr.var_name,
-            _replace_expr(expr.var_type, target, replacement),
-            _replace_expr(expr.body, target, replacement),
-        )
-    elif isinstance(expr, EPi):
-        return EPi(
-            expr.var_name,
-            _replace_expr(expr.var_type, target, replacement),
-            _replace_expr(expr.body, target, replacement),
-        )
 
-    return expr
+    match expr:
+        case EApp(fn, arg):
+            return EApp(
+                _replace_expr(fn, target, replacement),
+                _replace_expr(arg, target, replacement),
+            )
+        case ELam(var_name, var_type, body):
+            return ELam(
+                var_name,
+                _replace_expr(var_type, target, replacement),
+                _replace_expr(body, target, replacement),
+            )
+        case EPi(var_name, var_type, body):
+            return EPi(
+                var_name,
+                _replace_expr(var_type, target, replacement),
+                _replace_expr(body, target, replacement),
+            )
+        case _:
+            return expr
 
 
 def _mk_app(fn: Expr, *args: Expr) -> Expr:
