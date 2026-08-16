@@ -116,7 +116,9 @@ def unify_univ_levels(l1: object, l2: object, univ_subst: dict[str, object]) -> 
 
 
 def is_def_eq_univ(l1: object, l2: object) -> bool:
-    """宇宙レベル同士が定義上等しいか（パラメータを許容して）判定する"""
+    """
+    Return True when two universe levels are definitionally equal.
+    """
     return unify_univ_levels(l1, l2, {}) is not None
 
 
@@ -310,7 +312,8 @@ def unify(
     definitions: Definitions = None,
 ) -> dict[str, MetaVar]:
     """
-    Unify two expressions and return updated metavariable assignments.
+    Unify two expressions and return updated metavariable assignments,
+    with robust substitution propagation and occurs-check.
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
@@ -319,10 +322,14 @@ def unify(
     if isinstance(t1, EMetaVar):
         mvar_id = t1.goal_id
         if mvar_id in metavars and not metavars[mvar_id].is_assigned:
+            if mvar_id in collect_metavar_ids(t2):
+                raise KernelTypeError(f"Unification failed: occurs check failed for ?{mvar_id} in {t2}")
             return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t2)}
     if isinstance(t2, EMetaVar):
         mvar_id = t2.goal_id
         if mvar_id in metavars and not metavars[mvar_id].is_assigned:
+            if mvar_id in collect_metavar_ids(t1):
+                raise KernelTypeError(f"Unification failed: occurs check failed for ?{mvar_id} in {t1}")
             return metavars | {mvar_id: MetaVar(statement=metavars[mvar_id].statement, assignment=t1)}
 
     t1_whnf = whnf(t1, metavars, definitions)
@@ -344,21 +351,30 @@ def unify(
             raise KernelTypeError(f"Unification failed: universe level mismatch between {l1} and {l2}")
         case (EApp(f1, a1), EApp(f2, a2)):
             current_metavars = unify(f1, f2, context, metavars, definitions)
-            return unify(a1, a2, context, current_metavars, definitions)
+            a1_inst = instantiate(a1, current_metavars)
+            a2_inst = instantiate(a2, current_metavars)
+            return unify(a1_inst, a2_inst, context, current_metavars, definitions)
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
             current_metavars = unify(d1, d2, context, metavars, definitions)
+            d1_inst = instantiate(d1, current_metavars)
+            b1_inst = instantiate(b1, current_metavars)
+            b2_inst = instantiate(b2, current_metavars)
             if v1 != v2:
-                b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
-            return unify(b1, b2, context | {v1: d1}, current_metavars, definitions)
+                b2_inst = substitute_expr_var(b2_inst, var_name=v2, replacement=EVar(v1))
+            return unify(b1_inst, b2_inst, context | {v1: d1_inst}, current_metavars, definitions)
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 raise KernelTypeError("Unification failed: match inductive type mismatch")
             current_metavars = unify(d1, d2, context, metavars, definitions)
-            current_metavars = unify(m1, m2, context, current_metavars, definitions)
+            m1_inst = instantiate(m1, current_metavars)
+            m2_inst = instantiate(m2, current_metavars)
+            current_metavars = unify(m1_inst, m2_inst, context, current_metavars, definitions)
             if len(c1) != len(c2):
                 raise KernelTypeError("Unification failed: match branch length mismatch")
             for b1, b2 in zip(c1, c2):
-                current_metavars = unify(b1, b2, context, current_metavars, definitions)
+                b1_inst = instantiate(b1, current_metavars)
+                b2_inst = instantiate(b2, current_metavars)
+                current_metavars = unify(b1_inst, b2_inst, context, current_metavars, definitions)
             return current_metavars
         case _:
             raise KernelTypeError(f"Unification failed: expressions are structurally distinct: {t1_whnf} vs {t2_whnf}")
