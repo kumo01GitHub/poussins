@@ -1,5 +1,5 @@
 """
-Kernel-level definition of a single proof subgoal and local context.
+Kernel-level goal representation for the proof system.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field

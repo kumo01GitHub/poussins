@@ -1,12 +1,13 @@
 """
-Kernel: Proof Engine
-This module is responsible for managing the proof state, including goals and metavariables.
+Kernel-level proof engine for managing proof states, goals, and metavariables.
 """
 from __future__ import annotations
 
+from .equality import is_def_eq
 from .proof_state import ProofState, MetaVar
 from .goal import Goal
-from .typecheck import infer_type, unify, is_def_eq
+from .typecheck import infer_type
+from .unification import unify
 from ..ast import Expr, collect_metavar_ids
 from ..environment import Environment, DefinitionDeclaration
 from ..errors import KernelStateError, KernelValueError

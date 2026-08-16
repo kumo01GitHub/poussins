@@ -1,7 +1,5 @@
 """
-Kernel: Proof Session
-This module is strictly responsible for holding the immutable history of proof states.
-It has ZERO knowledge of ProofEngine, typechecking, or tactics.
+Kernel-level proof session management for handling proof states and their history.
 """
 from __future__ import annotations
 from typing import final

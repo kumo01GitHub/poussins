@@ -1,14 +1,14 @@
 """
-Kernel facade that coordinates proof-state transitions.
+Kernel-level proof manager for handling proof sessions and state transitions.
 """
 from __future__ import annotations
 from typing import final
 
+from .eval import instantiate
 from .proof_engine import ProofEngine
 from .proof_session import ProofSession
 from .proof_state import ProofState
 from .goal import Goal
-from .typecheck import instantiate
 from ..ast import Expr
 from ..environment import Environment
 

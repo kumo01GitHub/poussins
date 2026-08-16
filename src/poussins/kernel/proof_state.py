@@ -1,5 +1,5 @@
 """
-Kernel-level proof state representing current substitutions and unsolved goals.
+Kernel-level proof state management for tracking goals and metavariables.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
