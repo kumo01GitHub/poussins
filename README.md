@@ -2,6 +2,15 @@
 
 A Python proof assistant with a small kernel and ergonomic proof DSL.
 
+<p align="center">
+<a href="https://pypi.org/project/poussins">
+    <img alt="PyPI Version" src="https://img.shields.io/pypi/v/poussins">
+</a>
+<a href="https://pypi.org/project/poussins">
+    <img alt="PyPI License" src="https://img.shields.io/pypi/l/poussins">
+</a>
+</p>
+
 ## Documentation Map
 
 - Proof authors: [Proof Author Guide](docs/proof-author-guide.md)

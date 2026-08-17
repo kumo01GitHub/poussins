@@ -1,6 +1,8 @@
 [project]
 name = "poussins"
 version = "0.0.7"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 description = "A proof assistant running on Python."
 readme = "README.md"
 requires-python = ">=3.11"
