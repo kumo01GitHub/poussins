@@ -10,6 +10,7 @@ from .library import (
     BoolDeclaration,
     NatDeclaration,
 )
+from ..ast import Expr
 
 
 class Environment:
@@ -34,7 +35,7 @@ class Environment:
         """
         return self.declarations.get(name)
 
-    def update(self, other: Environment):
+    def update(self, other: "Environment"):
         """
         Merge declarations from another environment into this one.
         """
@@ -46,8 +47,14 @@ class Environment:
         """
         return self.declarations.items()
 
+    def to_context(self) -> dict[str, Expr]:
+        """
+        Convert the environment to a context dictionary mapping names to types.
+        """
+        return {name: decl.type for name, decl in self.declarations.items()}
+
     @classmethod
-    def standard(cls) -> Environment:
+    def standard(cls) -> "Environment":
         """
         Create a standard environment with the core logical declarations.
         """

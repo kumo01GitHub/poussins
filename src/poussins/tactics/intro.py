@@ -20,7 +20,7 @@ def intro(manager: ProofManager, var_name: str) -> None:
     if current_goal is None:
         raise TacticError("intro failed: No active goals remain.")
 
-    goal_expr = whnf(current_goal.statement, state.metavars, manager.engine.env)
+    goal_expr = whnf(current_goal.statement, state.metavars, manager.env)
     if not isinstance(goal_expr, EPi):
         raise TacticError(f"intro failed: Current goal is not a product type (EPi). Found: {goal_expr}")
 

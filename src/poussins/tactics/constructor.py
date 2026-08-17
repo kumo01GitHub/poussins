@@ -22,7 +22,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     current_goal = state.current_goal
     assert current_goal is not None
 
-    goal_type = whnf(current_goal.statement, state.metavars, manager.engine.env)
+    goal_type = whnf(current_goal.statement, state.metavars, manager.env)
 
     head_expr = goal_type
     while isinstance(head_expr, EApp):
@@ -64,14 +64,14 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         const = EConst(name=name, levels=levels)
 
         c_type = whnf(
-            infer_type(const, current_goal.context, state.metavars, manager.engine.env),
+            infer_type(const, current_goal.context, state.metavars, manager.env),
             state.metavars,
-            manager.engine.env,
+            manager.env,
         )
 
         c_conclusion = c_type
         while isinstance(c_conclusion, EPi):
-            c_conclusion = whnf(c_conclusion.body, state.metavars, manager.engine.env)
+            c_conclusion = whnf(c_conclusion.body, state.metavars, manager.env)
 
         c_head = c_conclusion
         while isinstance(c_head, EApp):
@@ -97,7 +97,7 @@ def _goal_head_name(manager: ProofManager) -> str:
     if current_goal is None:
         raise TacticError("constructor failed: No active goals remain.")
 
-    goal_type = whnf(current_goal.statement, state.metavars, manager.engine.env)
+    goal_type = whnf(current_goal.statement, state.metavars, manager.env)
 
     head_expr = goal_type
     while isinstance(head_expr, EApp):

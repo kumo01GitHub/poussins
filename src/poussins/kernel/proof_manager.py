@@ -24,8 +24,8 @@ class ProofManager:
         Create a proof manager for a statement in a given environment.
         """
         self.env = env
-        self.engine = ProofEngine(env)
-        initial_state = self.engine.create_initial_state(statement)
+        self.engine = ProofEngine()
+        initial_state = self.engine.create_initial_state(statement, env)
         self.session = ProofSession(initial_state)
         self.root_metavar_id = initial_state.current_goal.id if initial_state.current_goal else None
 
@@ -34,7 +34,7 @@ class ProofManager:
         """
         Return the current proof state (the last state in the history).
         """
-        return self.engine.refresh_state(self.session.current_state)
+        return self.engine.refresh_state(self.session.current_state, self.env)
 
     @property
     def is_closed(self) -> bool:
@@ -62,28 +62,28 @@ class ProofManager:
         """
         Close the current goal by providing an assignment that satisfies the goal's statement.
         """
-        next_state = self.engine.close_goal(self.current_state, assignment)
+        next_state = self.engine.close_goal(self.current_state, assignment, self.env)
         self.session.update_state(next_state)
 
     def refine_goal(self, assignment: Expr, subgoals: list[Goal]):
         """
         Refine the current goal by providing an assignment that splits it into new subgoals.
         """
-        next_state = self.engine.refine_goal(self.current_state, assignment, subgoals)
+        next_state = self.engine.refine_goal(self.current_state, assignment, subgoals, self.env)
         self.session.update_state(next_state)
 
     def change_goal(self, new_statement: Expr) -> None:
         """
         Replace the current goal statement with a definitionally equal statement.
         """
-        next_state = self.engine.change_goal(self.current_state, new_statement)
+        next_state = self.engine.change_goal(self.current_state, new_statement, self.env)
         self.session.update_state(next_state)
 
     def change_hypothesis(self, hypothesis_name: str, new_type: Expr) -> None:
         """
         Replace a local hypothesis type with a definitionally equal type.
         """
-        next_state = self.engine.change_hypothesis(self.current_state, hypothesis_name, new_type)
+        next_state = self.engine.change_hypothesis(self.current_state, hypothesis_name, new_type, self.env)
         self.session.update_state(next_state)
 
     def undo(self) -> None:

@@ -18,55 +18,43 @@ class ProofEngine:
     Validate proof-state transitions against the current environment.
     """
 
-    def __init__(self, env: Environment):
-        """
-        Build a proof engine with the declarations available in ``env``.
-        """
-        self.env = env
-
-    @property
-    def global_context(self) -> dict[str, Expr]:
-        """
-        Return the current global typing context from the environment.
-        """
-        return {name: decl.type for name, decl in self.env.items()}
-
-    def refresh_goal(self, goal: Goal) -> Goal:
+    def refresh_goal(self, goal: Goal, env: Environment) -> Goal:
         """
         Rebuild a goal so its global view matches the current environment.
         """
         return goal.with_context(
-            self.global_context | goal.local_context, goal.local_hypothesis_names
+            env.to_context() | goal.local_context,
+            goal.local_hypothesis_names
         )
 
-    def refresh_state(self, state: ProofState) -> ProofState:
+    def refresh_state(self, state: ProofState, env: Environment) -> ProofState:
         """
         Refresh all goals in a proof state against the current environment.
         """
         if not state.goals:
             return state
         return ProofState(
-            goals=tuple(self.refresh_goal(goal) for goal in state.goals),
+            goals=tuple(self.refresh_goal(goal, env) for goal in state.goals),
             metavars=state.metavars,
         )
 
-    def create_initial_state(self, statement: Expr) -> ProofState:
+    def create_initial_state(self, statement: Expr, env: Environment) -> ProofState:
         """
         Create the initial proof state with a single goal and its corresponding metavariable.
         """
         initial_goal = Goal(
             statement=statement,
-            context=self.global_context,
+            context=env.to_context(),
             local_hypothesis_names=frozenset(),
         )
         initial_metavars = {initial_goal.id: MetaVar(statement=statement)}
         return ProofState(goals=(initial_goal,), metavars=initial_metavars)
 
-    def close_goal(self, state: ProofState, assignment: Expr) -> ProofState:
+    def close_goal(self, state: ProofState, assignment: Expr, env: Environment) -> ProofState:
         """
         Close the current goal by providing an assignment that satisfies the goal's statement.
         """
-        state = self.refresh_state(state)
+        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to close.")
@@ -80,14 +68,14 @@ class ProofEngine:
             assignment,
             current_goal.context,
             candidate_metavars,
-            self.env,
+            env,
         )
         final_metavars = unify(
             inferred_type,
             current_goal.statement,
             current_goal.context,
             candidate_metavars,
-            self.env,
+            env,
         )
 
         remaining_goals = [
@@ -96,12 +84,12 @@ class ProofEngine:
         return ProofState(goals=tuple(remaining_goals), metavars=final_metavars)
 
     def refine_goal(
-        self, state: ProofState, assignment: Expr, subgoals: list[Goal]
+        self, state: ProofState, assignment: Expr, subgoals: list[Goal], env: Environment
     ) -> ProofState:
         """
         Refine the current goal by providing an assignment that splits it into new subgoals.
         """
-        state = self.refresh_state(state)
+        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to refine.")
@@ -139,14 +127,14 @@ class ProofEngine:
             assignment,
             current_goal.context,
             candidate_metavars,
-            self.env,
+            env,
         )
         final_metavars = unify(
             inferred_type,
             current_goal.statement,
             current_goal.context,
             candidate_metavars,
-            self.env,
+            env,
         )
 
         all_potential_goals = subgoals + list(state.goals[1:])
@@ -155,9 +143,9 @@ class ProofEngine:
         ]
         return ProofState(goals=tuple(truly_active_goals), metavars=final_metavars)
 
-    def change_goal(self, state: ProofState, new_statement: Expr) -> ProofState:
+    def change_goal(self, state: ProofState, new_statement: Expr, env: Environment) -> ProofState:
         """ Replace the current goal statement with a definitionally equal statement. """
-        state = self.refresh_state(state)
+        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
@@ -167,7 +155,7 @@ class ProofEngine:
             current_goal.statement,
             current_goal.context,
             state.metavars,
-            self.env,
+            env,
         ):
             raise KernelValueError(
                 "change failed: New goal is not definitionally equal to the current goal."
@@ -184,12 +172,12 @@ class ProofEngine:
         return ProofState(goals=updated_goals, metavars=updated_metavars)
 
     def change_hypothesis(
-        self, state: ProofState, hypothesis_name: str, new_type: Expr
+        self, state: ProofState, hypothesis_name: str, new_type: Expr, env: Environment
     ) -> ProofState:
         """
         Replace the type of a local hypothesis with a definitionally equal type.
         """
-        state = self.refresh_state(state)
+        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
@@ -205,7 +193,7 @@ class ProofEngine:
             current_type,
             current_goal.context,
             state.metavars,
-            self.env,
+            env,
         ):
             raise KernelValueError(
                 f"change failed: New type for '{hypothesis_name}' is not definitionally equal to the current type."
@@ -215,7 +203,7 @@ class ProofEngine:
             hypothesis_name: new_type
         }
         updated_goal = current_goal.with_context(
-            self.global_context | updated_local_context,
+            env.to_context() | updated_local_context,
             frozenset(updated_local_context.keys()),
         )
         updated_goals = (updated_goal,) + state.goals[1:]

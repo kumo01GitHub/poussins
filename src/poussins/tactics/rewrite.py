@@ -72,13 +72,12 @@ def rewrite(
 
     hyp_type_raw = current_goal.local_context[hyp_name]
     metavars = state.metavars
-    definitions = manager.engine.env  # Environmentを利用
+    definitions = manager.env
 
     hyp_type = whnf(hyp_type_raw, metavars, definitions)
 
     eq_decl = EqualityDeclaration.EQ_DECLARATION
     eq_name = eq_decl.declaration.name
-    # 文字列リストを UnivLevelParam に変換する
     eq_levels = tuple(UnivLevelParam(p) for p in eq_decl.declaration.level_params)
 
     raw_args = []

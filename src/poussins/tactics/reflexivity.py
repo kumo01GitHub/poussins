@@ -25,7 +25,7 @@ def reflexivity(manager: ProofManager) -> None:
     target = current_goal.statement
     context = current_goal.context
     metavars = state.metavars
-    definitions = manager.engine.env
+    definitions = manager.env
 
     goal_type = whnf(target, metavars, definitions)
 
