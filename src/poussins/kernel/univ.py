@@ -15,15 +15,12 @@ def is_universe_leq(level_left: object, level_right: object) -> bool:
     """
     if level_left == level_right:
         return True
-
+    if isinstance(level_left, UnivLevelZero):
+        return True
     match (level_left, level_right):
-        case (UnivLevelZero(), UnivLevelSucc(_)):
-            return True
         case (UnivLevelSucc(pred_left), UnivLevelSucc(pred_right)):
             return is_universe_leq(pred_left, pred_right)
-        case (UnivLevelZero(), UnivLevelIMax(left, right)):
-            return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
-        case (UnivLevelSucc(_), UnivLevelIMax(left, right)):
+        case (_, UnivLevelIMax(left, right)):
             return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
         case _:
             return False
