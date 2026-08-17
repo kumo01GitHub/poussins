@@ -4,6 +4,7 @@ Kernel-level universe management functions for comparing and unifying universe l
 from __future__ import annotations
 
 from ..ast import (
+    Expr, ESort, EVar, EConst, EPi, ELam, EApp,
     UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelIMax,
 )
 
@@ -62,3 +63,62 @@ def is_def_eq_univ(l1: object, l2: object) -> bool:
     Return True when two universe levels are definitionally equal.
     """
     return unify_univ_levels(l1, l2, {}) is not None
+
+
+def instantiate_univ_level(level: object, level_subst: dict[str, object]) -> object:
+    """
+    Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping.
+    """
+    if not level_subst:
+        return level
+
+    match level:
+        case UnivLevelParam():
+            return level_subst.get(level.name, level)
+        case UnivLevelZero():
+            return level
+        case UnivLevelSucc(p):
+            return UnivLevelSucc(instantiate_univ_level(p, level_subst))
+        case UnivLevelIMax(left, right):
+            return UnivLevelIMax(
+                instantiate_univ_level(left, level_subst),
+                instantiate_univ_level(right, level_subst)
+            )
+        case _:
+            return level
+
+
+def instantiate_univ(expr: Expr, level_subst: dict[str, object]) -> Expr:
+    """
+    Recursively traverse an expression (Expr) and return a new Expr with UnivLevelParam replaced in ESort and EConst.
+    """
+    if not level_subst:
+        return expr
+
+    match expr:
+        case EVar(_):
+            return expr
+        case ESort(level):
+            return ESort(instantiate_univ_level(level, level_subst))
+        case EConst(name, levels):
+            new_levels = tuple(instantiate_univ_level(l, level_subst) for l in levels)
+            return EConst(name, new_levels)
+        case EApp(fn, arg):
+            return EApp(
+                instantiate_univ(fn, level_subst),
+                instantiate_univ(arg, level_subst)
+            )
+        case ELam(name, type_, body):
+            return ELam(
+                name,
+                instantiate_univ(type_, level_subst),
+                instantiate_univ(body, level_subst)
+            )
+        case EPi(name, type_, body):
+            return EPi(
+                name,
+                instantiate_univ(type_, level_subst),
+                instantiate_univ(body, level_subst)
+            )
+        case _:
+            return expr

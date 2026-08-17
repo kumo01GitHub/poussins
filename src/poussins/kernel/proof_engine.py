@@ -9,7 +9,7 @@ from .goal import Goal
 from .typecheck import infer_type
 from .unification import unify
 from ..ast import Expr, collect_metavar_ids
-from ..environment import Environment, DefinitionDeclaration
+from ..environment import Environment
 from ..errors import KernelStateError, KernelValueError
 
 
@@ -30,17 +30,6 @@ class ProofEngine:
         Return the current global typing context from the environment.
         """
         return {name: decl.type for name, decl in self.env.items()}
-
-    @property
-    def definitions(self) -> dict[str, Expr]:
-        """
-        Return unfoldable definitions from the environment.
-        """
-        return {
-            name: decl.value
-            for name, decl in self.env.items()
-            if isinstance(decl, DefinitionDeclaration)
-        }
 
     def refresh_goal(self, goal: Goal) -> Goal:
         """
@@ -91,14 +80,14 @@ class ProofEngine:
             assignment,
             current_goal.context,
             candidate_metavars,
-            self.definitions,
+            self.env,
         )
         final_metavars = unify(
             inferred_type,
             current_goal.statement,
             current_goal.context,
             candidate_metavars,
-            self.definitions,
+            self.env,
         )
 
         remaining_goals = [
@@ -150,14 +139,14 @@ class ProofEngine:
             assignment,
             current_goal.context,
             candidate_metavars,
-            self.definitions,
+            self.env,
         )
         final_metavars = unify(
             inferred_type,
             current_goal.statement,
             current_goal.context,
             candidate_metavars,
-            self.definitions,
+            self.env,
         )
 
         all_potential_goals = subgoals + list(state.goals[1:])
@@ -178,7 +167,7 @@ class ProofEngine:
             current_goal.statement,
             current_goal.context,
             state.metavars,
-            self.definitions,
+            self.env,
         ):
             raise KernelValueError(
                 "change failed: New goal is not definitionally equal to the current goal."
@@ -216,7 +205,7 @@ class ProofEngine:
             current_type,
             current_goal.context,
             state.metavars,
-            self.definitions,
+            self.env,
         ):
             raise KernelValueError(
                 f"change failed: New type for '{hypothesis_name}' is not definitionally equal to the current type."

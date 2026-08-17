@@ -3,13 +3,14 @@ Kernel-level equality checking functions for expressions, including alpha-equiva
 """
 from __future__ import annotations
 
-from .eval import instantiate, whnf, Definitions
+from .eval import instantiate, whnf
 from .proof_state import MetaVar
 from .univ import is_def_eq_univ
 from ..ast import (
     Expr, ESort, EVar, EConst, EApp, ELam, EPi, EMatch, EMetaVar,
     collect_free_vars, substitute_expr_var
 )
+from ..environment import Environment
 
 
 def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = []) -> bool:
@@ -54,7 +55,7 @@ def is_def_eq(
     t2: Expr,
     context: dict[str, Expr],
     metavars: dict[str, MetaVar],
-    definitions: Definitions = None,
+    env: Environment | None = None,
 ) -> bool:
     """
     Return True when two expressions are definitionally equal.
@@ -63,8 +64,9 @@ def is_def_eq(
     t2 = instantiate(t2, metavars)
     if is_alpha_eq(t1, t2):
         return True
-    t1_whnf = whnf(t1, metavars, definitions)
-    t2_whnf = whnf(t2, metavars, definitions)
+
+    t1_whnf = whnf(t1, metavars, env)
+    t2_whnf = whnf(t2, metavars, env)
     if t1_whnf != t1 or t2_whnf != t2:
         if is_alpha_eq(t1_whnf, t2_whnf):
             return True
@@ -77,7 +79,8 @@ def is_def_eq(
                 return False
             if t1_whnf.body.arg.name in collect_free_vars(t1_whnf.body.fn):
                 return False
-            return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars, definitions)
+            return is_def_eq(t1_whnf.body.fn, t2_whnf, context, metavars, env)
+
         if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
             if not isinstance(t2_whnf.body, EApp):
                 return False
@@ -87,32 +90,34 @@ def is_def_eq(
                 return False
             if t2_whnf.body.arg.name in collect_free_vars(t2_whnf.body.fn):
                 return False
-            return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars, definitions)
+            return is_def_eq(t1_whnf, t2_whnf.body.fn, context, metavars, env)
+
     if type(t1_whnf) is not type(t2_whnf):
         return False
+
     match (t1_whnf, t2_whnf):
         case (ESort(level1), ESort(level2)):
             return is_def_eq_univ(level1, level2)
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
-                is_def_eq(f1, f2, context, metavars, definitions) and
-                is_def_eq(a1, a2, context, metavars, definitions)
+                is_def_eq(f1, f2, context, metavars, env) and
+                is_def_eq(a1, a2, context, metavars, env)
             )
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
-            if not is_def_eq(d1, d2, context, metavars, definitions):
+            if not is_def_eq(d1, d2, context, metavars, env):
                 return False
             if v1 != v2:
                 b2 = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
-            return is_def_eq(b1, b2, context | {v1: d1}, metavars, definitions)
+            return is_def_eq(b1, b2, context | {v1: d1}, metavars, env)
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
                 return False
-            if not is_def_eq(d1, d2, context, metavars, definitions):
+            if not is_def_eq(d1, d2, context, metavars, env):
                 return False
-            if not is_def_eq(m1, m2, context, metavars, definitions):
+            if not is_def_eq(m1, m2, context, metavars, env):
                 return False
             if len(c1) != len(c2):
                 return False
-            return all(is_def_eq(b1, b2, context, metavars, definitions) for b1, b2 in zip(c1, c2))
+            return all(is_def_eq(b1, b2, context, metavars, env) for b1, b2 in zip(c1, c2))
         case _:
             return False

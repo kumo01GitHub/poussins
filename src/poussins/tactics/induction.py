@@ -41,7 +41,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"induction failed: Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.engine.definitions)
+    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.engine.env)
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn

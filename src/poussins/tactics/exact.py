@@ -33,7 +33,7 @@ def assumption(manager: ProofManager) -> None:
     metavars = state.metavars
 
     for hyp_name, hyp_type in current_goal.local_context.items():
-        if is_def_eq(hyp_type, target, context, metavars, manager.engine.definitions):
+        if is_def_eq(hyp_type, target, context, metavars, manager.engine.env):
             manager.close_goal(EVar(hyp_name))
             return
 

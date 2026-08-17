@@ -23,7 +23,7 @@ def refine(manager: ProofManager, expr: Expr) -> None:
         expected_type=current_goal.statement,
         context=current_goal.context,
         metavars=state.metavars,
-        definitions=manager.engine.definitions,
+        definitions=manager.engine.env,
     )
 
     user_meta_ids = collect_metavar_ids(expr)

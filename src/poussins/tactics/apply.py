@@ -25,9 +25,9 @@ def apply(manager: ProofManager, expr: Expr) -> None:
 
     implicit_subgoals: list[Goal] = []
     current_type = whnf(
-        infer_type(expr, current_goal.context, state.metavars, manager.engine.definitions),
+        infer_type(expr, current_goal.context, state.metavars, manager.engine.env),
         state.metavars,
-        manager.engine.definitions,
+        manager.engine.env,
     )
     assignment = expr
 
@@ -48,7 +48,7 @@ def apply(manager: ProofManager, expr: Expr) -> None:
                 replacement=EMetaVar(new_goal.id)
             ),
             state.metavars,
-            manager.engine.definitions,
+            manager.engine.env,
         )
 
     try:
