@@ -101,7 +101,7 @@ def instantiate_univ(expr: Expr, level_subst: dict[str, object]) -> Expr:
         case ESort(level):
             return ESort(instantiate_univ_level(level, level_subst))
         case EConst(name, levels):
-            new_levels = tuple(instantiate_univ_level(l, level_subst) for l in levels)
+            new_levels = tuple(instantiate_univ_level(level, level_subst) for level in levels)
             return EConst(name, new_levels)
         case EApp(fn, arg):
             return EApp(
