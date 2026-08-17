@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from .proof_state import MetaVar
 from ..ast import (
-    Expr, EConst, EApp, ELam,
+    Expr, EConst, EApp, ELam, ESort, EVar, EMetaVar, EPi, EMatch,
     substitute_metavar, substitute_expr_var
 )
 from ..environment import Environment, DefinitionDeclaration
@@ -58,5 +58,7 @@ def whnf(
                 new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
-        case _:
+        case ESort(_) | EVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMatch(_, _, _, _) | EMetaVar(_):
             return expr
+        case _:
+            raise NotImplementedError(f"whnf not implemented for {type(expr).__name__}")

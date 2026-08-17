@@ -4,7 +4,7 @@ Kernel-level universe management functions for comparing and unifying universe l
 from __future__ import annotations
 
 from ..ast import (
-    Expr, ESort, EVar, EConst, EPi, ELam, EApp,
+    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
     UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelIMax,
 )
 
@@ -96,10 +96,10 @@ def instantiate_univ(expr: Expr, level_subst: dict[str, object]) -> Expr:
         return expr
 
     match expr:
-        case EVar(_):
-            return expr
         case ESort(level):
             return ESort(instantiate_univ_level(level, level_subst))
+        case EVar(_):
+            return expr
         case EConst(name, levels):
             new_levels = tuple(instantiate_univ_level(level, level_subst) for level in levels)
             return EConst(name, new_levels)
@@ -120,5 +120,7 @@ def instantiate_univ(expr: Expr, level_subst: dict[str, object]) -> Expr:
                 instantiate_univ(type_, level_subst),
                 instantiate_univ(body, level_subst)
             )
-        case _:
+        case EMatch(_, _, _, _) | EMetaVar(_):
             return expr
+        case _:
+            raise NotImplementedError(f"instantiate_univ not implemented for {type(expr).__name__}")
