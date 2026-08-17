@@ -34,7 +34,7 @@ class ProofManager:
         """
         Return the current proof state (the last state in the history).
         """
-        return self.engine.refresh_state(self.session.current_state, self.env)
+        return self.session.current_state
 
     @property
     def is_closed(self) -> bool:

@@ -18,26 +18,6 @@ class ProofEngine:
     Validate proof-state transitions against the current environment.
     """
 
-    def refresh_goal(self, goal: Goal, env: Environment) -> Goal:
-        """
-        Rebuild a goal so its global view matches the current environment.
-        """
-        return goal.with_context(
-            env.to_context() | goal.local_context,
-            goal.local_hypothesis_names
-        )
-
-    def refresh_state(self, state: ProofState, env: Environment) -> ProofState:
-        """
-        Refresh all goals in a proof state against the current environment.
-        """
-        if not state.goals:
-            return state
-        return ProofState(
-            goals=tuple(self.refresh_goal(goal, env) for goal in state.goals),
-            metavars=state.metavars,
-        )
-
     def create_initial_state(self, statement: Expr, env: Environment) -> ProofState:
         """
         Create the initial proof state with a single goal and its corresponding metavariable.
@@ -54,7 +34,6 @@ class ProofEngine:
         """
         Close the current goal by providing an assignment that satisfies the goal's statement.
         """
-        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to close.")
@@ -89,7 +68,6 @@ class ProofEngine:
         """
         Refine the current goal by providing an assignment that splits it into new subgoals.
         """
-        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to refine.")
@@ -145,7 +123,6 @@ class ProofEngine:
 
     def change_goal(self, state: ProofState, new_statement: Expr, env: Environment) -> ProofState:
         """ Replace the current goal statement with a definitionally equal statement. """
-        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
@@ -177,7 +154,6 @@ class ProofEngine:
         """
         Replace the type of a local hypothesis with a definitionally equal type.
         """
-        state = self.refresh_state(state, env)
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
