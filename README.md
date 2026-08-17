@@ -1,6 +1,6 @@
 # poussins
 
-A Python proof assistant with a small kernel, tactic layer, and ergonomic proof DSL.
+A Python proof assistant with a small kernel and ergonomic proof DSL.
 
 ## Documentation Map
 
