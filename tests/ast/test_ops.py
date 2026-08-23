@@ -1,21 +1,9 @@
 import pytest
-from poussins.ast.expr import (
-    Expr,
-    ESort,
-    EVar,
-    EConst,
-    EPi,
-    ELam,
-    EApp,
-    EMatch,
-    EMetaVar,
-)
-from poussins.ast.ops import (
-    has_metavar,
-    substitute_metavar,
-    substitute_expr_var,
-    collect_metavar_ids,
-    collect_free_vars,
+
+from poussins.ast import (
+    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
+    has_metavar, substitute_metavar, substitute_expr_var,
+    collect_metavar_ids, collect_free_vars,
 )
 
 
@@ -24,164 +12,183 @@ class DummyExpr(Expr):
     pass
 
 
-# ==========================================
-# 1. Tests for has_metavar
-# ==========================================
-def test_has_metavar_coverage_and_booleans():
-    # Coverage for each Expr type (False cases)
-    assert not has_metavar(ESort("Type"))
-    assert not has_metavar(EVar("x"))
-    assert not has_metavar(EConst("nat", ()))
-    assert not has_metavar(EPi("x", EVar("A"), EVar("x")))
-    assert not has_metavar(ELam("x", EVar("A"), EVar("x")))
-    assert not has_metavar(EApp(EVar("f"), EVar("x")))
-    assert not has_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)))
+class TestHasMetaVar:
+    """
+    Test cases for `has_metavar`.
+    """
 
-    # Coverage for each Expr type (True cases)
-    assert has_metavar(EMetaVar("g1"))
-    assert has_metavar(EPi("x", EMetaVar("g1"), EVar("x")))
-    assert has_metavar(ELam("x", EVar("A"), EMetaVar("g1")))
-    assert has_metavar(EApp(EVar("f"), EMetaVar("g1")))
-    assert has_metavar(EMatch("Nat", EMetaVar("g1"), EVar("P"), (EConst("z", ()),)))
+    def test_has_metavar(self):
+        assert has_metavar(EMetaVar("m1"))
+        assert has_metavar(EPi("x", EMetaVar("m1"), EVar("x")))
+        assert has_metavar(ELam("x", EVar("A"), EMetaVar("m1")))
+        assert has_metavar(EApp(EVar("f"), EMetaVar("m1")))
+        assert has_metavar(EMatch("Nat", EMetaVar("m1"), EVar("P"), (EConst("z", ()),)))
 
+    def test_not_has_metavar(self):
+        assert not has_metavar(ESort("Type"))
+        assert not has_metavar(EVar("x"))
+        assert not has_metavar(EConst("nat", ()))
+        assert not has_metavar(EPi("x", EVar("A"), EVar("x")))
+        assert not has_metavar(ELam("x", EVar("A"), EVar("x")))
+        assert not has_metavar(EApp(EVar("f"), EVar("x")))
+        assert not has_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)))
 
-def test_has_metavar_not_implemented():
-    with pytest.raises(NotImplementedError):
-        has_metavar(DummyExpr())
-
-
-# ==========================================
-# 2. Tests for substitute_metavar
-# ==========================================
-def test_substitute_metavar_coverage_and_cases():
-    replacement = EConst("c", ())
-
-    # ESort, EVar, EConst, EMetaVar (not included / included / multiple)
-    assert substitute_metavar(ESort("Type"), "g1", replacement) == ESort("Type")
-    assert substitute_metavar(EVar("x"), "g1", replacement) == EVar("x")
-    assert substitute_metavar(EConst("nat", ()), "g1", replacement) == EConst("nat", ())
-    
-    # EMetaVar: case where metavar is not included
-    assert substitute_metavar(EMetaVar("g2"), "g1", replacement) == EMetaVar("g2")
-    # EMetaVar: case where metavar is included
-    assert substitute_metavar(EMetaVar("g1"), "g1", replacement) == replacement
-    # EMetaVar: case with multiple occurrences
-    multi_expr = EApp(EMetaVar("g1"), EMetaVar("g1"))
-    assert substitute_metavar(multi_expr, "g1", replacement) == EApp(replacement, replacement)
-
-    # EPi / ELam substitution
-    pi_expr = EPi("x", EMetaVar("g1"), EMetaVar("g1"))
-    assert substitute_metavar(pi_expr, "g1", replacement) == EPi("x", replacement, replacement)
-
-    lam_expr = ELam("x", EMetaVar("g1"), EMetaVar("g1"))
-    assert substitute_metavar(lam_expr, "g1", replacement) == ELam("x", replacement, replacement)
-
-    # EMatch substitution
-    match_expr = EMatch("Nat", EMetaVar("g1"), EMetaVar("g1"), (EMetaVar("g1"),))
-    expected_match = EMatch("Nat", replacement, replacement, (replacement,))
-    assert substitute_metavar(match_expr, "g1", replacement) == expected_match
+    def test_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            has_metavar(DummyExpr())
 
 
-def test_substitute_metavar_not_implemented():
-    with pytest.raises(NotImplementedError):
-        substitute_metavar(DummyExpr(), "g1", EConst("c", ()))
+class TestSubstituteMetaVar:
+    """
+    Test cases for `substitute_metavar`.
+    """
+
+    def test_included(self):
+        term = EConst("t", ())
+        m = EMetaVar("m")
+
+        assert substitute_metavar(m, m.goal_id, term) == term
+        assert substitute_metavar(EPi("x", m, EVar("x")), m.goal_id, term) == EPi("x", term, EVar("x"))
+        assert substitute_metavar(ELam("x", EVar("A"), m), m.goal_id, term) == ELam("x", EVar("A"), term)
+        assert substitute_metavar(EApp(EVar("f"), m), m.goal_id, term) == EApp(EVar("f"), term)
+        assert substitute_metavar(EMatch("Nat", m, EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", term, EVar("P"), (EConst("z", ()),))
+
+    def test_substitute_only_target_metavar(self):
+        term = EConst("t", ())
+        m1 = EMetaVar("m1")
+        m2 = EMetaVar("m2")
+
+        expr = EApp(m1, m2)
+        expected = EApp(term, m2)
+        assert substitute_metavar(expr, m1.goal_id, term) == expected
+
+    def test_multiple_occurrences(self):
+        term = EConst("t", ())
+        m1 = EMetaVar("m1")
+        expr = EApp(m1, m1)
+        expected = EApp(term, term)
+        assert substitute_metavar(expr, m1.goal_id, term) == expected
+
+    def test_not_included(self):
+        term = EConst("t", ())
+        m = EMetaVar("m")
+
+        assert substitute_metavar(ESort("Type"), m.goal_id, term) == ESort("Type")
+        assert substitute_metavar(EVar("x"), m.goal_id, term) == EVar("x")
+        assert substitute_metavar(EConst("nat", ()), m.goal_id, term) == EConst("nat", ())
+        assert substitute_metavar(EPi("x", EVar("A"), EVar("x")), m.goal_id, term) == EPi("x", EVar("A"), EVar("x"))
+        assert substitute_metavar(ELam("x", EVar("A"), EVar("x")), m.goal_id, term) == ELam("x", EVar("A"), EVar("x"))
+        assert substitute_metavar(EApp(EVar("f"), EVar("x")), m.goal_id, term) == EApp(EVar("f"), EVar("x"))
+        assert substitute_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
+
+    def test_not_implemented(self):
+        term = EConst("t", ())
+        m = EMetaVar("m")
+
+        with pytest.raises(NotImplementedError):
+            substitute_metavar(DummyExpr(), m.goal_id, term)
 
 
-# ==========================================
-# 3. Tests for substitute_expr_var
-# ==========================================
-def test_substitute_expr_var_coverage_and_cases():
-    replacement = EVar("y")
+class TestSubstituteExprVar:
+    """
+    Test cases for `substitute_expr_var`.
+    """
 
-    # ESort, EConst, EMetaVar
-    assert substitute_expr_var(ESort("Type"), "x", replacement) == ESort("Type")
-    assert substitute_expr_var(EConst("nat", ()), "x", replacement) == EConst("nat", ())
-    assert substitute_expr_var(EMetaVar("g1"), "x", replacement) == EMetaVar("g1")
+    def test_included(self):
+        before = EVar("x")
+        after = EVar("y")
 
-    # EVar: not included / included cases
-    assert substitute_expr_var(EVar("z"), "x", replacement) == EVar("z")
-    assert substitute_expr_var(EVar("x"), "x", replacement) == replacement
+        assert substitute_expr_var(before, before.name, after) == after
+        assert substitute_expr_var(EApp(before, before), "x", after) == EApp(after, after)
+        assert substitute_expr_var(EPi("x", before, EVar("x")), "x", after) == EPi("x", after, EVar("x"))
+        assert substitute_expr_var(ELam("x", EVar("x"), EVar("x")), "x", after) == ELam("x", after, EVar("x"))
+        assert substitute_expr_var(EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after) == EMatch("Nat", after, after, (after,))
 
-    # EApp: multiple occurrences case
-    app_expr = EApp(EVar("x"), EVar("x"))
-    assert substitute_expr_var(app_expr, "x", replacement) == EApp(replacement, replacement)
+    def test_substitute_only_target_var(self):
+        before = EVar("x")
+        after = EVar("y")
 
-    # EPi: domain variable is substituted, bound body variable is shadowed
-    pi_expr = EPi("x", EVar("x"), EVar("x"))
-    expected_pi = EPi("x", replacement, EVar("x"))
-    assert substitute_expr_var(pi_expr, "x", replacement) == expected_pi
+        expr = EApp(before, EVar("z"))
+        expected = EApp(after, EVar("z"))
+        assert substitute_expr_var(expr, "x", after) == expected
 
-    # ELam: domain variable is substituted, bound body variable is shadowed
-    lam_expr = ELam("x", EVar("x"), EVar("x"))
-    expected_lam = ELam("x", replacement, EVar("x"))
-    assert substitute_expr_var(lam_expr, "x", replacement) == expected_lam
+    def test_multiple_occurrences(self):
+        before = EVar("x")
+        after = EVar("y")
+        expr = EApp(before, before)
+        expected = EApp(after, after)
+        assert substitute_expr_var(expr, "x", after) == expected
 
-    # EMatch
-    match_expr = EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),))
-    expected_match = EMatch("Nat", replacement, replacement, (replacement,))
-    assert substitute_expr_var(match_expr, "x", replacement) == expected_match
+    def test_not_included(self):
+        after = EVar("y")
 
+        assert substitute_expr_var(ESort("Type"), "x", after) == ESort("Type")
+        assert substitute_expr_var(EConst("nat", ()), "x", after) == EConst("nat", ())
+        assert substitute_expr_var(EMetaVar("g1"), "x", after) == EMetaVar("g1")
+        assert substitute_expr_var(EVar("y"), "x", after) == EVar("y")
+        assert substitute_expr_var(EApp(EVar("f"), EVar("y")), "x", after) == EApp(EVar("f"), EVar("y"))
+        assert substitute_expr_var(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
-def test_substitute_expr_var_not_implemented():
-    with pytest.raises(NotImplementedError):
-        substitute_expr_var(DummyExpr(), "x", EVar("y"))
+    def test_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            substitute_expr_var(DummyExpr(), "x", EVar("y"))
 
+class TestCollectMetaVarIds:
+    """
+    Test cases for `collect_metavar_ids`.
+    """
 
-# ==========================================
-# 4. Tests for collect_metavar_ids
-# ==========================================
-def test_collect_metavar_ids_coverage_and_cases():
-    # Cases where no metavariables are included (ESort, EVar, EConst)
-    assert collect_metavar_ids(ESort("Type")) == []
-    assert collect_metavar_ids(EVar("x")) == []
-    assert collect_metavar_ids(EConst("nat", ())) == []
+    def test_coverage_and_cases(self):
+        # Cases where no metavariables are included (ESort, EVar, EConst)
+        assert collect_metavar_ids(ESort("Type")) == []
+        assert collect_metavar_ids(EVar("x")) == []
+        assert collect_metavar_ids(EConst("nat", ())) == []
 
-    # Cases with metavariables, multiple occurrences, and duplicates
-    expr = EApp(EMetaVar("g1"), EApp(EMetaVar("g2"), EMetaVar("g1")))
-    assert collect_metavar_ids(expr) == ["g1", "g2"]
+        # Cases with metavariables, multiple occurrences, and duplicates
+        expr = EApp(EMetaVar("g1"), EApp(EMetaVar("g2"), EMetaVar("g1")))
+        assert collect_metavar_ids(expr) == ["g1", "g2"]
 
-    # Coverage for EPi / ELam / EMatch
-    pi_expr = EPi("x", EMetaVar("g3"), EMetaVar("g1"))
-    assert collect_metavar_ids(pi_expr) == ["g3", "g1"]
+        # Coverage for EPi / ELam / EMatch
+        pi_expr = EPi("x", EMetaVar("g3"), EMetaVar("g1"))
+        assert collect_metavar_ids(pi_expr) == ["g3", "g1"]
 
-    lam_expr = ELam("x", EMetaVar("g1"), EMetaVar("g4"))
-    assert collect_metavar_ids(lam_expr) == ["g1", "g4"]
+        lam_expr = ELam("x", EMetaVar("g1"), EMetaVar("g4"))
+        assert collect_metavar_ids(lam_expr) == ["g1", "g4"]
 
-    match_expr = EMatch("Nat", EMetaVar("g2"), EMetaVar("g1"), (EMetaVar("g2"), EMetaVar("g5")))
-    assert collect_metavar_ids(match_expr) == ["g2", "g1", "g5"]
+        match_expr = EMatch("Nat", EMetaVar("g2"), EMetaVar("g1"), (EMetaVar("g2"), EMetaVar("g5")))
+        assert collect_metavar_ids(match_expr) == ["g2", "g1", "g5"]
 
+    def test_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            collect_metavar_ids(DummyExpr())
 
-def test_collect_metavar_ids_not_implemented():
-    with pytest.raises(NotImplementedError):
-        collect_metavar_ids(DummyExpr())
+class TestCollectFreeVars:
+    """
+    Test cases for `collect_free_vars`.
+    """
 
+    def test_coverage_and_cases(self):
+        # Cases where no free variables are included (ESort, EConst, EMetaVar)
+        assert collect_free_vars(ESort("Type")) == set()
+        assert collect_free_vars(EConst("nat", ())) == set()
+        assert collect_free_vars(EMetaVar("g1")) == set()
 
-# ==========================================
-# 5. Tests for collect_free_vars
-# ==========================================
-def test_collect_free_vars_coverage_and_cases():
-    # Cases where no free variables are included (ESort, EConst, EMetaVar)
-    assert collect_free_vars(ESort("Type")) == set()
-    assert collect_free_vars(EConst("nat", ())) == set()
-    assert collect_free_vars(EMetaVar("g1")) == set()
+        # Cases with free variables, multiple occurrences, and duplicates
+        assert collect_free_vars(EVar("x")) == {"x"}
 
-    # Cases with free variables, multiple occurrences, and duplicates
-    assert collect_free_vars(EVar("x")) == {"x"}
+        app_expr = EApp(EVar("x"), EVar("x"))
+        assert collect_free_vars(app_expr) == {"x"}
 
-    app_expr = EApp(EVar("x"), EVar("x"))
-    assert collect_free_vars(app_expr) == {"x"}
+        # Cases with binding and multiple free variables
+        pi_expr = EPi("x", EVar("A"), EApp(EVar("x"), EVar("B")))
+        assert collect_free_vars(pi_expr) == {"A", "B"}
 
-    # Cases with binding and multiple free variables
-    pi_expr = EPi("x", EVar("A"), EApp(EVar("x"), EVar("B")))
-    assert collect_free_vars(pi_expr) == {"A", "B"}
+        lam_expr = ELam("x", EVar("A"), EApp(EVar("x"), EVar("C")))
+        assert collect_free_vars(lam_expr) == {"A", "C"}
 
-    lam_expr = ELam("x", EVar("A"), EApp(EVar("x"), EVar("C")))
-    assert collect_free_vars(lam_expr) == {"A", "C"}
+        match_expr = EMatch("Nat", EVar("x"), EVar("y"), (EVar("x"), EVar("z")))
+        assert collect_free_vars(match_expr) == {"x", "y", "z"}
 
-    match_expr = EMatch("Nat", EVar("x"), EVar("y"), (EVar("x"), EVar("z")))
-    assert collect_free_vars(match_expr) == {"x", "y", "z"}
-
-
-def test_collect_free_vars_not_implemented():
-    with pytest.raises(NotImplementedError):
-        collect_free_vars(DummyExpr())
+    def test_not_implemented(self):
+        with pytest.raises(NotImplementedError):
+            collect_free_vars(DummyExpr())

@@ -5,11 +5,21 @@ from __future__ import annotations
 
 from ..ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
-    UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelIMax,
+    UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelMax, UnivLevelIMax,
 )
 
 
-def is_universe_leq(level_left: object, level_right: object) -> bool:
+def flatten_univ_level_max(level: UnivLevel) -> set[UnivLevel]:
+    """
+    Recursively flatten a UnivLevelMax into a set of its constituent levels.
+    """
+    if isinstance(level, UnivLevelMax):
+        return flatten_univ_level_max(level.left) | flatten_univ_level_max(level.right)
+    else:
+        return {level}
+
+
+def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
     """
     Return True when the left universe level is below or equal to the right.
     """
@@ -17,16 +27,28 @@ def is_universe_leq(level_left: object, level_right: object) -> bool:
         return True
     if isinstance(level_left, UnivLevelZero):
         return True
+
+    if isinstance(level_left, UnivLevelMax):
+        return all(is_universe_leq(level, level_right) for level in flatten_univ_level_max(level_left))
+    if isinstance(level_right, UnivLevelMax):
+        return any(is_universe_leq(level_left, level) for level in flatten_univ_level_max(level_right))
+
     match (level_left, level_right):
         case (UnivLevelSucc(pred_left), UnivLevelSucc(pred_right)):
             return is_universe_leq(pred_left, pred_right)
+        case (_, UnivLevelSucc(pred_right)):
+            return is_universe_leq(level_left, pred_right)
+        case (UnivLevelIMax(left, right), _):
+            return is_universe_leq(right, UnivLevelZero()) or (
+                is_universe_leq(left, level_right) and is_universe_leq(right, level_right)
+            )
         case (_, UnivLevelIMax(left, right)):
             return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
         case _:
             return False
 
 
-def unify_univ_levels(l1: object, l2: object, univ_subst: dict[str, object]) -> dict[str, object] | None:
+def unify_univ_levels(l1: UnivLevel, l2: UnivLevel, univ_subst: dict[str, UnivLevel]) -> dict[str, UnivLevel] | None:
     """
     Attempt to unify two universe levels, returning a substitution mapping if successful.
     """
@@ -55,14 +77,14 @@ def unify_univ_levels(l1: object, l2: object, univ_subst: dict[str, object]) -> 
             return None
 
 
-def is_def_eq_univ(l1: object, l2: object) -> bool:
+def is_def_eq_univ(l1: UnivLevel, l2: UnivLevel) -> bool:
     """
     Return True when two universe levels are definitionally equal.
     """
     return unify_univ_levels(l1, l2, {}) is not None
 
 
-def instantiate_univ_level(level: object, level_subst: dict[str, object]) -> object:
+def instantiate_univ_level(level: UnivLevel, level_subst: dict[str, UnivLevel]) -> UnivLevel:
     """
     Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping.
     """
@@ -76,6 +98,11 @@ def instantiate_univ_level(level: object, level_subst: dict[str, object]) -> obj
             return level
         case UnivLevelSucc(p):
             return UnivLevelSucc(instantiate_univ_level(p, level_subst))
+        case UnivLevelMax(left, right):
+            return UnivLevelMax(
+                instantiate_univ_level(left, level_subst),
+                instantiate_univ_level(right, level_subst)
+            )
         case UnivLevelIMax(left, right):
             return UnivLevelIMax(
                 instantiate_univ_level(left, level_subst),
@@ -85,7 +112,7 @@ def instantiate_univ_level(level: object, level_subst: dict[str, object]) -> obj
             return level
 
 
-def instantiate_univ(expr: Expr, level_subst: dict[str, object]) -> Expr:
+def instantiate_univ(expr: Expr, level_subst: dict[str, UnivLevel]) -> Expr:
     """
     Recursively traverse an expression (Expr) and return a new Expr with UnivLevelParam replaced in ESort and EConst.
     """
