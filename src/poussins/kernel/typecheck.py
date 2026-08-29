@@ -44,7 +44,7 @@ def infer_type(
                 decl = env.get(name)
                 if decl is not None:
                     t = decl.type
-                    level_params = getattr(decl, "level_params", None)
+                    level_params = decl.level_params
                     if levels and level_params:
                         if len(levels) != len(level_params):
                             raise KernelTypeError(f"Incorrect number of universe levels for {name}")
