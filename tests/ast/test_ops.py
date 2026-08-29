@@ -2,6 +2,7 @@ import pytest
 
 from poussins.ast import (
     Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
+    UnivLevelZero,
     has_metavar, substitute_metavar, substitute_expr_var,
     collect_metavar_ids, collect_free_vars,
 )
@@ -25,7 +26,7 @@ class TestHasMetaVar:
         assert has_metavar(EMatch("Nat", EMetaVar("m1"), EVar("P"), (EConst("z", ()),)))
 
     def test_not_has_metavar(self):
-        assert not has_metavar(ESort("Type"))
+        assert not has_metavar(ESort(UnivLevelZero()))
         assert not has_metavar(EVar("x"))
         assert not has_metavar(EConst("nat", ()))
         assert not has_metavar(EPi("x", EVar("A"), EVar("x")))
@@ -35,7 +36,7 @@ class TestHasMetaVar:
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            has_metavar(DummyExpr())
+            _ = has_metavar(DummyExpr())
 
 
 class TestSubstituteMetaVar:
@@ -73,7 +74,7 @@ class TestSubstituteMetaVar:
         term = EConst("t", ())
         m = EMetaVar("m")
 
-        assert substitute_metavar(ESort("Type"), m.goal_id, term) == ESort("Type")
+        assert substitute_metavar(ESort(UnivLevelZero()), m.goal_id, term) == ESort(UnivLevelZero())
         assert substitute_metavar(EVar("x"), m.goal_id, term) == EVar("x")
         assert substitute_metavar(EConst("nat", ()), m.goal_id, term) == EConst("nat", ())
         assert substitute_metavar(EPi("x", EVar("A"), EVar("x")), m.goal_id, term) == EPi("x", EVar("A"), EVar("x"))
@@ -86,7 +87,7 @@ class TestSubstituteMetaVar:
         m = EMetaVar("m")
 
         with pytest.raises(NotImplementedError):
-            substitute_metavar(DummyExpr(), m.goal_id, term)
+            _ = substitute_metavar(DummyExpr(), m.goal_id, term)
 
 
 class TestSubstituteExprVar:
@@ -122,7 +123,7 @@ class TestSubstituteExprVar:
     def test_not_included(self):
         after = EVar("y")
 
-        assert substitute_expr_var(ESort("Type"), "x", after) == ESort("Type")
+        assert substitute_expr_var(ESort(UnivLevelZero()), "x", after) == ESort(UnivLevelZero())
         assert substitute_expr_var(EConst("nat", ()), "x", after) == EConst("nat", ())
         assert substitute_expr_var(EMetaVar("g1"), "x", after) == EMetaVar("g1")
         assert substitute_expr_var(EVar("y"), "x", after) == EVar("y")
@@ -131,7 +132,7 @@ class TestSubstituteExprVar:
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            substitute_expr_var(DummyExpr(), "x", EVar("y"))
+            _ = substitute_expr_var(DummyExpr(), "x", EVar("y"))
 
 class TestCollectMetaVarIds:
     """
@@ -140,7 +141,7 @@ class TestCollectMetaVarIds:
 
     def test_coverage_and_cases(self):
         # Cases where no metavariables are included (ESort, EVar, EConst)
-        assert collect_metavar_ids(ESort("Type")) == []
+        assert collect_metavar_ids(ESort(UnivLevelZero())) == []
         assert collect_metavar_ids(EVar("x")) == []
         assert collect_metavar_ids(EConst("nat", ())) == []
 
@@ -160,7 +161,7 @@ class TestCollectMetaVarIds:
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            collect_metavar_ids(DummyExpr())
+            _ = collect_metavar_ids(DummyExpr())
 
 class TestCollectFreeVars:
     """
@@ -169,7 +170,7 @@ class TestCollectFreeVars:
 
     def test_coverage_and_cases(self):
         # Cases where no free variables are included (ESort, EConst, EMetaVar)
-        assert collect_free_vars(ESort("Type")) == set()
+        assert collect_free_vars(ESort(UnivLevelZero())) == set()
         assert collect_free_vars(EConst("nat", ())) == set()
         assert collect_free_vars(EMetaVar("g1")) == set()
 
@@ -191,4 +192,4 @@ class TestCollectFreeVars:
 
     def test_not_implemented(self):
         with pytest.raises(NotImplementedError):
-            collect_free_vars(DummyExpr())
+            _ = collect_free_vars(DummyExpr())
