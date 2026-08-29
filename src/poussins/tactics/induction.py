@@ -49,9 +49,11 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
-    head_name = getattr(head_expr, "name", None)
-    if not head_name:
-        raise TacticError(f"'{hypothesis_name}' has no inductive head. Found type '{hypothesis_type}'.")
+    if not isinstance(head_expr, EConst):
+            raise TacticError(
+                f"Induction hypothesis type must be an inductive type, found non-constant head: {hypothesis_type}"
+            )
+    head_name = head_expr.name
 
     env = manager.env
     inductive_decl = env.get(head_name)

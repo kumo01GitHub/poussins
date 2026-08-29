@@ -150,9 +150,11 @@ def cases(
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
-    head_name = getattr(head_expr, "name", None)
-    if not head_name:
-        raise TacticError(f"Hypothesis type head has no name. Found: {hypothesis_type}")
+    if not isinstance(head_expr, EConst):
+        raise TacticError(
+            f"Hypothesis type must be an inductive type, but found non-constant head: {hypothesis_type}"
+        )
+    head_name = head_expr.name
 
     env = manager.env
     inductive_decl = env.get(head_name)
@@ -166,13 +168,14 @@ def cases(
     if patterns is None:
         normalized_patterns = tuple((name, ()) for name in inductive_decl.constructor_names)
     else:
-        normalized_patterns = []
+        temp_patterns: list[tuple[str, tuple[str, ...]]] = []
         for pattern in patterns:
             if not pattern:
                 raise TacticError("empty patterns are not supported.")
             constructor_name = pattern[0]
             names_for_branch = tuple(pattern[1:])
-            normalized_patterns.append((constructor_name, names_for_branch))
+            temp_patterns.append((constructor_name, names_for_branch))
+        normalized_patterns = tuple(temp_patterns)
 
     subgoals: list[Goal] = []
     branch_terms: list[Expr] = []

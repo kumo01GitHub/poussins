@@ -59,21 +59,14 @@ class Prop:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def to_expr(prop_or_expr: Prop | Expr | object) -> Expr:
+    def to_expr(prop_or_expr: Prop | Expr) -> Expr:
         """
         Return the underlying expression for a proposition-like value.
         """
         if isinstance(prop_or_expr, Prop):
             return prop_or_expr.expr
-        if isinstance(prop_or_expr, Expr):
+        else:
             return prop_or_expr
-        if hasattr(prop_or_expr, "expr") and isinstance(getattr(prop_or_expr, "expr"), Expr):
-            return prop_or_expr.expr
-        if hasattr(prop_or_expr, "to_expr") and callable(getattr(prop_or_expr, "to_expr")):
-            coerced = prop_or_expr.to_expr(prop_or_expr)
-            if isinstance(coerced, Expr):
-                return coerced
-        return prop_or_expr
 
     # ------------------------------------------------------------------
     # Factory helpers
@@ -102,11 +95,11 @@ class Prop:
         body = bindings[-1]
         binding_args = bindings[:-1]
 
-        if not isinstance(body, (Expr, Prop)) and not hasattr(body, "expr"):
+        if not isinstance(body, (Expr, Prop)):
             raise TypeError("forall() missing required body argument")
 
         if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], (list, tuple)):
-            expr = cls.to_expr(body)
+            expr: Expr = cls.to_expr(body)
             for binding in reversed(list(binding_args[0])):
                 if not isinstance(binding, (list, tuple)) or len(binding) != 2:
                     raise TypeError("each binding must be a (name, type) pair")
@@ -145,11 +138,11 @@ class Prop:
         body = bindings[-1]
         binding_args = bindings[:-1]
 
-        if not isinstance(body, (Expr, Prop)) and not hasattr(body, "expr"):
+        if not isinstance(body, (Expr, Prop)):
             raise TypeError("exists() missing required body argument")
 
         if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], (list, tuple)):
-            expr = cls.to_expr(body)
+            expr: Expr = cls.to_expr(body)
             for binding in reversed(list(binding_args[0])):
                 if not isinstance(binding, (list, tuple)) or len(binding) != 2:
                     raise TypeError("each binding must be a (name, type) pair")

@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import functools
 from logging import Logger
-from typing import Any, Callable, Final
+from typing import Callable, Concatenate, Final, ParamSpec
 
 from ..ast import Expr, EVar
 from ..environment import Environment
@@ -26,9 +26,11 @@ from ..tactics import (
 )
 
 
-def log_tactic(func: Callable[..., None]) -> Callable[..., None]:
+_TacticParams = ParamSpec('_TacticParams')
+
+def log_tactic(func: Callable[Concatenate[ProofScript, _TacticParams], None]) -> Callable[..., None]:
     @functools.wraps(func)
-    def wrapper(self: ProofScript, *args: Any, **kwargs: Any) -> None:
+    def wrapper(self: ProofScript, *args: _TacticParams.args, **kwargs: _TacticParams.kwargs) -> None:
         self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
 
         result = func(self, *args, **kwargs)

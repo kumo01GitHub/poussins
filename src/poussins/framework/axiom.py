@@ -2,6 +2,8 @@
 A named proposition accepted without proof.
 """
 from __future__ import annotations
+from logging import Logger
+from typing import Final
 
 from .prop import Prop
 from ..ast import Expr
@@ -25,11 +27,11 @@ class Axiom:
         """
         Create an axiom with a name, statement, environment, and universe parameters.
         """
-        self.name = name
-        self.level_params = level_params
-        self.statement = Prop.to_expr(statement)
-        self.env = env
-        self.logger = getLogger(__name__)
+        self.name: Final[str] = name
+        self.level_params: Final[tuple[str, ...]] = level_params
+        self.statement: Final[Expr] = Prop.to_expr(statement)
+        self.env: Final[Environment] = env
+        self.logger: Final[Logger] = getLogger(__name__)
 
         self.declare()
 

@@ -78,7 +78,7 @@ def rewrite(
     eq_name = eq_decl.declaration.name
     eq_levels = tuple(UnivLevelParam(p) for p in eq_decl.declaration.level_params)
 
-    raw_args = []
+    raw_args: list[Expr] = []
     head_expr = hyp_type
     while isinstance(head_expr, EApp):
         raw_args.append(head_expr.arg)

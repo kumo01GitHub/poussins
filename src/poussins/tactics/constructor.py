@@ -29,9 +29,9 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
-    head_name = getattr(head_expr, "name", None)
-    if not head_name:
-        raise TacticError(f"Goal type head has no name. Found: {goal_type}")
+    if not isinstance(head_expr, EConst):
+        raise TacticError(f"Goal type head must be a constant, found {type(head_expr).__name__}: {goal_type}")
+    head_name = head_expr.name
 
     env = manager.env
     inductive_decl = env.get(head_name)
@@ -103,10 +103,10 @@ def _goal_head_name(manager: ProofManager) -> str:
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
-    head_name = getattr(head_expr, "name", None)
-    if not head_name:
-        raise TacticError(f"Goal type head has no name. Found: {goal_type}")
-    return head_name
+    if not isinstance(head_expr, EConst):
+        raise TacticError(f"Goal type head must be a constant, found {type(head_expr).__name__}: {goal_type}")
+
+    return head_expr.name
 
 
 def _apply_named_constructor(

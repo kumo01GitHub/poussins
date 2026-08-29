@@ -4,7 +4,7 @@ Equality tactics including reflexivity and rfl.
 from __future__ import annotations
 
 from .apply import apply
-from ..ast import EApp, EConst, UnivLevelParam
+from ..ast import EApp, EConst, Expr, UnivLevelParam
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq, whnf
 from ..environment.library import EqualityDeclaration
@@ -29,7 +29,7 @@ def reflexivity(manager: ProofManager) -> None:
 
     goal_type = whnf(target, metavars, definitions)
 
-    raw_args = []
+    raw_args: list[Expr] = []
     head_expr = goal_type
     while isinstance(head_expr, EApp):
         raw_args.append(head_expr.arg)
