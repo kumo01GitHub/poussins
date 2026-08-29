@@ -48,28 +48,28 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
             return False
 
 
-def unify_univ_levels(l1: UnivLevel, l2: UnivLevel, univ_subst: dict[str, UnivLevel]) -> dict[str, UnivLevel] | None:
+def unify_univ_levels(l1: UnivLevel, l2: UnivLevel, param_assignment: dict[str, UnivLevel]) -> dict[str, UnivLevel] | None:
     """
     Attempt to unify two universe levels, returning a substitution mapping if successful.
     """
-    if isinstance(l1, UnivLevelParam) and l1.name in univ_subst:
-        l1 = univ_subst[l1.name]
-    if isinstance(l2, UnivLevelParam) and l2.name in univ_subst:
-        l2 = univ_subst[l2.name]
+    if isinstance(l1, UnivLevelParam) and l1.name in param_assignment:
+        l1 = param_assignment[l1.name]
+    if isinstance(l2, UnivLevelParam) and l2.name in param_assignment:
+        l2 = param_assignment[l2.name]
 
     if l1 == l2:
-        return univ_subst
+        return param_assignment
 
     if isinstance(l1, UnivLevelParam):
-        return univ_subst | {l1.name: l2}
+        return param_assignment | {l1.name: l2}
     if isinstance(l2, UnivLevelParam):
-        return univ_subst | {l2.name: l1}
+        return param_assignment | {l2.name: l1}
 
     match (l1, l2):
         case (UnivLevelSucc(p1), UnivLevelSucc(p2)):
-            return unify_univ_levels(p1, p2, univ_subst)
+            return unify_univ_levels(p1, p2, param_assignment)
         case (UnivLevelIMax(a1, b1), UnivLevelIMax(a2, b2)):
-            subst = unify_univ_levels(a1, a2, univ_subst)
+            subst = unify_univ_levels(a1, a2, param_assignment)
             if subst is None:
                 return None
             return unify_univ_levels(b1, b2, subst)
@@ -84,63 +84,63 @@ def is_def_eq_univ(l1: UnivLevel, l2: UnivLevel) -> bool:
     return unify_univ_levels(l1, l2, {}) is not None
 
 
-def instantiate_univ_level(level: UnivLevel, level_subst: dict[str, UnivLevel]) -> UnivLevel:
+def instantiate_univ_level(level: UnivLevel, param_assignment: dict[str, UnivLevel]) -> UnivLevel:
     """
     Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping.
     """
-    if not level_subst:
+    if not param_assignment:
         return level
 
     match level:
         case UnivLevelParam():
-            return level_subst.get(level.name, level)
+            return param_assignment.get(level.name, level)
         case UnivLevelZero():
             return level
         case UnivLevelSucc(p):
-            return UnivLevelSucc(instantiate_univ_level(p, level_subst))
+            return UnivLevelSucc(instantiate_univ_level(p, param_assignment))
         case UnivLevelMax(left, right):
             return UnivLevelMax(
-                instantiate_univ_level(left, level_subst),
-                instantiate_univ_level(right, level_subst)
+                instantiate_univ_level(left, param_assignment),
+                instantiate_univ_level(right, param_assignment)
             )
         case UnivLevelIMax(left, right):
             return UnivLevelIMax(
-                instantiate_univ_level(left, level_subst),
-                instantiate_univ_level(right, level_subst)
+                instantiate_univ_level(left, param_assignment),
+                instantiate_univ_level(right, param_assignment)
             )
 
 
-def instantiate_univ(expr: Expr, level_subst: dict[str, UnivLevel]) -> Expr:
+def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr:
     """
     Recursively traverse an expression (Expr) and return a new Expr with UnivLevelParam replaced in ESort and EConst.
     """
-    if not level_subst:
+    if not param_assignment:
         return expr
 
     match expr:
         case ESort(level):
-            return ESort(instantiate_univ_level(level, level_subst))
+            return ESort(instantiate_univ_level(level, param_assignment))
         case EVar(_):
             return expr
         case EConst(name, levels):
-            new_levels = tuple(instantiate_univ_level(level, level_subst) for level in levels)
+            new_levels = tuple(instantiate_univ_level(level, param_assignment) for level in levels)
             return EConst(name, new_levels)
         case EApp(fn, arg):
             return EApp(
-                instantiate_univ(fn, level_subst),
-                instantiate_univ(arg, level_subst)
+                instantiate_univ(fn, param_assignment),
+                instantiate_univ(arg, param_assignment)
             )
         case ELam(name, type_, body):
             return ELam(
                 name,
-                instantiate_univ(type_, level_subst),
-                instantiate_univ(body, level_subst)
+                instantiate_univ(type_, param_assignment),
+                instantiate_univ(body, param_assignment)
             )
         case EPi(name, type_, body):
             return EPi(
                 name,
-                instantiate_univ(type_, level_subst),
-                instantiate_univ(body, level_subst)
+                instantiate_univ(type_, param_assignment),
+                instantiate_univ(body, param_assignment)
             )
         case EMatch(_, _, _, _) | EMetaVar(_):
             return expr

@@ -48,8 +48,7 @@ def infer_type(
                     if levels and level_params:
                         if len(levels) != len(level_params):
                             raise KernelTypeError(f"Incorrect number of universe levels for {name}")
-                        level_subst = dict(zip(level_params, levels))
-                        t = instantiate_univ(t, level_subst)
+                        t = instantiate_univ(t, dict(zip(level_params, levels)))
                     return t
             t = context.get(name)
             if t is None:

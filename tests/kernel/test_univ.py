@@ -23,15 +23,15 @@ class TestIsUniverseLeq:
     """
     Test cases for `is_universe_leq`.
     """
+
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
     two: Final[UnivLevel] = UnivLevelSucc(one)
 
-    param_u = UnivLevelParam("u")
-    param_u_plus = UnivLevelSucc(param_u)
-    param_v = UnivLevelParam("v")
-    max_uv = UnivLevelMax(param_u, param_v)
-    imax_uv = UnivLevelIMax(param_u, param_v)
+    param_u: Final[UnivLevel] = UnivLevelParam("u")
+    param_v: Final[UnivLevel] = UnivLevelParam("v")
+    max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
+    imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_equal(self):
         assert is_universe_leq(self.zero, self.zero) is True
@@ -57,39 +57,36 @@ class TestUnifyUnivLevels:
     Test cases for `unify_univ_levels`.
     """
 
-    def test_unify_univ_levels_success(self):
-        zero = UnivLevelZero()
-        succ_zero = UnivLevelSucc(zero)
-        param_u = UnivLevelParam("u")
-        param_v = UnivLevelParam("v")
-        max_uv = UnivLevelMax(param_u, param_v)
+    zero: Final[UnivLevel] = UnivLevelZero()
+    one: Final[UnivLevel] = UnivLevelSucc(zero)
+    two: Final[UnivLevel] = UnivLevelSucc(one)
 
+    param_u: Final[UnivLevel] = UnivLevelParam("u")
+    param_v: Final[UnivLevel] = UnivLevelParam("v")
+    max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
+    imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
+
+    def test_unify_univ_levels_success(self):
         # Identical levels
-        assert unify_univ_levels(zero, zero, {}) == {}
-        assert unify_univ_levels(max_uv, max_uv, {}) == {}
+        assert unify_univ_levels(self.zero, self.zero, {}) == {}
+        assert unify_univ_levels(self.max_uv, self.max_uv, {}) == {}
 
         # Parameter and successor unification
-        assert unify_univ_levels(param_u, zero, {}) == {"u": zero}
-        assert unify_univ_levels(succ_zero, param_u, {}) == {"u": succ_zero}
-        assert unify_univ_levels(param_u, succ_zero, {"u": succ_zero}) == {"u": succ_zero}
-        assert unify_univ_levels(UnivLevelSucc(param_u), UnivLevelSucc(zero), {}) == {"u": zero}
+        assert unify_univ_levels(self.param_u, self.zero, {}) == {"u": self.zero}
+        assert unify_univ_levels(self.one, self.param_u, {}) == {"u": self.one}
+        assert unify_univ_levels(self.param_u, self.one, {"u": self.one}) == {"u": self.one}
+        assert unify_univ_levels(UnivLevelSucc(self.param_u), self.one, {}) == {"u": self.zero}
 
         # IMax unification
-        imax1 = UnivLevelIMax(param_u, param_v)
-        imax2 = UnivLevelIMax(zero, succ_zero)
+        imax1 = UnivLevelIMax(self.param_u, self.param_v)
+        imax2 = UnivLevelIMax(self.zero, self.one)
         subst = unify_univ_levels(imax1, imax2, {})
-        assert subst == {"u": zero, "v": succ_zero}
+        assert subst == {"u": self.zero, "v": self.one}
 
     def test_unify_univ_levels_failure(self):
-        zero = UnivLevelZero()
-        succ_zero = UnivLevelSucc(zero)
-        param_u = UnivLevelParam("u")
-        param_v = UnivLevelParam("v")
-        max_uv = UnivLevelMax(param_u, param_v)
-
         # Unification failures returning None (Failure cases)
-        assert unify_univ_levels(succ_zero, zero, {}) is None
-        assert unify_univ_levels(max_uv, zero, {}) is None
+        assert unify_univ_levels(self.one, self.zero, {}) is None
+        assert unify_univ_levels(self.max_uv, self.zero, {}) is None
 
 
 class TestIsDefEqUniv:
@@ -97,28 +94,26 @@ class TestIsDefEqUniv:
     Test cases for `is_def_eq_univ`.
     """
 
-    def test_is_def_eq_univ_success(self):
-        zero = UnivLevelZero()
-        succ_zero = UnivLevelSucc(zero)
-        param_u = UnivLevelParam("u")
-        max_uv = UnivLevelMax(param_u, zero)
+    zero: Final[UnivLevel] = UnivLevelZero()
+    one: Final[UnivLevel] = UnivLevelSucc(zero)
+    two: Final[UnivLevel] = UnivLevelSucc(one)
 
-        assert is_def_eq_univ(zero, zero) is True
-        assert is_def_eq_univ(succ_zero, succ_zero) is True
-        assert is_def_eq_univ(param_u, zero) is True
-        assert is_def_eq_univ(max_uv, max_uv) is True
-        assert is_def_eq_univ(succ_zero, zero) is False
+    param_u: Final[UnivLevel] = UnivLevelParam("u")
+    param_v: Final[UnivLevel] = UnivLevelParam("v")
+    max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
+    imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
+
+    def test_is_def_eq_univ_success(self):
+        assert is_def_eq_univ(self.zero, self.zero) is True
+        assert is_def_eq_univ(self.one, self.one) is True
+        assert is_def_eq_univ(self.param_u, self.zero) is True
+        assert is_def_eq_univ(self.max_uv, self.max_uv) is True
+        assert is_def_eq_univ(self.one, self.zero) is False
 
     def test_is_def_eq_univ_failure(self):
-        zero = UnivLevelZero()
-        succ_zero = UnivLevelSucc(zero)
-        param_u = UnivLevelParam("u")
-        param_v = UnivLevelParam("v")
-        max_uv = UnivLevelMax(param_u, param_v)
-
         # Failure cases returning False
-        assert is_def_eq_univ(succ_zero, zero) is False
-        assert is_def_eq_univ(max_uv, zero) is False
+        assert is_def_eq_univ(self.one, self.zero) is False
+        assert is_def_eq_univ(self.max_uv, self.zero) is False
 
 
 class TestInstantiateUnivLevel:
@@ -126,19 +121,19 @@ class TestInstantiateUnivLevel:
     Test cases for `instantiate_univ_level`.
     """
 
-    def test_instantiate_univ_level_success(self):
-        param_u = UnivLevelParam("u")
-        param_v = UnivLevelParam("v")
-        zero = UnivLevelZero()
-        one = UnivLevelSucc(zero)
-        subst = {"u": zero, "v": one}
+    param_u: Final[UnivLevel] = UnivLevelParam("u")
+    param_v: Final[UnivLevel] = UnivLevelParam("v")
+    zero: Final[UnivLevel] = UnivLevelZero()
+    one: Final[UnivLevel] = UnivLevelSucc(zero)
+    assignment: Final[dict[str, UnivLevel]] = {"u": zero, "v": one}
 
+    def test_instantiate_univ_level_success(self):
         # Individual UnivLevel variants coverage (Success / substitution)
-        assert instantiate_univ_level(param_u, subst) == zero
-        assert instantiate_univ_level(param_v, subst) == one
-        assert instantiate_univ_level(UnivLevelSucc(param_u), subst) == UnivLevelSucc(zero)
-        assert instantiate_univ_level(UnivLevelMax(param_u, param_v), subst) == UnivLevelMax(zero, one)
-        assert instantiate_univ_level(UnivLevelIMax(param_u, param_v), subst) == UnivLevelIMax(zero, one)
+        assert instantiate_univ_level(self.param_u, self.assignment) == self.zero
+        assert instantiate_univ_level(self.param_v, self.assignment) == self.one
+        assert instantiate_univ_level(UnivLevelSucc(self.param_u), self.assignment) == self.one
+        assert instantiate_univ_level(UnivLevelMax(self.param_u, self.param_v), self.assignment) == UnivLevelMax(self.zero, self.one)
+        assert instantiate_univ_level(UnivLevelIMax(self.param_u, self.param_v), self.assignment) == UnivLevelIMax(self.zero, self.one)
 
 
 class TestInstantiateUniv:
@@ -146,33 +141,29 @@ class TestInstantiateUniv:
     Test cases for `instantiate_univ`.
     """
 
-    def test_instantiate_univ_success(self):
-        param_u = UnivLevelParam("u")
-        zero = UnivLevelZero()
-        subst = {"u": zero}
+    param_u: Final[UnivLevel] = UnivLevelParam("u")
+    zero: Final[UnivLevel] = UnivLevelZero()
+    assignment: Final[dict[str, UnivLevel]] = {"u": zero}
 
+    def test_instantiate_univ_success(self):
         # Empty substitution returns original expression
         var_expr = EVar("x")
         assert instantiate_univ(var_expr, {}) is var_expr
 
         # Individual Expr variants coverage (Success / substitution)
-        assert instantiate_univ(EVar("x"), subst) == EVar("x")
-        assert instantiate_univ(ESort(param_u), subst) == ESort(zero)
-        assert instantiate_univ(EConst("nat", (param_u,)), subst) == EConst("nat", (zero,))
-        assert instantiate_univ(EApp(EVar("f"), EConst("c", (param_u,))), subst) == EApp(EVar("f"), EConst("c", (zero,)))
-        assert instantiate_univ(ELam("x", ESort(param_u), EVar("x")), subst) == ELam("x", ESort(zero), EVar("x"))
-        assert instantiate_univ(EPi("x", ESort(param_u), EVar("x")), subst) == EPi("x", ESort(zero), EVar("x"))
+        assert instantiate_univ(EVar("x"), self.assignment) == EVar("x")
+        assert instantiate_univ(ESort(self.param_u), self.assignment) == ESort(self.zero)
+        assert instantiate_univ(EConst("nat", (self.param_u,)), self.assignment) == EConst("nat", (self.zero,))
+        assert instantiate_univ(EApp(EVar("f"), EConst("c", (self.param_u,))), self.assignment) == EApp(EVar("f"), EConst("c", (self.zero,)))
+        assert instantiate_univ(ELam("x", ESort(self.param_u), EVar("x")), self.assignment) == ELam("x", ESort(self.zero), EVar("x"))
+        assert instantiate_univ(EPi("x", ESort(self.param_u), EVar("x")), self.assignment) == EPi("x", ESort(self.zero), EVar("x"))
 
         # Fallback variants returning as-is (EMatch, EMetaVar)
-        match_expr = EMatch("Nat", EVar("n"), ESort(param_u), (EConst("z", (param_u,)),))
-        assert instantiate_univ(match_expr, subst) == match_expr
+        match_expr = EMatch("Nat", EVar("n"), ESort(self.param_u), (EConst("z", (self.param_u,)),))
+        assert instantiate_univ(match_expr, self.assignment) == match_expr
         metavar_expr = EMetaVar("g1")
-        assert instantiate_univ(metavar_expr, subst) == metavar_expr
+        assert instantiate_univ(metavar_expr, self.assignment) == metavar_expr
 
     def test_instantiate_univ_not_implemented(self):
-        zero = UnivLevelZero()
-        subst = {"u": zero}
-
-        dummy = DummyExpr()
         with pytest.raises(NotImplementedError):
-            instantiate_univ(dummy, subst)
+            _ = instantiate_univ(DummyExpr(), self.assignment)
