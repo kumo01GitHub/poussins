@@ -129,7 +129,7 @@ def infer_metavar_types(
                 try:
                     fn_type = infer_type(fn, ctx, metavars, env)
                     fn_type_whnf = whnf(fn_type, metavars, env)
-                    if hasattr(fn_type_whnf, "domain"):
+                    if isinstance(fn_type_whnf, (EPi, ELam)):
                         _walk(arg, fn_type_whnf.domain, ctx)
                         _walk(fn, fn_type, ctx)
                 except KernelTypeError:
