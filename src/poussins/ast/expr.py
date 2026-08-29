@@ -4,6 +4,7 @@ Core expression data types for the proof assistant.
 from __future__ import annotations
 from abc import ABC
 from dataclasses import dataclass
+from typing import override
 
 from .universe import UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam
 
@@ -24,6 +25,7 @@ class ESort(Expr):
 
     level: UnivLevel
 
+    @override
     def __str__(self) -> str:
         match self.level:
             case UnivLevelZero():
@@ -54,6 +56,7 @@ class EVar(Expr):
 
     name: str
 
+    @override
     def __str__(self) -> str:
         return self.name
 
@@ -67,6 +70,7 @@ class EConst(Expr):
     name: str
     levels: tuple[UnivLevel, ...]
 
+    @override
     def __str__(self) -> str:
         if self.levels:
             levels_str = ", ".join(str(lv) for lv in self.levels)
@@ -85,6 +89,7 @@ class EPi(Expr):
     domain: Expr
     body: Expr
 
+    @override
     def __str__(self) -> str:
         return f"(Π {self.var} : {self.domain}, {self.body})"
 
@@ -99,6 +104,7 @@ class ELam(Expr):
     domain: Expr
     body: Expr
 
+    @override
     def __str__(self) -> str:
         return f"(λ {self.var} : {self.domain}, {self.body})"
 
@@ -112,6 +118,7 @@ class EApp(Expr):
     fn: Expr
     arg: Expr
 
+    @override
     def __str__(self) -> str:
         return f"({self.fn} {self.arg})"
 
@@ -127,6 +134,7 @@ class EMatch(Expr):
     motive: Expr
     cases: tuple[Expr, ...]
 
+    @override
     def __str__(self) -> str:
         cases_str = ", ".join(f"branch ↦ {c}" for c in self.cases)
         return (
@@ -143,5 +151,6 @@ class EMetaVar(Expr):
 
     goal_id: str
 
+    @override
     def __str__(self) -> str:
         return f"?{self.goal_id}"

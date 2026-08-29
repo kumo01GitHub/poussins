@@ -3,6 +3,7 @@ Universe-level data structures used by expression sorts.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import override
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,7 @@ class UnivLevelZero:
     The base universe level (0).
     """
 
+    @override
     def __str__(self) -> str:
         return "0"
 
@@ -23,8 +25,14 @@ class UnivLevelSucc:
 
     pred: UnivLevel
 
+    @override
     def __str__(self) -> str:
-        return f"({self.pred} + 1)"
+        base = self.pred
+        offset = 1
+        while isinstance(base, UnivLevelSucc):
+            offset += 1
+            base = base.pred
+        return f"({base} + {offset})"
 
 
 @dataclass(frozen=True)
@@ -35,6 +43,7 @@ class UnivLevelParam:
 
     name: str
 
+    @override
     def __str__(self) -> str:
         return self.name
 
@@ -48,6 +57,7 @@ class UnivLevelMax:
     left: UnivLevel
     right: UnivLevel
 
+    @override
     def __str__(self) -> str:
         return f"max({self.left}, {self.right})"
 
@@ -61,6 +71,7 @@ class UnivLevelIMax:
     left: UnivLevel
     right: UnivLevel
 
+    @override
     def __str__(self) -> str:
         return f"imax({self.left}, {self.right})"
 
