@@ -68,7 +68,7 @@ def infer_type(
         case ELam(var, domain, body):
             extended_context = context | {var: domain}
             body_type = infer_type(body, extended_context, metavars, env)
-            infer_type(EPi(var, domain, body_type), context, metavars, env)
+            _ = infer_type(EPi(var, domain, body_type), context, metavars, env)
             return EPi(var, domain, body_type)
         case EApp(fn, arg):
             fn_type = infer_type(fn, context, metavars, env)
@@ -132,7 +132,7 @@ def infer_metavar_types(
                     if hasattr(fn_type_whnf, "domain"):
                         _walk(arg, fn_type_whnf.domain, ctx)
                         _walk(fn, fn_type, ctx)
-                except Exception:
+                except KernelTypeError:
                     pass
             case _:
                 pass
