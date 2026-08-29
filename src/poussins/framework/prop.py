@@ -15,6 +15,7 @@ Prop is immutable. The underlying Expr is accessible via .expr.
 """
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import override
 
 from ..ast import (
     Expr,
@@ -201,6 +202,7 @@ class Prop:
     # Equality / hashing — delegate to Expr
     # ------------------------------------------------------------------
 
+    @override
     def __eq__(self, other: object) -> bool:
         """
         Compare propositions by their underlying expression.
@@ -211,12 +213,14 @@ class Prop:
             return self.expr == other
         return NotImplemented
 
+    @override
     def __hash__(self) -> int:
         """
         Hash the wrapped expression.
         """
         return hash(self.expr)
 
+    @override
     def __repr__(self) -> str:
         """
         Return a debug representation of the proposition.

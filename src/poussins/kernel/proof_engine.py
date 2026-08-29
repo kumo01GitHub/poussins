@@ -90,8 +90,8 @@ class ProofEngine:
 
         if active_metavar_ids != subgoal_ids:
             raise KernelValueError(
-                f"Subgoal mismatch with assignment expressions.\n"
-                f"  Expected from assignment (in order): {active_metavar_ids}\n"
+                "Subgoal mismatch with assignment expressions.\n" +
+                f"  Expected from assignment (in order): {active_metavar_ids}\n" +
                 f"  Provided subgoals:                   {subgoal_ids}"
             )
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, override
 
 from ..ast import EApp, EConst, EVar, Expr
 from ..environment.library import EqualityDeclaration
@@ -46,6 +46,7 @@ class InductiveType(ABC):
         right_expr = cls.to_expr(right)
         return EApp(EApp(EApp(EConst(cls.EQ_NAME, ()), cls.type()), left_expr), right_expr)
 
+    @override
     def __eq__(self, other: object) -> bool:
         if isinstance(other, InductiveType):
             return self.expr == other.expr
@@ -53,8 +54,10 @@ class InductiveType(ABC):
             return self.expr == other
         return NotImplemented
 
+    @override
     def __hash__(self) -> int:
         return hash(self.expr)
 
+    @override
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.expr!r})"

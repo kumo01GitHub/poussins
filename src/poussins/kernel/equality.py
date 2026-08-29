@@ -13,12 +13,17 @@ from ..ast import (
 from ..environment import Environment
 
 
-def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] = [], bvars2: list[str] = []) -> bool:
+def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] | None = None, bvars2: list[str] | None = None) -> bool:
     """
     Return True when two expressions are alpha-equivalent.
     """
     if type(t1) is not type(t2):
         return False
+
+    if bvars1 is None:
+        bvars1 = []
+    if bvars2 is None:
+        bvars2 = []
 
     match (t1, t2):
         case (EVar(n1), EVar(n2)):

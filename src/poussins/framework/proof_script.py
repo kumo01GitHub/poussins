@@ -4,7 +4,8 @@ Framework-level base class providing method-style tactic access for Theorem and 
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import functools
-from typing import Any, Callable
+from logging import Logger
+from typing import Any, Callable, Final
 
 from ..ast import Expr, EVar
 from ..environment import Environment
@@ -23,12 +24,11 @@ from ..tactics import (
     reflexivity, rfl,
     rewrite, rw,
 )
-from ..utils.logging import getLogger
 
 
-def log_tactic(func: Callable[..., Any]) -> Callable[..., Any]:
+def log_tactic(func: Callable[..., None]) -> Callable[..., None]:
     @functools.wraps(func)
-    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+    def wrapper(self: ProofScript, *args: Any, **kwargs: Any) -> None:
         self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
 
         result = func(self, *args, **kwargs)
@@ -58,14 +58,15 @@ class ProofScript(ABC):
     It completely delegates all state mutation and history tracking concerns to ProofManager.
     """
 
+    logger: Logger
+
     def __init__(self, statement: Expr, env: Environment):
         """
         Create a proof script bound to a statement and environment.
         """
-        self.statement: Expr = statement
-        self.env: Environment = env
-        self.manager: ProofManager = ProofManager(statement, env)
-        self.logger = getLogger(__name__)
+        self.statement: Final[Expr] = statement
+        self.env: Final[Environment] = env
+        self.manager: Final[ProofManager] = ProofManager(statement, env)
 
     @property
     def current_state(self) -> ProofState:

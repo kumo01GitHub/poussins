@@ -44,7 +44,7 @@ class ProofManager:
         return self.session.is_closed
 
     @property
-    def current_proof_term(self) -> Expr:
+    def current_proof_term(self) -> Expr | None:
         """
         Return the current proof term by instantiating the root metavariable with its assignment.
         """

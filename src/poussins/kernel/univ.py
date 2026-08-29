@@ -108,8 +108,6 @@ def instantiate_univ_level(level: UnivLevel, level_subst: dict[str, UnivLevel]) 
                 instantiate_univ_level(left, level_subst),
                 instantiate_univ_level(right, level_subst)
             )
-        case _:
-            return level
 
 
 def instantiate_univ(expr: Expr, level_subst: dict[str, UnivLevel]) -> Expr:

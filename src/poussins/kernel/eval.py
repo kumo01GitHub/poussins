@@ -39,17 +39,20 @@ def whnf(
     expr: Expr,
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
-    unfolding: frozenset[str] = frozenset(),
+    unfolding: frozenset[str] | None = None,
 ) -> Expr:
     """
     Reduce an expression to weak head normal form.
     """
+    if unfolding is None:
+        unfolding = frozenset()
+
     expr = instantiate_metavar(expr, metavars)
     match expr:
         case EConst(name, _):
             if env is not None and name not in unfolding:
                 decl = env.get(name)
-                if isinstance(decl, DefinitionDeclaration) and decl.value is not None:
+                if isinstance(decl, DefinitionDeclaration):
                     return whnf(decl.value, metavars, env, unfolding | {name})
             return expr
         case EApp(fn, arg):

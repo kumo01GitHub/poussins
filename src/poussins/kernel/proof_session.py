@@ -51,6 +51,6 @@ class ProofSession:
         Undo the last proof state, reverting to the previous state in the history stack.
         """
         if len(self._history) > 1:
-            self._history.pop()
+            _ = self._history.pop()
         else:
             raise KernelStateError("Cannot undo beyond the initial proof state.")

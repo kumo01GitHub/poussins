@@ -2,6 +2,8 @@
 Theorem, Lemma, Example: proof-carrying DSL objects.
 """
 from __future__ import annotations
+from logging import Logger
+from typing import Final, override
 
 from .prop import Prop
 from .proof_script import ProofScript
@@ -33,12 +35,14 @@ class Theorem(ProofScript):
         """
         Create a theorem with a name, statement, environment, and universe parameters.
         """
-        self.name = name
-        self.level_params = level_params
+        self.name: Final[str] = name
+        self.level_params: Final[tuple[str, ...]] = level_params
         super().__init__(Prop.to_expr(statement), env)
-        self.logger = getLogger(__name__)
+
+        self.logger: Logger = getLogger(__name__)
         self.logger.info(f"Theorem '{self.name}': {self.statement}")
 
+    @override
     def qed(self) -> None:
         """
         Verify that the proof is closed, extract the final proof term,
@@ -92,9 +96,10 @@ class Example(ProofScript):
         pure_expr = Prop.to_expr(statement)
         super().__init__(pure_expr, env)
 
-        self.logger = getLogger(__name__)
+        self.logger: Logger = getLogger(__name__)
         self.logger.info(f"Example: {self.statement}")
 
+    @override
     def qed(self) -> None:
         """
         Verify the anonymity proof is complete.
