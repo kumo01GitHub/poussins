@@ -17,7 +17,7 @@ def main():
 
     # prove
     p_prove = subparsers.add_parser("prove", help="Batch proof execution (.py)")
-    p_prove.add_argument("filepath", help=".py file with theorems/lemmas")
+    _ = p_prove.add_argument("filepath", help=".py file with theorems/lemmas")
 
     # step
     p_step = subparsers.add_parser("step", help="Step-by-step proof execution")

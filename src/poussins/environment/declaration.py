@@ -51,13 +51,17 @@ class InductiveDeclaration(Declaration):
 
 @dataclass(frozen=True)
 class ConstructorDeclaration(Declaration):
-    """ Constructor information for an inductive type. """
+    """
+    Constructor information for an inductive type.
+    """
     inductive_name: str
 
 
 @dataclass(frozen=True)
 class RecursorDeclaration(Declaration):
-    """ Recursor information for an inductive type. """
+    """
+    Recursor information for an inductive type.
+    """
     inductive_name: str
     num_params: int
     num_indices: int
@@ -66,5 +70,7 @@ class RecursorDeclaration(Declaration):
 
 @dataclass(frozen=True)
 class QuotDeclaration(Declaration):
-    """ Quotient type information. """
+    """
+    Quotient type information.
+    """
     variant: str

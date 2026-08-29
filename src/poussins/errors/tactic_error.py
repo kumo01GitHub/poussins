@@ -1,5 +1,5 @@
 """
-Tactic-related errors.
+Tactic-level errors.
 """
 from .proof_error import ProofError
 
