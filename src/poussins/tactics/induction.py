@@ -3,7 +3,10 @@ Tactic for performing structural induction over an inductive hypothesis.
 """
 from __future__ import annotations
 
-from ..ast import EApp, EConst, ELam, EMatch, EMetaVar, EPi, EVar, Expr, substitute_expr_var
+from ..ast import (
+    EApp, EConst, ELam, EMatch, EMetaVar, EPi, EVar, Expr,
+    UnivLevelParam,
+    substitute_expr_var)
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
@@ -31,15 +34,15 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     an induction hypothesis of the form ``ih : P prev``.
     """
     if manager.is_closed:
-        raise TacticError("induction failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("induction failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     if not current_goal.has_local_hypothesis(hypothesis_name):
-        raise TacticError(f"induction failed: Unknown hypothesis '{hypothesis_name}'.")
+        raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
 
     hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.env)
     head_expr = hypothesis_type
@@ -48,14 +51,14 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
 
     head_name = getattr(head_expr, "name", None)
     if not head_name:
-        raise TacticError(f"induction failed: '{hypothesis_name}' has no inductive head. Found type '{hypothesis_type}'.")
+        raise TacticError(f"'{hypothesis_name}' has no inductive head. Found type '{hypothesis_type}'.")
 
     env = manager.env
     inductive_decl = env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
-        raise TacticError(f"induction failed: '{head_name}' is not an inductive type.")
+        raise TacticError(f"'{head_name}' is not an inductive type.")
     if not inductive_decl.constructor_names:
-        raise TacticError(f"induction failed: Inductive type '{head_name}' has no constructors.")
+        raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
     constructor_names = inductive_decl.constructor_names
     subgoals: list[Goal] = []
@@ -64,9 +67,12 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     for constructor_name in constructor_names:
         constructor_decl = env.get(constructor_name)
         if not isinstance(constructor_decl, ConstructorDeclaration):
-            raise TacticError(f"induction failed: '{constructor_name}' is not a constructor declaration.")
+            raise TacticError(f"'{constructor_name}' is not a constructor declaration.")
 
-        constructor = EConst(name=constructor_name, levels=constructor_decl.level_params)
+        constructor = EConst(
+            name=constructor_name,
+            levels=tuple(UnivLevelParam(param) for param in constructor_decl.level_params)
+        )
         constructor_type = constructor_decl.type
 
         branch_binders: list[tuple[str, Expr]] = []

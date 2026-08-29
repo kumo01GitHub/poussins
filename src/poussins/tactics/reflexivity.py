@@ -4,7 +4,7 @@ Equality tactics including reflexivity and rfl.
 from __future__ import annotations
 
 from .apply import apply
-from ..ast import EApp, EConst
+from ..ast import EApp, EConst, UnivLevelParam
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq, whnf
 from ..environment.library import EqualityDeclaration
@@ -50,7 +50,10 @@ def reflexivity(manager: ProofManager) -> None:
         raise TacticError("reflexivity failed: LHS and RHS are not definitionally equal.")
 
     refl_decl = EqualityDeclaration.EQ_REFL_DECLARATION.declaration
-    refl_const = EConst(name=refl_decl.name, levels=refl_decl.level_params)
+    refl_const = EConst(
+        name=refl_decl.name,
+        levels=tuple(UnivLevelParam(param) for param in refl_decl.level_params)
+    )
 
     apply(manager, refl_const)
 

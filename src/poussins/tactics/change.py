@@ -13,7 +13,7 @@ def change(manager: ProofManager, expr: Expr, hypothesis_name: str | None = None
     Change the current goal, or the type of a named hypothesis, to a definitionally equal expression.
     """
     if manager.is_closed:
-        raise TacticError("change failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     try:
         if hypothesis_name is None:

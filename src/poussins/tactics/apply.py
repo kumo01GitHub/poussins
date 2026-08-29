@@ -16,12 +16,12 @@ def apply(manager: ProofManager, expr: Expr) -> None:
     Apply an expression to the current goal.
     """
     if manager.is_closed:
-        raise TacticError("apply failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("apply failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     implicit_subgoals: list[Goal] = []
     current_type = whnf(
@@ -40,7 +40,7 @@ def apply(manager: ProofManager, expr: Expr) -> None:
         implicit_subgoals.append(new_goal)
 
         assignment = EApp(assignment, EMetaVar(new_goal.id))
-        
+
         current_type = whnf(
             substitute_expr_var(
                 expr=current_type.body,

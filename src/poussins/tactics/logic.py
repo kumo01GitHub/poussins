@@ -15,15 +15,15 @@ def exfalso(manager: ProofManager) -> None:
     Replace the current goal with False and derive the target from it using False.rec.
     """
     if manager.is_closed:
-        raise TacticError("exfalso failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     current_goal = manager.current_state.current_goal
     if current_goal is None:
-        raise TacticError("exfalso failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     false_rec_decl = LogicDeclaration.FALSE_REC_DECLARATION.declaration
     if not isinstance(false_rec_decl, RecursorDeclaration):
-        raise TacticError("exfalso failed: False.rec is not a RecursorDeclaration.")
+        raise TacticError("False.rec is not a RecursorDeclaration.")
 
     false_goal = Goal(
         statement=EConst("False", ()),
@@ -36,8 +36,7 @@ def exfalso(manager: ProofManager) -> None:
             EConst(
                 name=false_rec_decl.name,
                 levels=tuple(
-                    UnivLevelParam(p) if isinstance(p, str) else p
-                    for p in false_rec_decl.level_params
+                    UnivLevelParam(param) for param in false_rec_decl.level_params
                 ),
             ),
             ELam("_", EConst("False", ()), current_goal.statement),

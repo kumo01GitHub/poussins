@@ -3,7 +3,6 @@ Kernel-level proof state management for tracking goals and metavariables.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ..ast.expr import Expr
 from .goal import Goal
@@ -16,7 +15,7 @@ class MetaVar:
     """
 
     statement: Expr
-    assignment: Optional[Expr] = None
+    assignment: Expr | None = None
 
     @property
     def is_assigned(self) -> bool:
@@ -36,7 +35,7 @@ class ProofState:
     metavars: dict[str, MetaVar] = field(default_factory=dict)
 
     @property
-    def current_goal(self) -> Optional[Goal]:
+    def current_goal(self) -> Goal | None:
         """
         Return the next active goal, if one exists.
         """

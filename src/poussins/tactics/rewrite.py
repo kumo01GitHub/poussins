@@ -3,8 +3,6 @@ Advanced Rewrite tactic for equality substitution supporting direction (symm) an
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from ..ast import EApp, EConst, ELam, EMetaVar, EPi, EVar, Expr, UnivLevelParam
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
@@ -52,7 +50,7 @@ def rewrite(
     hyp_name: str,
     *,
     symm: bool = False,
-    at: Optional[str] = None,
+    at: str | None = None,
 ) -> None:
     """
     Advanced rewrite tactic supporting:
@@ -60,15 +58,15 @@ def rewrite(
     - Location targeting (at='h2' to rewrite inside a local hypothesis instead of the goal)
     """
     if manager.is_closed:
-        raise TacticError("rewrite failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("rewrite failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     if not current_goal.has_local_hypothesis(hyp_name):
-        raise TacticError(f"rewrite failed: Hypothesis '{hyp_name}' not found in local context.")
+        raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
 
     hyp_type_raw = current_goal.local_context[hyp_name]
     metavars = state.metavars
@@ -90,14 +88,14 @@ def rewrite(
     head_name = head_expr.name if isinstance(head_expr, EConst) else None
 
     if head_name != eq_name or len(args) < 3:
-        raise TacticError(f"rewrite failed: Hypothesis '{hyp_name}' is not an equality.")
+        raise TacticError(f"Hypothesis '{hyp_name}' is not an equality.")
 
     eq_type, lhs, rhs = args[0], args[1], args[2]
     from_expr, to_expr = (rhs, lhs) if symm else (lhs, rhs)
 
     if at is not None:
         if not current_goal.has_local_hypothesis(at):
-            raise TacticError(f"rewrite failed: Target hypothesis '{at}' for 'at' modifier not found.")
+            raise TacticError(f"Target hypothesis '{at}' for 'at' modifier not found.")
         target_expr = current_goal.local_context[at]
     else:
         target_expr = current_goal.statement
@@ -105,7 +103,7 @@ def rewrite(
     new_target_expr = _replace_expr(target_expr, from_expr, to_expr)
 
     if target_expr == new_target_expr:
-        raise TacticError("rewrite failed: Did not find occurrences of the target expression.")
+        raise TacticError("Did not find occurrences of the target expression.")
 
     if at is not None:
         new_context = dict(current_goal.context)
@@ -150,7 +148,7 @@ def rewrite(
         manager.refine_goal(assignment, [new_goal])
 
     except Exception as e:
-        raise TacticError(f"rewrite failed: {e}") from e
+        raise TacticError(f"{e}") from e
 
 
 # Alias

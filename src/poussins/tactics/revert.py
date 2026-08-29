@@ -12,22 +12,22 @@ def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
     targets = [hyp_names] if isinstance(hyp_names, str) else hyp_names
 
     if not targets:
-        raise TacticError("revert: No hypothesis names provided.")
+        raise TacticError("No hypothesis names provided.")
 
     for hyp_name in targets:
         current_goal = manager.current_state.current_goal
         if current_goal is None:
-            raise TacticError("revert: No active goal.")
+            raise TacticError("No active goal.")
 
         if hyp_name not in current_goal.local_context:
-            raise TacticError(f"revert: Hypothesis '{hyp_name}' not found in local context.")
+            raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
 
         hyp_type = current_goal.context[hyp_name]
 
         for name, expr in current_goal.local_context.items():
             if name != hyp_name and hyp_name in collect_free_vars(expr):
                 raise TacticError(
-                    f"revert: Cannot revert '{hyp_name}' because '{name}' depends on it."
+                    f"Cannot revert '{hyp_name}' because '{name}' depends on it."
                 )
 
         new_goal = Goal(

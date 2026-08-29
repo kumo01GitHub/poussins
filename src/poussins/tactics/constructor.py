@@ -4,7 +4,7 @@ Tactic for applying inductive constructors.
 from __future__ import annotations
 
 from .apply import apply
-from ..ast import EConst, EApp, EPi
+from ..ast import EConst, EApp, EPi, UnivLevelParam
 from ..errors import TacticError
 from ..kernel import ProofManager, whnf, infer_type
 from ..environment import InductiveDeclaration, ConstructorDeclaration
@@ -16,11 +16,12 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     Apply a matching constructor, or the constructor at the given index.
     """
     if manager.is_closed:
-        raise TacticError("constructor failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
-    assert current_goal is not None
+    if current_goal is None:
+        raise TacticError("No active goals remain.")
 
     goal_type = whnf(current_goal.statement, state.metavars, manager.env)
 
@@ -30,27 +31,27 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
 
     head_name = getattr(head_expr, "name", None)
     if not head_name:
-        raise TacticError(f"constructor failed: Goal type head has no name. Found: {goal_type}")
+        raise TacticError(f"Goal type head has no name. Found: {goal_type}")
 
     env = manager.env
     inductive_decl = env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
-        raise TacticError(f"constructor failed: '{head_name}' is not an inductive type.")
+        raise TacticError(f"'{head_name}' is not an inductive type.")
     elif not inductive_decl.constructor_names:
-        raise TacticError(f"constructor failed: Inductive type '{head_name}' has no constructors.")
+        raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
     if index is not None:
         if not (1 <= index <= len(inductive_decl.constructor_names)):
             raise TacticError(
-                f"constructor failed: Invalid constructor index {index} for '{head_name}'. "
+                f"Invalid constructor index {index} for '{head_name}'. " +
                 f"Expected 1..{len(inductive_decl.constructor_names)}."
             )
         target_name = inductive_decl.constructor_names[index - 1]
         decl = env.get(target_name)
         if not isinstance(decl, ConstructorDeclaration):
-            raise TacticError(f"constructor failed: '{target_name}' is not a constructor declaration.")
+            raise TacticError(f"'{target_name}' is not a constructor declaration.")
 
-        apply(manager, EConst(name=target_name, levels=decl.level_params))
+        apply(manager, EConst(name=target_name, levels=tuple(UnivLevelParam(param) for param in decl.level_params)))
         return
 
     matched_constructor_const: EConst | None = None
@@ -58,10 +59,9 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     for name in inductive_decl.constructor_names:
         decl = env.get(name)
         if not isinstance(decl, ConstructorDeclaration):
-            raise TacticError(f"constructor failed: '{name}' is not a constructor declaration.")
+            raise TacticError(f"'{name}' is not a constructor declaration.")
 
-        levels = decl.level_params
-        const = EConst(name=name, levels=levels)
+        const = EConst(name=name, levels=tuple(UnivLevelParam(param) for param in decl.level_params))
 
         c_type = whnf(
             infer_type(const, current_goal.context, state.metavars, manager.env),
@@ -83,7 +83,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
             break
 
     if matched_constructor_const is None:
-        raise TacticError(f"constructor failed: No constructor of '{head_name}' matches the goal structure.")
+        raise TacticError(f"No constructor of '{head_name}' matches the goal structure.")
 
     apply(manager, matched_constructor_const)
 
@@ -95,7 +95,7 @@ def _goal_head_name(manager: ProofManager) -> str:
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("constructor failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     goal_type = whnf(current_goal.statement, state.metavars, manager.env)
 
@@ -105,7 +105,7 @@ def _goal_head_name(manager: ProofManager) -> str:
 
     head_name = getattr(head_expr, "name", None)
     if not head_name:
-        raise TacticError(f"constructor failed: Goal type head has no name. Found: {goal_type}")
+        raise TacticError(f"Goal type head has no name. Found: {goal_type}")
     return head_name
 
 
@@ -140,7 +140,7 @@ def _apply_named_constructor(
     if not isinstance(decl, ConstructorDeclaration):
         raise TacticError(f"{tactic_name} failed: '{constructor_name}' is not a constructor declaration.")
 
-    apply(manager, EConst(name=constructor_name, levels=decl.level_params))
+    apply(manager, EConst(name=constructor_name, levels=tuple(UnivLevelParam(param) for param in decl.level_params)))
 
 
 def left(manager: ProofManager) -> None:

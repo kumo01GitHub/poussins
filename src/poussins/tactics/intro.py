@@ -3,7 +3,7 @@ Tactics for introducing local variables into the current goal.
 """
 from __future__ import annotations
 
-from ..ast import ELam, EPi, EMetaVar, EVar, substitute_expr_var  
+from ..ast import ELam, EPi, EMetaVar, EVar, substitute_expr_var
 from ..errors import TacticError
 from ..kernel import ProofManager, Goal, whnf
 
@@ -13,19 +13,19 @@ def intro(manager: ProofManager, var_name: str) -> None:
     Introduce one variable from a dependent product goal.
     """
     if manager.is_closed:
-        raise TacticError("intro failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("intro failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     goal_expr = whnf(current_goal.statement, state.metavars, manager.env)
     if not isinstance(goal_expr, EPi):
-        raise TacticError(f"intro failed: Current goal is not a product type (EPi). Found: {goal_expr}")
+        raise TacticError(f"Current goal is not a product type (EPi). Found: {goal_expr}")
 
     if current_goal.has_local_hypothesis(var_name):
-        raise TacticError(f"intro failed: Identifier '{var_name}' already exists in the local context.")
+        raise TacticError(f"Identifier '{var_name}' already exists in the local context.")
 
     new_subgoal_statement = substitute_expr_var(
         expr=goal_expr.body,

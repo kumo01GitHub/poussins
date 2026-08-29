@@ -13,6 +13,7 @@ from ..ast import (
     Expr,
     ESort,
     EVar,
+    UnivLevelParam,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
@@ -100,7 +101,7 @@ def _infer_inductive_parameter_substitutions(target_expr: Expr, actual_expr: Exp
 
         if isinstance(expr, EConst) and isinstance(value, EConst):
             if expr.name != value.name or expr.levels != value.levels:
-                raise TacticError("cases failed: could not infer constructor argument types.")
+                raise TacticError("could not infer constructor argument types.")
             return
 
         if isinstance(expr, ESort) and isinstance(value, ESort):
@@ -108,7 +109,7 @@ def _infer_inductive_parameter_substitutions(target_expr: Expr, actual_expr: Exp
 
         if isinstance(expr, EMetaVar) and isinstance(value, EMetaVar):
             if expr.goal_id != value.goal_id:
-                raise TacticError("cases failed: could not infer constructor argument types.")
+                raise TacticError("could not infer constructor argument types.")
             return
 
         if isinstance(expr, EPi) and isinstance(value, EPi):
@@ -119,7 +120,7 @@ def _infer_inductive_parameter_substitutions(target_expr: Expr, actual_expr: Exp
         if type(expr) is type(value):
             return
 
-        raise TacticError("cases failed: could not infer constructor argument types.")
+        raise TacticError("could not infer constructor argument types.")
 
     visit(target_expr, actual_expr)
     return substitutions
@@ -134,15 +135,15 @@ def cases(
     Case-split on an inductive hypothesis and create one subgoal per selected constructor pattern.
     """
     if manager.is_closed:
-        raise TacticError("cases failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
-        raise TacticError("cases failed: No active goals remain.")
+        raise TacticError("No active goals remain.")
 
     if not current_goal.has_local_hypothesis(hypothesis_name):
-        raise TacticError(f"cases failed: Unknown hypothesis '{hypothesis_name}'.")
+        raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
 
     hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.env)
     head_expr = hypothesis_type
@@ -151,14 +152,14 @@ def cases(
 
     head_name = getattr(head_expr, "name", None)
     if not head_name:
-        raise TacticError(f"cases failed: Hypothesis type head has no name. Found: {hypothesis_type}")
+        raise TacticError(f"Hypothesis type head has no name. Found: {hypothesis_type}")
 
     env = manager.env
     inductive_decl = env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
-        raise TacticError(f"cases failed: '{head_name}' is not an inductive type.")
+        raise TacticError(f"'{head_name}' is not an inductive type.")
     if not inductive_decl.constructor_names:
-        raise TacticError(f"cases failed: Inductive type '{head_name}' has no constructors.")
+        raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
     inductive_parameters = _collect_pi_binders(inductive_decl.type)
 
@@ -168,7 +169,7 @@ def cases(
         normalized_patterns = []
         for pattern in patterns:
             if not pattern:
-                raise TacticError("cases failed: empty patterns are not supported.")
+                raise TacticError("empty patterns are not supported.")
             constructor_name = pattern[0]
             names_for_branch = tuple(pattern[1:])
             normalized_patterns.append((constructor_name, names_for_branch))
@@ -179,9 +180,12 @@ def cases(
     for constructor_name, names_for_branch in normalized_patterns:
         constructor_decl = env.get(constructor_name)
         if not isinstance(constructor_decl, ConstructorDeclaration):
-            raise TacticError(f"cases failed: '{constructor_name}' is not a constructor declaration.")
+            raise TacticError(f"'{constructor_name}' is not a constructor declaration.")
 
-        constructor = EConst(name=constructor_name, levels=constructor_decl.level_params)
+        constructor = EConst(
+            name=constructor_name,
+            levels=tuple(UnivLevelParam(param) for param in constructor_decl.level_params)
+        )
         constructor_pattern, branch_binders = _build_constructor_pattern(
             constructor=constructor,
             constructor_type=constructor_decl.type,
@@ -213,7 +217,7 @@ def cases(
             branch_local_context[var_name] = var_type
 
         if len(names_for_branch) > len(constructor_arg_binders):
-            raise TacticError("cases failed: too many branch names for constructor pattern.")
+            raise TacticError("too many branch names for constructor pattern.")
         for branch_name, (_, binder_type) in zip(names_for_branch, constructor_arg_binders[-len(names_for_branch):]):
             specialized_type = binder_type
             for param_name, param_value in parameter_substitutions.items():
