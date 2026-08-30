@@ -5,7 +5,7 @@ import sys
 
 
 def getLogger(name: str) -> logging.Logger:
-    """Get a logger with the specified name, configured to log to stdout with a level determined by the POUSSINS_LOG_LEVEL environment variable (defaulting to INFO)."""
+    """Get a logger."""
     logger = logging.getLogger(name)
     level = getattr(
         logging,
@@ -17,7 +17,9 @@ def getLogger(name: str) -> logging.Logger:
         # Configure the logger only if it hasn't been configured yet
         logger.setLevel(level)
         handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 

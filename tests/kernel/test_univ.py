@@ -1,3 +1,4 @@
+"""Test cases for the `poussins.kernel.univ` module."""
 from typing import Final
 
 import pytest
@@ -139,8 +140,20 @@ class TestInstantiateUnivLevel:
         assert instantiate_univ_level(self.param_u, self.assignment) == self.zero
         assert instantiate_univ_level(self.param_v, self.assignment) == self.one
         assert instantiate_univ_level(UnivLevelSucc(self.param_u), self.assignment) == self.one
-        assert instantiate_univ_level(UnivLevelMax(self.param_u, self.param_v), self.assignment) == UnivLevelMax(self.zero, self.one)
-        assert instantiate_univ_level(UnivLevelIMax(self.param_u, self.param_v), self.assignment) == UnivLevelIMax(self.zero, self.one)
+        assert (
+            instantiate_univ_level(
+                UnivLevelMax(self.param_u, self.param_v),
+                self.assignment
+            )
+            == UnivLevelMax(self.zero, self.one)
+        )
+        assert (
+            instantiate_univ_level(
+                UnivLevelIMax(self.param_u, self.param_v),
+                self.assignment
+            )
+            == UnivLevelIMax(self.zero, self.one)
+        )
 
 
 class TestInstantiateUniv:
@@ -157,16 +170,36 @@ class TestInstantiateUniv:
 
         # Individual Expr variants coverage (Success / substitution)
         assert instantiate_univ(EVar("x"), self.assignment) == EVar("x")
-        assert instantiate_univ(ESort(self.param_u), self.assignment) == ESort(self.zero)
-        assert instantiate_univ(EConst("nat", (self.param_u,)), self.assignment) == EConst("nat", (self.zero,))
-        assert instantiate_univ(EApp(EVar("f"), EConst("c", (self.param_u,))), self.assignment) == EApp(EVar("f"), EConst("c", (self.zero,)))
-        assert instantiate_univ(ELam("x", ESort(self.param_u), EVar("x")), self.assignment) == ELam("x", ESort(self.zero), EVar("x"))
-        assert instantiate_univ(EPi("x", ESort(self.param_u), EVar("x")), self.assignment) == EPi("x", ESort(self.zero), EVar("x"))
+        assert (
+            instantiate_univ(ESort(self.param_u), self.assignment)
+            == ESort(self.zero)
+        )
+        assert (
+            instantiate_univ(EConst("nat", (self.param_u,)), self.assignment)
+            == EConst("nat", (self.zero,))
+        )
+        assert (
+            instantiate_univ(
+                EApp(EVar("f"), EConst("c", (self.param_u,))),
+                self.assignment
+            )
+            == EApp(EVar("f"), EConst("c", (self.zero,)))
+        )
+        assert (
+            instantiate_univ(ELam("x", ESort(self.param_u), EVar("x")), self.assignment)
+            == ELam("x", ESort(self.zero), EVar("x"))
+        )
+        assert (
+            instantiate_univ(EPi("x", ESort(self.param_u), EVar("x")), self.assignment)
+            == EPi("x", ESort(self.zero), EVar("x"))
+        )
 
         # Fallback variants returning as-is (EMatch, EMetaVar)
-        match_expr = EMatch("Nat", EVar("n"), ESort(self.param_u), (EConst("z", (self.param_u,)),))
+        match_expr = EMatch(
+            "Nat", EVar("n"), ESort(self.param_u), (EConst("z", (self.param_u,)),)
+        )
         assert instantiate_univ(match_expr, self.assignment) == match_expr
-        metavar_expr = EMetaVar("g1")
+        metavar_expr = EMetaVar("m1")
         assert instantiate_univ(metavar_expr, self.assignment) == metavar_expr
 
     def test_instantiate_univ_not_implemented(self):

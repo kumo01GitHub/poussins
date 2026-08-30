@@ -1,5 +1,4 @@
-"""InductiveType: shared frontend base for inductive-type DSL wrappers.
-"""
+"""InductiveType: shared frontend base for inductive-type DSL wrappers."""
 from __future__ import annotations
 
 from abc import ABC
@@ -23,6 +22,7 @@ class InductiveType(ABC):
     expr: Expr
 
     def __init__(self, expr: Expr | str) -> None:
+        """Initialize an inductive type."""
         if isinstance(expr, str):
             expr = EVar(expr)
         object.__setattr__(self, "expr", expr)
@@ -42,7 +42,8 @@ class InductiveType(ABC):
         """Construct an equality proposition over this inductive type."""
         left_expr = cls.to_expr(left)
         right_expr = cls.to_expr(right)
-        return EApp(EApp(EApp(EConst(cls.EQ_NAME, ()), cls.type()), left_expr), right_expr)
+        return EApp(EApp(EApp(
+            EConst(cls.EQ_NAME, ()), cls.type()), left_expr), right_expr)
 
     @override
     def __eq__(self, other: object) -> bool:

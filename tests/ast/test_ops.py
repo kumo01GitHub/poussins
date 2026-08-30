@@ -1,3 +1,4 @@
+"""Test cases for AST operations in `poussins.ast`."""
 import pytest
 
 from poussins.ast import (

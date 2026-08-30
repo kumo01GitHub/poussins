@@ -1,5 +1,4 @@
-"""Public environment exports for poussins.
-"""
+"""Public environment exports for poussins."""
 from .declaration import (
     AxiomDeclaration,
     ConstructorDeclaration,

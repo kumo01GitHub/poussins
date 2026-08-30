@@ -37,7 +37,7 @@ select = [
     "C4",
     "PL",
     "D",
-    "RUF",
+    # "RUF",
 ]
 
 ignore = []

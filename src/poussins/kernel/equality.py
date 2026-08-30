@@ -1,5 +1,4 @@
-"""Kernel-level equality checking functions for expressions, including alpha-equivalence and definitional equality.
-"""
+"""Kernel-level equality checking functions for expressions."""
 from __future__ import annotations
 
 from ..ast import (
@@ -21,9 +20,13 @@ from .proof_state import MetaVar
 from .univ import is_def_eq_univ
 
 
-def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] | None = None, bvars2: list[str] | None = None) -> bool:
-    """Return True when two expressions are alpha-equivalent.
-    """
+def is_alpha_eq(
+    t1: Expr,
+    t2: Expr,
+    bvars1: list[str] | None = None,
+    bvars2: list[str] | None = None
+) -> bool:
+    """Return True when two expressions are alpha-equivalent."""
     if type(t1) is not type(t2):
         return False
 
@@ -51,13 +54,23 @@ def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] | None = None, bvars2: lis
                 return False
             return is_alpha_eq(b1, b2, [v1] + bvars1, [v2] + bvars2)
         case (EApp(f1, a1), EApp(f2, a2)):
-            return is_alpha_eq(f1, f2, bvars1, bvars2) and is_alpha_eq(a1, a2, bvars1, bvars2)
+            return (
+                is_alpha_eq(f1, f2, bvars1, bvars2)
+                and is_alpha_eq(a1, a2, bvars1, bvars2)
+            )
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
-            if i1 != i2 or not is_alpha_eq(d1, d2, bvars1, bvars2) or not is_alpha_eq(m1, m2, bvars1, bvars2):
+            if (
+                i1 != i2
+                or not is_alpha_eq(d1, d2, bvars1, bvars2)
+                or not is_alpha_eq(m1, m2, bvars1, bvars2)
+            ):
                 return False
             if len(c1) != len(c2):
                 return False
-            return all(is_alpha_eq(b1, b2, bvars1, bvars2) for b1, b2 in zip(c1, c2))
+            return all(
+                is_alpha_eq(b1, b2, bvars1, bvars2)
+                for b1, b2 in zip(c1, c2, strict=False)
+            )
         case _:
             return False
 
@@ -69,8 +82,7 @@ def is_def_eq(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> bool:
-    """Return True when two expressions are definitionally equal.
-    """
+    """Return True when two expressions are definitionally equal."""
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
     if is_alpha_eq(t1, t2):
@@ -111,8 +123,8 @@ def is_def_eq(
             return is_def_eq_univ(level1, level2)
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
-                is_def_eq(f1, f2, context, metavars, env) and
-                is_def_eq(a1, a2, context, metavars, env)
+                is_def_eq(f1, f2, context, metavars, env)
+                and is_def_eq(a1, a2, context, metavars, env)
             )
         case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
             if not is_def_eq(d1, d2, context, metavars, env):
@@ -129,6 +141,9 @@ def is_def_eq(
                 return False
             if len(c1) != len(c2):
                 return False
-            return all(is_def_eq(b1, b2, context, metavars, env) for b1, b2 in zip(c1, c2))
+            return all(
+                is_def_eq(b1, b2, context, metavars, env)
+                for b1, b2 in zip(c1, c2, strict=False)
+            )
         case _:
             return False

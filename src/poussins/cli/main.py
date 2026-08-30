@@ -1,5 +1,4 @@
-"""Command-line entrypoint wiring for poussins.
-"""
+"""Command-line entrypoint wiring for poussins."""
 import argparse
 
 from .lean import run_lean2py, run_py2lean
@@ -8,8 +7,7 @@ from .step import run_step
 
 
 def main():
-    """Parse CLI arguments and dispatch to the selected subcommand.
-    """
+    """Parse CLI arguments and dispatch to the selected subcommand."""
     parser = argparse.ArgumentParser(description="poussins command line")
     subparsers = parser.add_subparsers(dest="subcmd", required=True)
 
@@ -21,7 +19,11 @@ def main():
     # step
     p_step = subparsers.add_parser("step", help="Step-by-step proof execution")
     _ = p_step.add_argument("filepath", help=".py file with theorems/lemmas")
-    _ = p_step.add_argument("--theorem", help="Theorem name to step through", default=None)
+    _ = p_step.add_argument(
+        "--theorem",
+        help="Theorem name to step through",
+        default=None
+    )
 
     # lean2py
     p_lean2py = subparsers.add_parser("lean2py", help="Convert Lean file to Python DSL")
@@ -29,7 +31,10 @@ def main():
     _ = p_lean2py.add_argument("--output", help="Output file path", default=None)
 
     # py2lean
-    p_py2lean = subparsers.add_parser("py2lean", help="Convert Python DSL to Lean format")
+    p_py2lean = subparsers.add_parser(
+        "py2lean",
+        help="Convert Python DSL to Lean format"
+    )
     _ = p_py2lean.add_argument("filepath", help=".py file to convert")
     _ = p_py2lean.add_argument("--output", help="Output file path", default=None)
 

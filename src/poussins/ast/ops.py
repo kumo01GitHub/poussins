@@ -1,5 +1,4 @@
-"""AST operation utilities for expression traversal, substitution, and analysis.
-"""
+"""AST operation utilities for expression traversal, substitution, and analysis."""
 from __future__ import annotations
 
 from .expr import (
@@ -16,8 +15,7 @@ from .expr import (
 
 
 def has_metavar(expr: Expr) -> bool:
-    """Check if the expression contains any meta-variables (holes).
-    """
+    """Check if the expression contains any meta-variables (holes)."""
     match expr:
         case EMetaVar(_):
             return True
@@ -37,9 +35,13 @@ def has_metavar(expr: Expr) -> bool:
             raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
-def substitute_metavar(expr: Expr, target_goal_id: str, replacement: Expr) -> Expr:
-    """Substitute all occurrences of the meta-variable with the given goal_id in the expression with the replacement expression.
-    """
+def substitute_metavar(
+    expr: Expr, target_goal_id: str, replacement: Expr | None
+) -> Expr:
+    """Substitute all occurrences of the meta-variable."""
+    if replacement is None:
+        raise ValueError("Replacement expression cannot be None.")
+
     match expr:
         case EMetaVar(goal_id):
             return replacement if goal_id == target_goal_id else expr
@@ -74,8 +76,7 @@ def substitute_metavar(expr: Expr, target_goal_id: str, replacement: Expr) -> Ex
 
 
 def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
-    """Substitute all occurrences of the variable with the given name in the expression with the replacement expression.
-    """
+    """Substitute all occurrences of the variable."""
     replacement_fvs = collect_free_vars(replacement)
 
     def subst(e: Expr) -> Expr:
@@ -95,7 +96,11 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                     while new_var in replacement_fvs or new_var == var_name:
                         new_var += "_"
                     alpha_body = substitute_expr_var(body, var, EVar(new_var))
-                    return EPi(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
+                    return EPi(
+                        new_var,
+                        new_domain,
+                        substitute_expr_var(alpha_body, var_name, replacement)
+                    )
 
                 return EPi(var, new_domain, subst(body))
 
@@ -109,7 +114,11 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                     while new_var in replacement_fvs or new_var == var_name:
                         new_var += "_"
                     alpha_body = substitute_expr_var(body, var, EVar(new_var))
-                    return ELam(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
+                    return ELam(
+                        new_var,
+                        new_domain,
+                        substitute_expr_var(alpha_body, var_name, replacement)
+                    )
 
                 return ELam(var, new_domain, subst(body))
 
@@ -129,8 +138,7 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
 
 
 def collect_metavar_ids(expr: Expr) -> list[str]:
-    """Collect all unique meta-variable goal IDs present in the expression.
-    """
+    """Collect all unique meta-variable goal IDs present in the expression."""
     ordered_ids: list[str] = []
 
     def _collect(e: Expr) -> None:
@@ -159,8 +167,7 @@ def collect_metavar_ids(expr: Expr) -> list[str]:
 
 
 def collect_free_vars(expr: Expr) -> set[str]:
-    """Collect all free variable names present in the expression.
-    """
+    """Collect all free variable names present in the expression."""
     match expr:
         case EVar(name):
             return {name}

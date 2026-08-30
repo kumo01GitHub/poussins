@@ -1,5 +1,4 @@
-"""Abstract Syntax Tree (AST) module.
-"""
+"""Abstract Syntax Tree (AST) module."""
 from .expr import EApp, EConst, ELam, EMatch, EMetaVar, EPi, ESort, EVar, Expr
 from .ops import (
     collect_free_vars,

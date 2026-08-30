@@ -1,5 +1,4 @@
-"""Core expression data types for the proof assistant.
-"""
+"""Core expression data types for the proof assistant."""
 from __future__ import annotations
 
 from abc import ABC
@@ -10,16 +9,14 @@ from .universe import UnivLevel, UnivLevelParam, UnivLevelSucc, UnivLevelZero
 
 
 class Expr(ABC):
-    """Abstract base class for expressions.
-    """
+    """Abstract base class for expressions."""
 
     pass
 
 
 @dataclass(frozen=True)
 class ESort(Expr):
-    """Sort, e.g. Prop, Type u, etc.
-    """
+    """Sort, e.g. Prop, Type u, etc."""
 
     level: UnivLevel
 
@@ -48,8 +45,7 @@ class ESort(Expr):
 
 @dataclass(frozen=True)
 class EVar(Expr):
-    """Variable, e.g. x, y.
-    """
+    """Variable, e.g. x, y."""
 
     name: str
 
@@ -60,8 +56,7 @@ class EVar(Expr):
 
 @dataclass(frozen=True)
 class EConst(Expr):
-    """Constant, e.g. nat, list, etc.
-    """
+    """Constant, e.g. nat, list, etc."""
 
     name: str
     levels: tuple[UnivLevel, ...]
@@ -77,8 +72,7 @@ class EConst(Expr):
 
 @dataclass(frozen=True)
 class EPi(Expr):
-    """Dependent product (Π-type), e.g. Π x : A, B.
-    """
+    """Dependent product (Π-type), e.g. Π x : A, B."""
 
     var: str
     domain: Expr
@@ -91,8 +85,7 @@ class EPi(Expr):
 
 @dataclass(frozen=True)
 class ELam(Expr):
-    """Lambda abstraction, e.g. λ x : A, b.
-    """
+    """Lambda abstraction, e.g. λ x : A, b."""
 
     var: str
     domain: Expr
@@ -105,8 +98,7 @@ class ELam(Expr):
 
 @dataclass(frozen=True)
 class EApp(Expr):
-    """Application, e.g. f a.
-    """
+    """Application, e.g. f a."""
 
     fn: Expr
     arg: Expr
@@ -118,8 +110,7 @@ class EApp(Expr):
 
 @dataclass(frozen=True)
 class EMatch(Expr):
-    """Pattern matching expression.
-    """
+    """Pattern matching expression."""
 
     inductive_name: str
     discriminee: Expr
@@ -137,8 +128,7 @@ class EMatch(Expr):
 
 @dataclass(frozen=True)
 class EMetaVar(Expr):
-    """Meta-variable, e.g. ?m.
-    """
+    """Meta-variable, e.g. ?m."""
 
     goal_id: str
 

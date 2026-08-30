@@ -1,5 +1,4 @@
-"""Batch proof execution subcommand for poussins CLI.
-"""
+"""Batch proof execution subcommand for poussins CLI."""
 import importlib.util
 import os
 import sys
@@ -8,8 +7,7 @@ from ..utils.logging import getLogger
 
 
 def run_prove(filepath: str):
-    """Run batch proof execution: import the file, collect all theorems/lemmas, and log their status.
-    """
+    """Run batch proof execution: import the file, collect all theorems/lemmas."""
     logger = getLogger(__name__)
 
     file_abspath = os.path.abspath(filepath)

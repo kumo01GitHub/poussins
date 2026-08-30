@@ -26,7 +26,10 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         head_expr = head_expr.fn
 
     if not isinstance(head_expr, EConst):
-        raise TacticError(f"Goal type head must be a constant, found {type(head_expr).__name__}: {goal_type}")
+        raise TacticError(
+            "Goal type head must be a constant, "
+            + f"found {type(head_expr).__name__}: {goal_type}"
+        )
     head_name = head_expr.name
 
     env = manager.env
@@ -39,15 +42,21 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     if index is not None:
         if not (1 <= index <= len(inductive_decl.constructor_names)):
             raise TacticError(
-                f"Invalid constructor index {index} for '{head_name}'. " +
-                f"Expected 1..{len(inductive_decl.constructor_names)}."
+                f"Invalid constructor index {index} for '{head_name}'. "
+                + f"Expected 1..{len(inductive_decl.constructor_names)}."
             )
         target_name = inductive_decl.constructor_names[index - 1]
         decl = env.get(target_name)
         if not isinstance(decl, ConstructorDeclaration):
             raise TacticError(f"'{target_name}' is not a constructor declaration.")
 
-        apply(manager, EConst(name=target_name, levels=tuple(UnivLevelParam(param) for param in decl.level_params)))
+        apply(
+            manager,
+            EConst(
+                name=target_name,
+                levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+            )
+        )
         return
 
     matched_constructor_const: EConst | None = None
@@ -57,7 +66,10 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         if not isinstance(decl, ConstructorDeclaration):
             raise TacticError(f"'{name}' is not a constructor declaration.")
 
-        const = EConst(name=name, levels=tuple(UnivLevelParam(param) for param in decl.level_params))
+        const = EConst(
+            name=name,
+            levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+        )
 
         c_type = whnf(
             infer_type(const, current_goal.context, state.metavars, manager.env),
@@ -79,7 +91,9 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
             break
 
     if matched_constructor_const is None:
-        raise TacticError(f"No constructor of '{head_name}' matches the goal structure.")
+        raise TacticError(
+            f"No constructor of '{head_name}' matches the goal structure."
+        )
 
     apply(manager, matched_constructor_const)
 
@@ -98,7 +112,10 @@ def _goal_head_name(manager: ProofManager) -> str:
         head_expr = head_expr.fn
 
     if not isinstance(head_expr, EConst):
-        raise TacticError(f"Goal type head must be a constant, found {type(head_expr).__name__}: {goal_type}")
+        raise TacticError(
+            "Goal type head must be a constant, "
+            + "found {type(head_expr).__name__}: {goal_type}"
+        )
 
     return head_expr.name
 
@@ -114,23 +131,37 @@ def _apply_named_constructor(
     head_name = _goal_head_name(manager)
     if head_name != inductive_name:
         if tactic_name in {"left", "right"}:
-            raise TacticError(f"{tactic_name} failed: Goal is not a disjunction. Found head '{head_name}'.")
+            raise TacticError(
+                f"{tactic_name} failed: "
+                + f"Goal is not a disjunction. Found head '{head_name}'."
+            )
         if tactic_name == "split":
-            raise TacticError(f"split failed: Goal is not a conjunction. Found head '{head_name}'.")
-        raise TacticError(f"{tactic_name} failed: Goal head '{head_name}' does not match '{inductive_name}'.")
+            raise TacticError(
+                f"split failed: Goal is not a conjunction. Found head '{head_name}'."
+            )
+        raise TacticError(
+            f"{tactic_name} failed: "
+            + f"Goal head '{head_name}' does not match '{inductive_name}'."
+        )
 
     env = manager.env
     inductive_decl = env.get(inductive_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
-        raise TacticError(f"{tactic_name} failed: '{inductive_name}' is not an inductive type.")
+        raise TacticError(
+            f"{tactic_name} failed: '{inductive_name}' is not an inductive type."
+        )
     if constructor_name not in inductive_decl.constructor_names:
         raise TacticError(
-            f"{tactic_name} failed: '{constructor_name}' is not a constructor of '{inductive_name}'."
+            f"{tactic_name} failed: "
+            + f"'{constructor_name}' is not a constructor of '{inductive_name}'."
         )
 
     decl = env.get(constructor_name)
     if not isinstance(decl, ConstructorDeclaration):
-        raise TacticError(f"{tactic_name} failed: '{constructor_name}' is not a constructor declaration.")
+        raise TacticError(
+            f"{tactic_name} failed: "
+            + f"'{constructor_name}' is not a constructor declaration."
+        )
 
     apply(manager, EConst(
         name=constructor_name,

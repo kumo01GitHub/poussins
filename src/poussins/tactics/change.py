@@ -6,8 +6,12 @@ from ..errors import KernelStateError, KernelValueError, TacticError
 from ..kernel import ProofManager
 
 
-def change(manager: ProofManager, expr: Expr, hypothesis_name: str | None = None) -> None:
-    """Change the current goal, or the type of a named hypothesis, to a equal expression."""
+def change(
+    manager: ProofManager,
+    expr: Expr,
+    hypothesis_name: str | None = None
+) -> None:
+    """Replace the current goal with a definitionally equal expression."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

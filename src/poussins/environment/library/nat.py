@@ -1,8 +1,17 @@
+"""Natural numbers declarations."""
 from __future__ import annotations
 
 from enum import Enum
 
-from ...ast.expr import EApp, EConst, ELam, EPi, ESort, EVar, UnivLevelParam
+from ...ast import (
+    EApp,
+    EConst,
+    ELam,
+    EPi,
+    ESort,
+    EVar,
+    UnivLevelParam,
+)
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
@@ -40,7 +49,7 @@ class NatDeclaration(Enum):
         type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
     )
 
-    """Nat.rec recursor declaration for natural numbers (Mathematical Induction / Primitive Recursion)."""
+    """Nat.rec recursor declaration for natural numbers."""
     NAT_REC_DECLARATION = RecursorDeclaration(
         name="Nat.rec",
         level_params=("u",),
@@ -50,7 +59,9 @@ class NatDeclaration(Enum):
         num_minors=2,
         type=EPi("motive", EPi("_", EConst("Nat", ()), ESort(UnivLevelParam("u"))),
             EPi("zero_case", EApp(EVar("motive"), EConst("Nat.zero", ())),
-                EPi("succ_case", EPi("n", EConst("Nat", ()), EPi("ih", EApp(EVar("motive"), EVar("n")), EApp(EVar("motive"), EApp(EConst("Nat.succ", ()), EVar("n"))))),
+                EPi("succ_case", EPi("n", EConst("Nat", ()),
+                    EPi("ih", EApp(EVar("motive"), EVar("n")), EApp(EVar("motive"),
+                        EApp(EConst("Nat.succ", ()), EVar("n"))))),
                     EPi("k", EConst("Nat", ()),
                         EApp(EVar("motive"), EVar("k"))
                     )
@@ -63,7 +74,8 @@ class NatDeclaration(Enum):
     NAT_ADD_DECLARATION = DefinitionDeclaration(
         name="Nat.add",
         level_params=(),
-        type=EPi("n", EConst("Nat", ()), EPi("m", EConst("Nat", ()), EConst("Nat", ()))),
+        type=EPi("n", EConst("Nat", ()), EPi("m", EConst("Nat", ()),
+            EConst("Nat", ()))),
         value=ELam("n", EConst("Nat", ()), ELam("m", EConst("Nat", ()), EVar("m"))),
     )
 

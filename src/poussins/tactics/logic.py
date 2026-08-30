@@ -9,7 +9,7 @@ from ..kernel import Goal, ProofManager
 
 
 def exfalso(manager: ProofManager) -> None:
-    """Replace the current goal with False and derive the target from it using False.rec."""
+    """Replace the current goal with False and derive the target from it."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

@@ -1,8 +1,8 @@
-"""Kernel-level goal representation for the proof system.
-"""
+"""Kernel-level goal representation for the proof system."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import override
 from uuid import uuid4
 
 from ..ast.expr import Expr
@@ -23,29 +23,35 @@ class Goal:
     local_hypothesis_names: frozenset[str] | None = None
 
     def __post_init__(self) -> None:
+        """Ensure that local_hypothesis_names is initialized."""
         if self.local_hypothesis_names is None:
-            object.__setattr__(self, "local_hypothesis_names", frozenset(self.context.keys()))
+            object.__setattr__(
+                self,
+                "local_hypothesis_names",
+                frozenset(self.context.keys())
+            )
 
     @property
     def local_context(self) -> dict[str, Expr]:
-        """Return the local hypotheses and binders in scope for this goal.
-        """
-        return {name: self.context[name] for name in self.local_hypothesis_names if name in self.context}
+        """Return the local hypotheses and binders in scope for this goal."""
+        return {
+            name: self.context[name]
+            for name in self.local_hypothesis_names if name in self.context
+        }
 
     @property
     def global_context(self) -> dict[str, Expr]:
-        """Return the visible global declarations for this goal.
-        """
-        return {name: typ for name, typ in self.context.items() if name not in self.local_hypothesis_names}
+        """Return the visible global declarations for this goal."""
+        return {
+            name: typ for name, typ in self.context.items() if name not in self.local_hypothesis_names
+        }
 
     def has_local_hypothesis(self, name: str) -> bool:
-        """Return whether the given name belongs to the local context.
-        """
+        """Return whether the given name belongs to the local context."""
         return name in self.local_hypothesis_names
 
     def with_statement(self, statement: Expr) -> Goal:
-        """Return a goal with the same identifier and context but a new statement.
-        """
+        """Return a goal with the same identifier and context but a new statement."""
         updated = Goal(
             statement=statement,
             context=dict(self.context),
@@ -59,19 +65,26 @@ class Goal:
         context: dict[str, Expr],
         local_hypothesis_names: frozenset[str] | None = None,
     ) -> Goal:
-        """Return a goal with the same identifier and statement but a new context.
-        """
+        """Return a goal with the same identifier and statement but a new context."""
         updated = Goal(
             statement=self.statement,
             context=context,
-            local_hypothesis_names=self.local_hypothesis_names if local_hypothesis_names is None else local_hypothesis_names,
+            local_hypothesis_names=(
+                self.local_hypothesis_names
+                if local_hypothesis_names is None else local_hypothesis_names
+            ),
         )
         object.__setattr__(updated, "id", self.id)
         return updated
 
+    @override
     def __eq__(self, other: object) -> bool:
-        """Compare goals by their stable identifier.
-        """
+        """Compare goals by their stable identifier."""
         if not isinstance(other, Goal):
             return False
         return self.id == other.id
+
+    @override
+    def __hash__(self) -> int:
+        """Compute the hash based on the stable identifier."""
+        return hash(self.id)

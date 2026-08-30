@@ -13,12 +13,10 @@ from .unification import unify
 
 
 class ProofEngine:
-    """Validate proof-state transitions against the current environment.
-    """
+    """Validate proof-state transitions against the current environment."""
 
     def create_initial_state(self, statement: Expr, env: Environment) -> ProofState:
-        """Create the initial proof state with a single goal and its corresponding metavariable.
-        """
+        """Create the initial proof state with a single goal."""
         initial_goal = Goal(
             statement=statement,
             context=env.to_context(),
@@ -27,9 +25,13 @@ class ProofEngine:
         initial_metavars = {initial_goal.id: MetaVar(statement=statement)}
         return ProofState(goals=(initial_goal,), metavars=initial_metavars)
 
-    def close_goal(self, state: ProofState, assignment: Expr, env: Environment) -> ProofState:
-        """Close the current goal by providing an assignment that satisfies the goal's statement.
-        """
+    def close_goal(
+        self,
+        state: ProofState,
+        assignment: Expr,
+        env: Environment
+    ) -> ProofState:
+        """Close the current goal by providing an assignment."""
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to close.")
@@ -59,10 +61,13 @@ class ProofEngine:
         return ProofState(goals=tuple(remaining_goals), metavars=final_metavars)
 
     def refine_goal(
-        self, state: ProofState, assignment: Expr, subgoals: list[Goal], env: Environment
+        self,
+        state: ProofState,
+        assignment: Expr,
+        subgoals: list[Goal],
+        env: Environment
     ) -> ProofState:
-        """Refine the current goal by providing an assignment that splits it into new subgoals.
-        """
+        """Refine the current goal."""
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to refine.")
@@ -85,9 +90,9 @@ class ProofEngine:
 
         if active_metavar_ids != subgoal_ids:
             raise KernelValueError(
-                "Subgoal mismatch with assignment expressions.\n" +
-                f"  Expected from assignment (in order): {active_metavar_ids}\n" +
-                f"  Provided subgoals:                   {subgoal_ids}"
+                "Subgoal mismatch with assignment expressions.\n"
+                + f"  Expected from assignment (in order): {active_metavar_ids}\n"
+                + f"  Provided subgoals:                   {subgoal_ids}"
             )
 
         for g in subgoals:
@@ -116,7 +121,12 @@ class ProofEngine:
         ]
         return ProofState(goals=tuple(truly_active_goals), metavars=final_metavars)
 
-    def change_goal(self, state: ProofState, new_statement: Expr, env: Environment) -> ProofState:
+    def change_goal(
+        self,
+        state: ProofState,
+        new_statement: Expr,
+        env: Environment
+    ) -> ProofState:
         """Replace the current goal statement with a definitionally equal statement."""
         current_goal = state.current_goal
         if current_goal is None:
@@ -130,7 +140,7 @@ class ProofEngine:
             env,
         ):
             raise KernelValueError(
-                "change failed: New goal is not definitionally equal to the current goal."
+                "New goal is not definitionally equal to the current goal."
             )
 
         updated_goal = current_goal.with_statement(new_statement)
@@ -146,8 +156,7 @@ class ProofEngine:
     def change_hypothesis(
         self, state: ProofState, hypothesis_name: str, new_type: Expr, env: Environment
     ) -> ProofState:
-        """Replace the type of a local hypothesis with a definitionally equal type.
-        """
+        """Replace the type of a local hypothesis with a definitionally equal type."""
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
@@ -166,7 +175,8 @@ class ProofEngine:
             env,
         ):
             raise KernelValueError(
-                f"change failed: New type for '{hypothesis_name}' is not definitionally equal to the current type."
+                f"New type for '{hypothesis_name}' is not definitionally equal "
+                + "to the current type."
             )
 
         updated_local_context = current_goal.local_context | {

@@ -55,7 +55,7 @@ def _build_branch_expr(
     branch_binders: list[tuple[str, Expr]],
     subgoal_id: str,
 ) -> Expr:
-    """Build a lambda expression for a branch body that returns the subgoal metavariable."""
+    """Build a lambda expression for a branch body that returns the metavariable."""
     expr: Expr = EMetaVar(subgoal_id)
     for var_name, domain in reversed(branch_binders):
         expr = ELam(var_name, domain, expr)
@@ -75,9 +75,7 @@ def _collect_pi_binders(expr: Expr) -> list[str]:
 def _infer_inductive_parameter_substitutions(
     target_expr: Expr, actual_expr: Expr
 ) -> dict[str, Expr]:
-    """Infer substitutions for an inductive constructor's parameters by matching its return type
-    against the scrutinee's concrete type.
-    """
+    """Infer substitutions for an inductive constructor's parameters."""
     substitutions: dict[str, Expr] = {}
 
     def visit(expr: Expr, value: Expr) -> None:
@@ -122,8 +120,7 @@ def cases(
     hypothesis_name: str,
     patterns: tuple[tuple[str, ...], ...] | None = None,
 ) -> None:
-    """Case-split on an inductive hypothesis and create one subgoal per selected constructor pattern.
-    """
+    """Case-split on an inductive hypothesis."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 
@@ -135,14 +132,19 @@ def cases(
     if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.env)
+    hypothesis_type = whnf(
+        current_goal.local_context[hypothesis_name],
+        state.metavars,
+        manager.env
+    )
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
     if not isinstance(head_expr, EConst):
         raise TacticError(
-            f"Hypothesis type must be an inductive type, but found non-constant head: {hypothesis_type}"
+            "Hypothesis type must be an inductive type, "
+            + f"but found non-constant head: {hypothesis_type}"
         )
     head_name = head_expr.name
 
@@ -156,7 +158,9 @@ def cases(
     inductive_parameters = _collect_pi_binders(inductive_decl.type)
 
     if patterns is None:
-        normalized_patterns = tuple((name, ()) for name in inductive_decl.constructor_names)
+        normalized_patterns = tuple(
+            (name, ()) for name in inductive_decl.constructor_names
+        )
     else:
         temp_patterns: list[tuple[str, tuple[str, ...]]] = []
         for pattern in patterns:
@@ -177,7 +181,9 @@ def cases(
 
         constructor = EConst(
             name=constructor_name,
-            levels=tuple(UnivLevelParam(param) for param in constructor_decl.level_params)
+            levels=tuple(
+                UnivLevelParam(param) for param in constructor_decl.level_params
+            )
         )
         constructor_pattern, branch_binders = _build_constructor_pattern(
             constructor=constructor,
@@ -211,10 +217,18 @@ def cases(
 
         if len(names_for_branch) > len(constructor_arg_binders):
             raise TacticError("too many branch names for constructor pattern.")
-        for branch_name, (_, binder_type) in zip(names_for_branch, constructor_arg_binders[-len(names_for_branch):]):
+        for branch_name, (_, binder_type) in zip(
+            names_for_branch,
+            constructor_arg_binders[-len(names_for_branch):],
+            strict=False
+        ):
             specialized_type = binder_type
             for param_name, param_value in parameter_substitutions.items():
-                specialized_type = substitute_expr_var(specialized_type, param_name, param_value)
+                specialized_type = substitute_expr_var(
+                    specialized_type,
+                    param_name,
+                    param_value
+                )
             branch_local_context[branch_name] = specialized_type
 
         branch_local_context[hypothesis_name] = substitute_expr_var(

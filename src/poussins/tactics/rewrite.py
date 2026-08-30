@@ -1,5 +1,4 @@
-"""Advanced Rewrite tactic for equality substitution supporting direction (symm) and location (at).
-"""
+"""Advanced Rewrite tactic for equality substitution."""
 from __future__ import annotations
 
 from ..ast import EApp, EConst, ELam, EMetaVar, EPi, EVar, Expr, UnivLevelParam
@@ -37,7 +36,7 @@ def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
 
 
 def _mk_app(fn: Expr, *args: Expr) -> Expr:
-    """Helper to chain EApp applications cleanly."""
+    """Make an chain of EApp applications."""
     res = fn
     for arg in args:
         res = EApp(res, arg)
@@ -51,10 +50,7 @@ def rewrite(
     symm: bool = False,
     at: str | None = None,
 ) -> None:
-    """Advanced rewrite tactic supporting:
-    - Direction control (symm=True for reversed substitution, i.e., RHS -> LHS)
-    - Location targeting (at='h2' to rewrite inside a local hypothesis instead of the goal)
-    """
+    """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

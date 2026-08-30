@@ -1,5 +1,4 @@
-"""Kernel-level components of the proof system, including the core data structures and proof engine.
-"""
+"""Kernel-level components of the proof system."""
 from .equality import is_alpha_eq, is_def_eq
 from .eval import instantiate, whnf
 from .goal import Goal

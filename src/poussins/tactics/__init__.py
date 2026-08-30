@@ -1,5 +1,4 @@
-"""Public tactic API.
-"""
+"""Public tactic API."""
 from .apply import apply
 from .cases import cases
 from .change import change

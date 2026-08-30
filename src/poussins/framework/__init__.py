@@ -1,5 +1,4 @@
-"""Public DSL layer: Prop, Axiom, Theorem, Example, and aliases.
-"""
+"""Public DSL layer: Prop, Axiom, Theorem, Example, and aliases."""
 from .axiom import Axiom
 from .bool import Bool
 from .inductive_type import InductiveType

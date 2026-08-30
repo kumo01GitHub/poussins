@@ -1,5 +1,4 @@
-"""Theorem, Lemma, Example: proof-carrying DSL objects.
-"""
+"""Theorem, Lemma, Example: proof-carrying DSL objects."""
 from __future__ import annotations
 
 from logging import Logger
@@ -15,7 +14,9 @@ from .prop import Prop
 
 class Theorem(ProofScript):
     """A named proposition together with an interactive proof session.
-    Tactics can be applied as methods (via ProofScript) or as standalone functions — both styles are equivalent::
+
+    Tactics can be applied as methods (via ProofScript) or as standalone functions
+    — both styles are equivalent::
 
         th = Theorem("mp", (p >> q) >> p >> q, env)
         th.intro("hpq")          # method style
@@ -32,8 +33,7 @@ class Theorem(ProofScript):
         env: Environment,
         level_params: tuple[str, ...] = (),
     ) -> None:
-        """Create a theorem with a name, statement, environment, and universe parameters.
-        """
+        """Create a theorem."""
         self.name: Final[str] = name
         self.level_params: Final[tuple[str, ...]] = level_params
         super().__init__(Prop.to_expr(statement), env)
@@ -43,7 +43,9 @@ class Theorem(ProofScript):
 
     @override
     def qed(self) -> None:
-        """Verify that the proof is closed, extract the final proof term,
+        """Qualify the theorem.
+
+        Verify that the proof is closed, extract the final proof term,
         and register it into the given environment.
         """
         if not self.is_closed:
@@ -54,7 +56,8 @@ class Theorem(ProofScript):
         proof_term = self.manager.current_proof_term
         if proof_term is None:
             raise FrameworkError(
-                f"Theorem '{self.name}' internal error: Failed to extract a valid proof term."
+                f"Theorem '{self.name}' internal error: "
+                + "Failed to extract a valid proof term."
             )
 
         declaration = TheoremDeclaration(
@@ -66,10 +69,12 @@ class Theorem(ProofScript):
 
         try:
             self.env.add(declaration)
-            self.logger.info(f"Theorem '{self.name}' is successfully proved: {self.statement}")
+            self.logger.info(
+                f"Theorem '{self.name}' is successfully proved: {self.statement}"
+            )
             self.logger.info(f"==> {proof_term}")
         except ValueError as e:
-            raise FrameworkError(f"Failed to register theorem: {e}")
+            raise FrameworkError("Failed to register theorem") from e
 
 
 # Stylistic aliases for Theorem.
@@ -83,12 +88,12 @@ Property = Theorem
 
 class Example(ProofScript):
     """An anonymous proof for exploration or testing.
+
     Like Theorem but without a name and without registering to Environment.
     """
 
     def __init__(self, statement: Prop | Expr, env: Environment) -> None:
-        """Create an anonymous proof script for the given statement.
-        """
+        """Create an anonymous proof script for the given statement."""
         pure_expr = Prop.to_expr(statement)
         super().__init__(pure_expr, env)
 
@@ -97,13 +102,16 @@ class Example(ProofScript):
 
     @override
     def qed(self) -> None:
-        """Verify the anonymity proof is complete.
-        """
+        """Verify the anonymity proof is complete."""
         if not self.is_closed:
-            raise FrameworkError("Example cannot be verified: The proof is not finished.")
+            raise FrameworkError(
+                "Example cannot be verified: The proof is not finished."
+            )
 
         if self.manager.current_proof_term is None:
-            raise FrameworkError("Example internal error: Failed to extract a valid proof term.")
+            raise FrameworkError(
+                "Example internal error: Failed to extract a valid proof term."
+            )
 
         self.logger.info(f"Example is successfully proved: {self.statement}")
         self.logger.info(f"==> {self.manager.current_proof_term}")

@@ -34,9 +34,15 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
         return True
 
     if isinstance(level_left, UnivLevelMax):
-        return all(is_universe_leq(level, level_right) for level in flatten_univ_level_max(level_left))
+        return all(
+            is_universe_leq(level, level_right)
+            for level in flatten_univ_level_max(level_left)
+        )
     if isinstance(level_right, UnivLevelMax):
-        return any(is_universe_leq(level_left, level) for level in flatten_univ_level_max(level_right))
+        return any(
+            is_universe_leq(level_left, level)
+            for level in flatten_univ_level_max(level_right)
+        )
 
     match (level_left, level_right):
         case (UnivLevelSucc(pred_left), UnivLevelSucc(pred_right)):
@@ -44,11 +50,18 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
         case (_, UnivLevelSucc(pred_right)):
             return is_universe_leq(level_left, pred_right)
         case (UnivLevelIMax(left, right), _):
-            return is_universe_leq(right, UnivLevelZero()) or (
-                is_universe_leq(left, level_right) and is_universe_leq(right, level_right)
+            return (
+                is_universe_leq(right, UnivLevelZero())
+                or (
+                    is_universe_leq(left, level_right)
+                    and is_universe_leq(right, level_right)
+                )
             )
         case (_, UnivLevelIMax(left, right)):
-            return is_universe_leq(level_left, left) or is_universe_leq(level_left, right)
+            return (
+                is_universe_leq(level_left, left)
+                or is_universe_leq(level_left, right)
+            )
         case _:
             return False
 
@@ -57,7 +70,7 @@ def unify_univ_levels(
     l1: UnivLevel, l2: UnivLevel,
     param_assignment: dict[str, UnivLevel]
 ) -> dict[str, UnivLevel] | None:
-    """Attempt to unify two universe levels, returning a substitution mapping if successful."""
+    """Attempt to unify two universe levels."""
     if isinstance(l1, UnivLevelParam) and l1.name in param_assignment:
         l1 = param_assignment[l1.name]
     if isinstance(l2, UnivLevelParam) and l2.name in param_assignment:
@@ -92,7 +105,7 @@ def instantiate_univ_level(
     level: UnivLevel,
     param_assignment: dict[str, UnivLevel]
 ) -> UnivLevel:
-    """Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping."""
+    """Return a new UnivLevel with parameters replaced according to param_assignment."""
     if not param_assignment:
         return level
 
@@ -126,7 +139,9 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
         case EVar(_):
             return expr
         case EConst(name, levels):
-            new_levels = tuple(instantiate_univ_level(level, param_assignment) for level in levels)
+            new_levels = tuple(
+                instantiate_univ_level(level, param_assignment) for level in levels
+            )
             return EConst(name, new_levels)
         case EApp(fn, arg):
             return EApp(

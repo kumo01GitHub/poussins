@@ -13,8 +13,7 @@ from .inductive_type import InductiveType
 
 
 class Bool(InductiveType):
-    """Immutable wrapper for boolean expressions.
-    """
+    """Immutable wrapper for boolean expressions."""
 
     TYPE_NAME: ClassVar[str] = BoolDeclaration.BOOL_DECLARATION.declaration.name
     TRUE_NAME: ClassVar[str] = BoolDeclaration.BOOL_TRUE_DECLARATION.declaration.name

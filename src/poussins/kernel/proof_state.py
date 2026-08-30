@@ -1,5 +1,4 @@
-"""Kernel-level proof state management for tracking goals and metavariables.
-"""
+"""Kernel-level proof state management for tracking goals and metavariables."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -10,22 +9,21 @@ from .goal import Goal
 
 @dataclass(frozen=True)
 class MetaVar:
-    """Track a metavariable statement and its optional assignment.
-    """
+    """Track a metavariable statement and its optional assignment."""
 
     statement: Expr
     assignment: Expr | None = None
 
     @property
     def is_assigned(self) -> bool:
-        """Return whether the metavariable has been assigned.
-        """
+        """Return whether the metavariable has been assigned."""
         return self.assignment is not None
 
 
 @dataclass(frozen=True)
 class ProofState:
     """Holds the active goals tuple and global meta-variable instantiations.
+
     This acts as a pure data repository managing the state of an interactive proof.
     """
 
@@ -34,6 +32,5 @@ class ProofState:
 
     @property
     def current_goal(self) -> Goal | None:
-        """Return the next active goal, if one exists.
-        """
+        """Return the next active goal, if one exists."""
         return self.goals[0] if self.goals else None

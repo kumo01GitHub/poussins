@@ -47,15 +47,19 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
 
-    hypothesis_type = whnf(current_goal.local_context[hypothesis_name], state.metavars, manager.env)
+    hypothesis_type = whnf(
+        current_goal.local_context[hypothesis_name],
+        state.metavars,
+        manager.env
+    )
     head_expr = hypothesis_type
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
     if not isinstance(head_expr, EConst):
             raise TacticError(
-                "Induction hypothesis type must be an inductive type, " +
-                f"found non-constant head: {hypothesis_type}"
+                "Induction hypothesis type must be an inductive type, "
+                + f"found non-constant head: {hypothesis_type}"
             )
     head_name = head_expr.name
 
@@ -77,7 +81,9 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
 
         constructor = EConst(
             name=constructor_name,
-            levels=tuple(UnivLevelParam(param) for param in constructor_decl.level_params)
+            levels=tuple(
+                UnivLevelParam(param) for param in constructor_decl.level_params
+            )
         )
         constructor_type = constructor_decl.type
 
@@ -139,7 +145,11 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     motive = ELam(
         "_induction",
         hypothesis_type,
-        substitute_expr_var(current_goal.statement, hypothesis_name, EVar("_induction")),
+        substitute_expr_var(
+            current_goal.statement,
+            hypothesis_name,
+            EVar("_induction")
+        ),
     )
     assignment = EMatch(head_name, EVar(hypothesis_name), motive, tuple(branch_terms))
     manager.refine_goal(assignment, subgoals)

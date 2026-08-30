@@ -1,5 +1,4 @@
-"""Equality tactics including reflexivity and rfl.
-"""
+"""Equality tactics including reflexivity and rfl."""
 from __future__ import annotations
 
 from ..ast import EApp, EConst, Expr, UnivLevelParam
@@ -10,8 +9,7 @@ from .apply import apply
 
 
 def reflexivity(manager: ProofManager) -> None:
-    """Solves a goal of the form `Eq A x y` where `x` and `y` are definitionally equal.
-    """
+    """Solves a goal of the form `Eq A x y` where `x` and `y` are equal."""
     if manager.is_closed:
         raise TacticError("reflexivity failed: No active goals remain.")
 
@@ -39,13 +37,13 @@ def reflexivity(manager: ProofManager) -> None:
     eq_name = EqualityDeclaration.EQ_DECLARATION.declaration.name
 
     if head_name != eq_name or len(args) < 3:
-        raise TacticError(f"reflexivity failed: Goal is not an equality. Found '{head_name}'.")
+        raise TacticError(f"Goal is not an equality. Found '{head_name}'.")
 
     x = args[1]
     y = args[2]
 
     if not is_def_eq(x, y, context, metavars, definitions):
-        raise TacticError("reflexivity failed: LHS and RHS are not definitionally equal.")
+        raise TacticError("LHS and RHS are not definitionally equal.")
 
     refl_decl = EqualityDeclaration.EQ_REFL_DECLARATION.declaration
     refl_const = EConst(

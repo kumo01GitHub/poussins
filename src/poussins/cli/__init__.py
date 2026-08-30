@@ -1,5 +1,4 @@
-"""Public CLIs.
-"""
+"""Public CLIs."""
 from .lean import run_lean2py, run_py2lean
 from .main import main
 from .prove import run_prove

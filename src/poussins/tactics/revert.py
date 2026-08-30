@@ -1,3 +1,4 @@
+"""Revert one or more hypotheses from the local context back into the goal."""
 from __future__ import annotations
 
 from ..ast import EApp, EMetaVar, EPi, EVar, collect_free_vars

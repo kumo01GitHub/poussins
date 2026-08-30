@@ -1,3 +1,4 @@
+"""Equality declarations."""
 from __future__ import annotations
 
 from enum import Enum
@@ -19,7 +20,10 @@ class EqualityDeclaration(Enum):
     EQ_DECLARATION = InductiveDeclaration(
         name="Eq",
         level_params=(),
-        type=EPi("A", Sort.TYPE.sort, EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort))),
+        type=EPi(
+            "A", Sort.TYPE.sort,
+            EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort))
+        ),
         constructor_names=("Eq.refl",),
     )
 
@@ -39,7 +43,7 @@ class EqualityDeclaration(Enum):
         ),
     )
 
-    """Eq.rec recursor declaration for propositional equality (J-rule / Path Induction)."""
+    """Eq.rec recursor declaration for propositional equality."""
     EQ_REC_DECLARATION = RecursorDeclaration(
         name="Eq.rec",
         level_params=("u",),
@@ -49,10 +53,14 @@ class EqualityDeclaration(Enum):
         num_minors=1,
         type=EPi("A", Sort.TYPE.sort,
             EPi("x", EVar("A"),
-                EPi("motive", EPi("y", EVar("A"), EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")), ESort(UnivLevelParam("u")))),
-                    EPi("minor", EApp(EApp(EVar("motive"), EVar("x")), EApp(EApp(EConst("Eq.refl", ()), EVar("A")), EVar("x"))),
+                EPi("motive", EPi("y", EVar("A"), EPi("h",
+                    EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")),
+                    ESort(UnivLevelParam("u")))),
+                    EPi("minor", EApp(EApp(EVar("motive"), EVar("x")),
+                        EApp(EApp(EConst("Eq.refl", ()), EVar("A")), EVar("x"))),
                         EPi("y", EVar("A"),
-                            EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")),
+                            EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")),
+                                EVar("x")), EVar("y")),
                                 EApp(EApp(EVar("motive"), EVar("y")), EVar("h"))
                             )
                         )

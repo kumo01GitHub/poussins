@@ -1,5 +1,4 @@
-"""Environment storage and predefined logical declarations.
-"""
+"""Environment storage and predefined logical declarations."""
 from __future__ import annotations
 
 from ..ast import Expr
@@ -13,43 +12,39 @@ from .library import (
 
 
 class Environment:
-    """Collection of named declarations used by the proof engine.
-    """
+    """Collection of named declarations."""
 
     def __init__(self):
+        """Initialize an empty environment."""
         self.declarations: dict[str, Declaration] = {}
 
     def add(self, declaration: Declaration):
-        """Add a declaration to the environment.
-        """
+        """Add a declaration to the environment."""
         if declaration.name in self.declarations:
-            raise ValueError(f"Declaration with name '{declaration.name}' already exists.")
+            raise ValueError(
+                f"Declaration with name '{declaration.name}' already exists."
+            )
         self.declarations[declaration.name] = declaration
 
     def get(self, name: str) -> Declaration | None:
-        """Return the declaration with the given name, if it exists.
-        """
+        """Return the declaration with the given name, if it exists."""
         return self.declarations.get(name)
 
     def update(self, other: Environment):
-        """Merge declarations from another environment into this one.
-        """
+        """Merge declarations from another environment into this one."""
         self.declarations.update(other.declarations)
 
     def items(self):
-        """Return the environment declarations as `(name, declaration)` pairs.
-        """
+        """Return the environment declarations as `(name, declaration)` pairs."""
         return self.declarations.items()
 
     def to_context(self) -> dict[str, Expr]:
-        """Convert the environment to a context dictionary mapping names to types.
-        """
+        """Convert the environment to a context dictionary mapping names to types."""
         return {name: decl.type for name, decl in self.declarations.items()}
 
     @classmethod
     def standard(cls) -> Environment:
-        """Create a standard environment with the core logical declarations.
-        """
+        """Create a standard environment."""
         env = cls()
 
         # ------------------------------------------------------------------

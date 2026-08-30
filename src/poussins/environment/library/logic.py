@@ -1,3 +1,4 @@
+""""Standard logical declarations."""
 from __future__ import annotations
 
 from enum import Enum
@@ -101,8 +102,12 @@ class LogicDeclaration(Enum):
         num_indices=0,
         num_minors=1,
         type=EPi("A", Sort.PROP.sort, EPi("B", Sort.PROP.sort,
-            EPi("motive", EPi("_", EApp(EApp(EConst("And", ()), EVar("A")), EVar("B")), ESort(UnivLevelParam("u"))),
-                EPi("minor", EPi("hA", EVar("A"), EPi("hB", EVar("B"), EApp(EVar("motive"), EApp(EApp(EApp(EApp(EConst("And.intro", ()), EVar("A")), EVar("B")), EVar("hA")), EVar("hB"))))),
+            EPi("motive", EPi("_", EApp(EApp(EConst("And", ()), EVar("A")), EVar("B")),
+                ESort(UnivLevelParam("u"))),
+                EPi("minor", EPi("hA", EVar("A"),
+                    EPi("hB", EVar("B"), EApp(EVar("motive"), EApp(EApp(EApp(EApp(
+                        EConst("And.intro", ()),
+                        EVar("A")), EVar("B")), EVar("hA")), EVar("hB"))))),
                     EPi("t", EApp(EApp(EConst("And", ()), EVar("A")), EVar("B")),
                         EApp(EVar("motive"), EVar("t"))
                     )
@@ -152,9 +157,14 @@ class LogicDeclaration(Enum):
         num_indices=0,
         num_minors=2,
         type=EPi("A", Sort.PROP.sort, EPi("B", Sort.PROP.sort,
-            EPi("motive", EPi("_", EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")), ESort(UnivLevelParam("u"))),
-                EPi("minor_inl", EPi("hA", EVar("A"), EApp(EVar("motive"), EApp(EApp(EApp(EConst("Or.inl", ()), EVar("A")), EVar("B")), EVar("hA")))),
-                    EPi("minor_inr", EPi("hB", EVar("B"), EApp(EVar("motive"), EApp(EApp(EApp(EConst("Or.inr", ()), EVar("A")), EVar("B")), EVar("hB")))),
+            EPi("motive", EPi("_", EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
+                ESort(UnivLevelParam("u"))),
+                EPi("minor_inl", EPi("hA", EVar("A"), EApp(EVar("motive"),
+                    EApp(EApp(EApp(
+                        EConst("Or.inl", ()), EVar("A")), EVar("B")), EVar("hA")))),
+                    EPi("minor_inr", EPi("hB", EVar("B"), EApp(EVar("motive"),
+                        EApp(EApp(EApp(
+                            EConst("Or.inr", ()), EVar("A")), EVar("B")), EVar("hB")))),
                         EPi("t", EApp(EApp(EConst("Or", ()), EVar("A")), EVar("B")),
                             EApp(EVar("motive"), EVar("t"))
                         )

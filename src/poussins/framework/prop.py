@@ -1,4 +1,5 @@
 """Prop: public-facing propositional formula DSL.
+
 Wraps the internal Expr AST with Python operator overloads so that propositions
 can be written naturally in Python code:
 
@@ -30,14 +31,16 @@ from ..environment.library import Sort
 
 @dataclass(frozen=True)
 class Prop:
-    """Immutable wrapper for proposition expressions with operator syntax.
-    """
+    """Immutable wrapper for proposition expressions with operator syntax."""
 
     expr: Expr
 
-    def __init__(self, expr_or_name: Expr | str, env: Environment | None = None) -> None:
-        """Create a proposition from an expression or a named variable.
-        """
+    def __init__(
+        self,
+        expr_or_name: Expr | str,
+        env: Environment | None = None
+    ) -> None:
+        """Create a proposition from an expression or a named variable."""
         if isinstance(expr_or_name, Expr):
             object.__setattr__(self, "expr", expr_or_name)
         else:
@@ -58,8 +61,7 @@ class Prop:
 
     @staticmethod
     def to_expr(prop_or_expr: Prop | Expr) -> Expr:
-        """Return the underlying expression for a proposition-like value.
-        """
+        """Return the underlying expression for a proposition-like value."""
         if isinstance(prop_or_expr, Prop):
             return prop_or_expr.expr
         else:
@@ -71,14 +73,12 @@ class Prop:
 
     @classmethod
     def top(cls) -> Prop:
-        """⊤ (True).
-        """
+        """⊤ (True)."""
         return cls(EConst("True", levels=()))
 
     @classmethod
     def bottom(cls) -> Prop:
-        """⊥ (False).
-        """
+        """⊥ (False)."""
         return cls(EConst("False", levels=()))
 
     @classmethod
@@ -93,7 +93,12 @@ class Prop:
         if not isinstance(body, (Expr, Prop)):
             raise TypeError("forall() missing required body argument")
 
-        if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], (list, tuple)):
+        if (
+            len(binding_args) == 1
+            and isinstance(binding_args[0], (list, tuple))
+            and len(binding_args[0]) > 0
+            and isinstance(binding_args[0][0], (list, tuple))
+        ):
             expr: Expr = cls.to_expr(body)
             for binding in reversed(list(binding_args[0])):
                 if not isinstance(binding, (list, tuple)) or len(binding) != 2:
@@ -102,7 +107,12 @@ class Prop:
                 expr = EPi(name, cls.to_expr(typ), expr)
             return cls(expr)
 
-        if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], str):
+        if (
+            len(binding_args) == 1
+            and isinstance(binding_args[0], (list, tuple))
+            and len(binding_args[0]) > 0
+            and isinstance(binding_args[0][0], str)
+        ):
             name, typ = binding_args[0]
             return cls(EPi(name, cls.to_expr(typ), cls.to_expr(body)))
 
@@ -122,7 +132,9 @@ class Prop:
                 expr = EPi(name, cls.to_expr(typ), expr)
             return cls(expr)
 
-        raise TypeError("forall() expects a binding or a sequence of (name, type) pairs")
+        raise TypeError(
+            "forall() expects a binding or a sequence of (name, type) pairs"
+        )
 
     @classmethod
     def exists(cls, *bindings: object) -> Prop:
@@ -136,7 +148,12 @@ class Prop:
         if not isinstance(body, (Expr, Prop)):
             raise TypeError("exists() missing required body argument")
 
-        if len(binding_args) == 1 and isinstance(binding_args[0], (list, tuple)) and len(binding_args[0]) > 0 and isinstance(binding_args[0][0], (list, tuple)):
+        if (
+            len(binding_args) == 1
+            and isinstance(binding_args[0], (list, tuple))
+            and len(binding_args[0]) > 0
+            and isinstance(binding_args[0][0], (list, tuple))
+        ):
             expr: Expr = cls.to_expr(body)
             for binding in reversed(list(binding_args[0])):
                 if not isinstance(binding, (list, tuple)) or len(binding) != 2:
@@ -164,7 +181,9 @@ class Prop:
                     expr = EPi(name, cls.to_expr(typ), expr)
             return cls(expr)
 
-        raise TypeError("exists() expects a binding or a sequence of (name, type) pairs")
+        raise TypeError(
+            "exists() expects a binding or a sequence of (name, type) pairs"
+        )
 
     # ------------------------------------------------------------------
     # Operator overloads
@@ -176,7 +195,9 @@ class Prop:
 
     def __and__(self, other: Prop | Expr) -> Prop:
         """P & Q  →  P ∧ Q  (conjunction)."""
-        return Prop(EApp(EApp(EConst("And", levels=()), self.expr), self.to_expr(other)))
+        return Prop(
+            EApp(EApp(EConst("And", levels=()), self.expr), self.to_expr(other))
+        )
 
     def __or__(self, other: Prop | Expr) -> Prop:
         """P | Q  →  P ∨ Q  (disjunction)."""
@@ -192,8 +213,7 @@ class Prop:
 
     @override
     def __eq__(self, other: object) -> bool:
-        """Compare propositions by their underlying expression.
-        """
+        """Compare propositions by their underlying expression."""
         if isinstance(other, Prop):
             return self.expr == other.expr
         elif isinstance(other, Expr):
@@ -202,12 +222,10 @@ class Prop:
 
     @override
     def __hash__(self) -> int:
-        """Hash the wrapped expression.
-        """
+        """Hash the wrapped expression."""
         return hash(self.expr)
 
     @override
     def __repr__(self) -> str:
-        """Return a debug representation of the proposition.
-        """
+        """Return a debug representation of the proposition."""
         return f"Prop({self.expr!r})"

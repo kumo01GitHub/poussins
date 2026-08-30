@@ -1,5 +1,4 @@
-"""Framework-level base class providing method-style tactic access for Theorem and Example.
-"""
+"""Framework-level base class providing method-style tactic access for Theorems."""
 from __future__ import annotations
 
 import functools
@@ -35,9 +34,17 @@ from ..tactics import (
 
 _TacticParams = ParamSpec('_TacticParams')
 
-def log_tactic(func: Callable[Concatenate[ProofScript, _TacticParams], None]) -> Callable[..., None]:
+def log_tactic(
+    func: Callable[Concatenate[ProofScript, _TacticParams], None]
+) -> Callable[..., None]:
+    """Log the execution of a tactic method in ProofScript."""
+
     @functools.wraps(func)
-    def wrapper(self: ProofScript, *args: _TacticParams.args, **kwargs: _TacticParams.kwargs) -> None:
+    def wrapper(
+        self: ProofScript,
+        *args: _TacticParams.args,
+        **kwargs: _TacticParams.kwargs
+    ) -> None:
         self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
 
         result = func(self, *args, **kwargs)
@@ -63,102 +70,92 @@ class ProofScript(ABC):
     """Abstract base class for all proof-carrying script objects (Theorem, Example).
 
     This class acts purely as a fluent frontend interface for writing proof scripts.
-    It completely delegates all state mutation and history tracking concerns to ProofManager.
+    It completely delegates all state mutation and
+    history tracking concerns to ProofManager.
     """
 
     logger: Logger
 
     def __init__(self, statement: Expr, env: Environment):
-        """Create a proof script bound to a statement and environment.
-        """
+        """Create a proof script bound to a statement and environment."""
         self.statement: Final[Expr] = statement
         self.env: Final[Environment] = env
         self.manager: Final[ProofManager] = ProofManager(statement, env)
 
     @property
     def current_state(self) -> ProofState:
-        """Return the current proof state.
-        """
+        """Return the current proof state."""
         return self.manager.current_state
 
     @property
     def is_closed(self) -> bool:
-        """Return whether the proof has no remaining goals.
-        """
+        """Return whether the proof has no remaining goals."""
         return self.manager.is_closed
 
     def undo(self):
-        """Revert the proof to the previous state.
-        """
+        """Revert the proof to the previous state."""
         self.manager.undo()
 
     @abstractmethod
     def qed(self):
-        """Finalize the proof script.
-        """
+        """Finalize the proof script."""
         pass
 
     @log_tactic
     def intro(self, name: str) -> None:
-        """Introduce a hypothesis with the given name into the local context.
-        """
+        """Introduce a hypothesis with the given name into the local context."""
         intro(self.manager, name)
 
     @log_tactic
     def intros(self, names: list[str]) -> None:
-        """Introduce multiple hypotheses into the local context.
-        """
+        """Introduce multiple hypotheses into the local context."""
         intros(self.manager, names)
 
     @log_tactic
     def apply(self, expr_or_name: Expr | str) -> None:
-        """Apply a theorem, hypothesis, or expression to the current goal.
-        """
+        """Apply a theorem, hypothesis, or expression to the current goal."""
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         apply(self.manager, expr)
 
     @log_tactic
     def exact(self, expr_or_name: Expr | str) -> None:
-        """Close the current goal with the given expression.
-        """
+        """Close the current goal with the given expression."""
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         exact(self.manager, expr)
 
     @log_tactic
-    def change(self, expr_or_name: Expr | str, hypothesis_name: str | None = None) -> None:
-        """Replace the current goal, or a local hypothesis type, with a definitionally equal expression.
-        """
+    def change(
+        self,
+        expr_or_name: Expr | str,
+        hypothesis_name: str | None = None
+    ) -> None:
+        """Replace the current goal with a definitionally equal expression."""
         expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         change(self.manager, expr, hypothesis_name)
 
     @log_tactic
     def assumption(self) -> None:
-        """Solve the current goal using a matching hypothesis.
-        """
+        """Solve the current goal using a matching hypothesis."""
         assumption(self.manager)
 
     @log_tactic
     def constructor(self, index: int | None = None) -> None:
-        """Apply an inductive constructor to the current goal.
-        """
+        """Apply an inductive constructor to the current goal."""
         constructor(self.manager, index)
 
     @log_tactic
     def left(self) -> None:
-        """Select the left branch of a disjunction goal.
-        """
+        """Select the left branch of a disjunction goal."""
         left(self.manager)
 
     @log_tactic
     def right(self) -> None:
-        """Select the right branch of a disjunction goal.
-        """
+        """Select the right branch of a disjunction goal."""
         right(self.manager)
 
     @log_tactic
     def split(self) -> None:
-        """Split a conjunction goal into two subgoals.
-        """
+        """Split a conjunction goal into two subgoals."""
         split(self.manager)
 
     @log_tactic
@@ -167,54 +164,45 @@ class ProofScript(ABC):
         hypothesis_name: str,
         patterns: tuple[tuple[str, ...], ...] | None = None,
     ) -> None:
-        """Case-split on an inductive hypothesis.
-        """
+        """Case-split on an inductive hypothesis."""
         cases(self.manager, hypothesis_name, patterns)
 
     @log_tactic
     def exfalso(self) -> None:
-        """Switch the current goal to False.
-        """
+        """Switch the current goal to False."""
         exfalso(self.manager)
 
     @log_tactic
     def induction(self, hypothesis_name: str) -> None:
-        """Perform induction on a Nat-valued hypothesis.
-        """
+        """Perform induction on a Nat-valued hypothesis."""
         induction(self.manager, hypothesis_name)
 
     @log_tactic
     def refine(self, expr: Expr) -> None:
-        """Refine the current goal using an expression that may contain metavariables.
-        """
+        """Refine current goal using an expression that may contain metavariables."""
         refine(self.manager, expr)
 
     @log_tactic
     def revert(self, hyp_names: str | list[str]) -> None:
-        """Revert one or more hypotheses from the local context back into the goal.
-        """
+        """Revert one or more hypotheses from the local context back into the goal."""
         revert(self.manager, hyp_names)
 
     @log_tactic
     def reflexivity(self) -> None:
-        """Solve the current goal if it is an equality of definitionally equal terms.
-        """
+        """Solve the current goal if it is an equality of definitionally equal terms."""
         reflexivity(self.manager)
 
     @log_tactic
     def rfl(self) -> None:
-        """Solve the current goal if it is an equality of definitionally equal terms.
-        """
+        """Solve the current goal if it is an equality of definitionally equal terms."""
         rfl(self.manager)
 
     @log_tactic
     def rewrite(self, hyp_name: str) -> None:
-        """Rewrite occurrences of LHS with RHS in the current goal using an equality hypothesis.
-        """
+        """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
         rewrite(self.manager, hyp_name)
 
     @log_tactic
     def rw(self, hyp_name: str) -> None:
-        """Rewrite occurrences of LHS with RHS in the current goal using an equality hypothesis.
-        """
+        """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
         rw(self.manager, hyp_name)

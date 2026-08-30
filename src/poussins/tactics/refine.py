@@ -1,4 +1,4 @@
-"""Tactic for refining the current goal with an explicit term containing metavariables."""
+"""Tactic for refining the current goal."""
 from __future__ import annotations
 
 from ..ast import EMetaVar, Expr, collect_metavar_ids, substitute_metavar
@@ -7,7 +7,7 @@ from ..kernel import Goal, ProofManager, infer_metavar_types
 
 
 def refine(manager: ProofManager, expr: Expr) -> None:
-    """Refine the current goal using an expression that may contain metavariables."""
+    """Refine current goal using an expression that may contain metavariables."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

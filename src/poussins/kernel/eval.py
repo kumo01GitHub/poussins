@@ -1,5 +1,4 @@
-"""Kernel-level evaluation functions for expressions, including weak head normal form reduction and metavariable instantiation.
-"""
+"""Kernel-level evaluation functions for expressions."""
 from __future__ import annotations
 
 from ..ast import (
@@ -20,18 +19,16 @@ from .proof_state import MetaVar
 
 
 def instantiate_metavar(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
-    """Instantiate assigned metavariables in an expression.
-    """
+    """Instantiate assigned metavariables in an expression."""
     current = expr
-    for goal_id, m in metavars.items():
-        if m.is_assigned:
-            current = substitute_metavar(current, goal_id, m.assignment)
+    for goal_id, metavar in metavars.items():
+        if metavar.is_assigned:
+            current = substitute_metavar(current, goal_id, metavar.assignment)
     return current
 
 
 def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
-    """Recursively replace all assigned metavariables in an expression.
-    """
+    """Recursively replace all assigned metavariables in an expression."""
     current = expr
     while True:
         next_term = instantiate_metavar(current, metavars)
@@ -47,8 +44,7 @@ def whnf(
     env: Environment | None = None,
     unfolding: frozenset[str] | None = None,
 ) -> Expr:
-    """Reduce an expression to weak head normal form.
-    """
+    """Reduce an expression to weak head normal form."""
     if unfolding is None:
         unfolding = frozenset()
 
@@ -66,7 +62,14 @@ def whnf(
                 new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
-        case ESort(_) | EVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMatch(_, _, _, _) | EMetaVar(_):
+        case (
+            ESort(_)
+            | EVar(_)
+            | ELam(_, _, _)
+            | EPi(_, _, _)
+            | EMatch(_, _, _, _)
+            | EMetaVar(_)
+        ):
             return expr
         case _:
             raise NotImplementedError(f"whnf not implemented for {type(expr).__name__}")

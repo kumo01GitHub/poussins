@@ -1,5 +1,4 @@
-"""Error classes for Poussins.
-"""
+"""Error classes for Poussins."""
 from .framework_error import FrameworkError
 from .kernel_error import KernelStateError, KernelTypeError, KernelValueError
 from .proof_error import ProofError
