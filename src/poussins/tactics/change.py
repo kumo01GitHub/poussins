@@ -1,6 +1,4 @@
-"""
-Tactic for replacing the current goal or a local hypothesis with a definitionally equal expression.
-"""
+"""Tactic for replacing the current goal or local hypothesis with a equal expression."""
 from __future__ import annotations
 
 from ..ast import Expr
@@ -9,9 +7,7 @@ from ..kernel import ProofManager
 
 
 def change(manager: ProofManager, expr: Expr, hypothesis_name: str | None = None) -> None:
-    """
-    Change the current goal, or the type of a named hypothesis, to a definitionally equal expression.
-    """
+    """Change the current goal, or the type of a named hypothesis, to a equal expression."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

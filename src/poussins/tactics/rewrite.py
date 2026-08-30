@@ -1,5 +1,4 @@
-"""
-Advanced Rewrite tactic for equality substitution supporting direction (symm) and location (at).
+"""Advanced Rewrite tactic for equality substitution supporting direction (symm) and location (at).
 """
 from __future__ import annotations
 
@@ -52,8 +51,7 @@ def rewrite(
     symm: bool = False,
     at: str | None = None,
 ) -> None:
-    """
-    Advanced rewrite tactic supporting:
+    """Advanced rewrite tactic supporting:
     - Direction control (symm=True for reversed substitution, i.e., RHS -> LHS)
     - Location targeting (at='h2' to rewrite inside a local hypothesis instead of the goal)
     """

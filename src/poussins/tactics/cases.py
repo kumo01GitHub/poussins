@@ -1,18 +1,16 @@
-"""
-Tactic for case-splitting on an inductive hypothesis.
-"""
+"""Tactic for case-splitting on an inductive hypothesis."""
 from __future__ import annotations
 
 from ..ast import (
     EApp,
     EConst,
     ELam,
-    EMetaVar,
     EMatch,
+    EMetaVar,
     EPi,
-    Expr,
     ESort,
     EVar,
+    Expr,
     UnivLevelParam,
     substitute_expr_var,
 )
@@ -22,9 +20,7 @@ from ..kernel import Goal, ProofManager, whnf
 
 
 def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
-    """
-    Produce a fresh binder name that does not collide with the current context.
-    """
+    """Produce a fresh binder name that does not collide with the current context."""
     candidate = base
     counter = 0
     while candidate in context or candidate in used_names:
@@ -39,9 +35,7 @@ def _build_constructor_pattern(
     context: dict[str, Expr],
     used_names: set[str],
 ) -> tuple[Expr, list[tuple[str, Expr]]]:
-    """
-    Build a constructor application and the list of branch binders for one case.
-    """
+    """Build a constructor application and the list of branch binders for one case."""
     pattern = constructor
     branch_binders: list[tuple[str, Expr]] = []
     current_context = dict(context)
@@ -61,9 +55,7 @@ def _build_branch_expr(
     branch_binders: list[tuple[str, Expr]],
     subgoal_id: str,
 ) -> Expr:
-    """
-    Build a lambda expression for a branch body that returns the subgoal metavariable.
-    """
+    """Build a lambda expression for a branch body that returns the subgoal metavariable."""
     expr: Expr = EMetaVar(subgoal_id)
     for var_name, domain in reversed(branch_binders):
         expr = ELam(var_name, domain, expr)
@@ -71,9 +63,7 @@ def _build_branch_expr(
 
 
 def _collect_pi_binders(expr: Expr) -> list[str]:
-    """
-    Collect the binder names from a Pi-chain expression.
-    """
+    """Collect the binder names from a Pi-chain expression."""
     binders: list[str] = []
     current = expr
     while isinstance(current, EPi):
@@ -82,9 +72,10 @@ def _collect_pi_binders(expr: Expr) -> list[str]:
     return binders
 
 
-def _infer_inductive_parameter_substitutions(target_expr: Expr, actual_expr: Expr) -> dict[str, Expr]:
-    """
-    Infer substitutions for an inductive constructor's parameters by matching its return type
+def _infer_inductive_parameter_substitutions(
+    target_expr: Expr, actual_expr: Expr
+) -> dict[str, Expr]:
+    """Infer substitutions for an inductive constructor's parameters by matching its return type
     against the scrutinee's concrete type.
     """
     substitutions: dict[str, Expr] = {}
@@ -131,8 +122,7 @@ def cases(
     hypothesis_name: str,
     patterns: tuple[tuple[str, ...], ...] | None = None,
 ) -> None:
-    """
-    Case-split on an inductive hypothesis and create one subgoal per selected constructor pattern.
+    """Case-split on an inductive hypothesis and create one subgoal per selected constructor pattern.
     """
     if manager.is_closed:
         raise TacticError("No active goals remain.")

@@ -1,19 +1,20 @@
 from __future__ import annotations
+
 from enum import Enum
 
-from .sort import Sort
+from ...ast import EApp, EConst, ELam, EPi, ESort, EVar, UnivLevelParam
 from ..declaration import (
-    DefinitionDeclaration,
     ConstructorDeclaration,
     Declaration,
+    DefinitionDeclaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from ...ast import EConst, EPi, EVar, ELam, EApp, ESort, UnivLevelParam
+from .sort import Sort
 
 
 class LogicDeclaration(Enum):
-    """ Standard logical declarations for propositions and connectives. """
+    """Standard logical declarations for propositions and connectives."""
 
     """True (⊤) inductive declaration for logical truth."""
     TRUE_DECLARATION = InductiveDeclaration(

@@ -1,5 +1,4 @@
-"""
-Example proof demonstrating equality and addition properties for natural numbers.
+"""Example proof demonstrating equality and addition properties for natural numbers.
 """
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop

@@ -1,19 +1,20 @@
 from __future__ import annotations
+
 from enum import Enum
 
-from .sort import Sort
+from ...ast.expr import EApp, EConst, EPi, ESort, EVar
+from ...ast.universe import UnivLevelParam
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from ...ast.expr import EConst, EPi, EApp, EVar, ESort
-from ...ast.universe import UnivLevelParam
+from .sort import Sort
 
 
 class BoolDeclaration(Enum):
-    """ Inductive declaration for booleans. """
+    """Inductive declaration for booleans."""
 
     """Bool inductive declaration for booleans."""
     BOOL_DECLARATION = InductiveDeclaration(

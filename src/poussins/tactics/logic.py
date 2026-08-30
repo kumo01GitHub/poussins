@@ -1,19 +1,15 @@
-"""
-Tactics for basic logical transformations.
-"""
+"""Tactics for basic logical transformations."""
 from __future__ import annotations
 
 from ..ast import EApp, EConst, ELam, EMetaVar, UnivLevelParam
-from ..errors import TacticError
-from ..kernel import ProofManager, Goal
 from ..environment import RecursorDeclaration
 from ..environment.library import LogicDeclaration
+from ..errors import TacticError
+from ..kernel import Goal, ProofManager
 
 
 def exfalso(manager: ProofManager) -> None:
-    """
-    Replace the current goal with False and derive the target from it using False.rec.
-    """
+    """Replace the current goal with False and derive the target from it using False.rec."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

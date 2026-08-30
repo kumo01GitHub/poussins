@@ -233,7 +233,7 @@ uv run -m poussins prove path/to/proofs.py
 
 # Tests and lint
 uv run pytest
-uv run ruff check .
+uv run ruff check src
 
 # Package
 uv build

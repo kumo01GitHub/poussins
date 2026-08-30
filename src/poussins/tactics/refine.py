@@ -1,6 +1,4 @@
-"""
-Tactic for refining the current goal with an explicit term containing metavariables.
-"""
+"""Tactic for refining the current goal with an explicit term containing metavariables."""
 from __future__ import annotations
 
 from ..ast import EMetaVar, Expr, collect_metavar_ids, substitute_metavar
@@ -9,7 +7,7 @@ from ..kernel import Goal, ProofManager, infer_metavar_types
 
 
 def refine(manager: ProofManager, expr: Expr) -> None:
-    """ Refine the current goal using an expression that may contain metavariables. """
+    """Refine the current goal using an expression that may contain metavariables."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 
@@ -52,5 +50,5 @@ def refine(manager: ProofManager, expr: Expr) -> None:
             manager.close_goal(assignment_expr)
         else:
             manager.refine_goal(assignment_expr, subgoals)
-    except KernelTypeError | KernelStateError | KernelValueError as e:
+    except (KernelTypeError, KernelStateError, KernelValueError) as e:
         raise TacticError(f"refine failed during kernel verification: {e}") from e

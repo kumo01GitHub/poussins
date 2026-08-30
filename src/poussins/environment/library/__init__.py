@@ -1,14 +1,13 @@
-from .sort import Sort
-from .logic import LogicDeclaration
-from .equality import EqualityDeclaration
 from .bool import BoolDeclaration
+from .equality import EqualityDeclaration
+from .logic import LogicDeclaration
 from .nat import NatDeclaration
-
+from .sort import Sort
 
 __all__ = [
-    "Sort",
-    "LogicDeclaration",
-    "EqualityDeclaration",
     "BoolDeclaration",
+    "EqualityDeclaration",
+    "LogicDeclaration",
     "NatDeclaration",
+    "Sort",
 ]

@@ -1,18 +1,24 @@
-"""
-Kernel-level unification functions for the proof system.
-"""
+"""Kernel-level unification functions for the proof system."""
 from __future__ import annotations
 
+from ..ast import (
+    EApp,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    collect_metavar_ids,
+    substitute_expr_var,
+)
+from ..environment import Environment
+from ..errors import KernelTypeError
 from .equality import is_alpha_eq
 from .eval import instantiate, whnf
 from .proof_state import MetaVar
 from .univ import unify_univ_levels
-from ..ast import (
-    Expr, ESort, EVar, EPi, ELam, EApp, EMatch, EMetaVar,
-    substitute_expr_var, collect_metavar_ids
-)
-from ..environment import Environment
-from ..errors import KernelTypeError
 
 
 def unify(
@@ -22,9 +28,7 @@ def unify(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> dict[str, MetaVar]:
-    """
-    Unify two expressions and return updated metavariable assignments, with robust substitution propagation and occurs-check.
-    """
+    """Unify two expressions and return updated metavariable assignments, with robust substitution propagation and occurs-check."""
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)
     if is_alpha_eq(t1, t2):
@@ -76,17 +80,22 @@ def unify(
             return unify(b1_inst, b2_inst, context | {v1: d1_inst}, current_metavars, env)
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
-                raise KernelTypeError("Unification failed: match inductive type mismatch")
+                raise KernelTypeError(
+                    "Unification failed: match inductive type mismatch"
+                )
             current_metavars = unify(d1, d2, context, metavars, env)
             m1_inst = instantiate(m1, current_metavars)
             m2_inst = instantiate(m2, current_metavars)
             current_metavars = unify(m1_inst, m2_inst, context, current_metavars, env)
             if len(c1) != len(c2):
                 raise KernelTypeError("Unification failed: match branch length mismatch")
-            for b1, b2 in zip(c1, c2):
+            for b1, b2 in zip(c1, c2, strict=False):
                 b1_inst = instantiate(b1, current_metavars)
                 b2_inst = instantiate(b2, current_metavars)
                 current_metavars = unify(b1_inst, b2_inst, context, current_metavars, env)
             return current_metavars
         case _:
-            raise KernelTypeError(f"Unification failed: expressions are structurally distinct: {t1_whnf} vs {t2_whnf}")
+            raise KernelTypeError(
+                "Unification failed: expressions are structurally distinct: " +
+                f"{t1_whnf} vs {t2_whnf}"
+            )

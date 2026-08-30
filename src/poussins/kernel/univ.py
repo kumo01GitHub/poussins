@@ -1,18 +1,27 @@
-"""
-Kernel-level universe management functions for comparing and unifying universe levels.
-"""
+"""Kernel-level universe management functions."""
 from __future__ import annotations
 
 from ..ast import (
-    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
-    UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelMax, UnivLevelIMax,
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    UnivLevel,
+    UnivLevelIMax,
+    UnivLevelMax,
+    UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
 )
 
 
 def flatten_univ_level_max(level: UnivLevel) -> set[UnivLevel]:
-    """
-    Recursively flatten a UnivLevelMax into a set of its constituent levels.
-    """
+    """Recursively flatten a UnivLevelMax into a set of its constituent levels."""
     if isinstance(level, UnivLevelMax):
         return flatten_univ_level_max(level.left) | flatten_univ_level_max(level.right)
     else:
@@ -20,12 +29,8 @@ def flatten_univ_level_max(level: UnivLevel) -> set[UnivLevel]:
 
 
 def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
-    """
-    Return True when the left universe level is below or equal to the right.
-    """
-    if level_left == level_right:
-        return True
-    if isinstance(level_left, UnivLevelZero):
+    """Return True when the left universe level is below or equal to the right."""
+    if (level_left == level_right) or isinstance(level_left, UnivLevelZero):
         return True
 
     if isinstance(level_left, UnivLevelMax):
@@ -48,10 +53,11 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
             return False
 
 
-def unify_univ_levels(l1: UnivLevel, l2: UnivLevel, param_assignment: dict[str, UnivLevel]) -> dict[str, UnivLevel] | None:
-    """
-    Attempt to unify two universe levels, returning a substitution mapping if successful.
-    """
+def unify_univ_levels(
+    l1: UnivLevel, l2: UnivLevel,
+    param_assignment: dict[str, UnivLevel]
+) -> dict[str, UnivLevel] | None:
+    """Attempt to unify two universe levels, returning a substitution mapping if successful."""
     if isinstance(l1, UnivLevelParam) and l1.name in param_assignment:
         l1 = param_assignment[l1.name]
     if isinstance(l2, UnivLevelParam) and l2.name in param_assignment:
@@ -78,16 +84,15 @@ def unify_univ_levels(l1: UnivLevel, l2: UnivLevel, param_assignment: dict[str, 
 
 
 def is_def_eq_univ(l1: UnivLevel, l2: UnivLevel) -> bool:
-    """
-    Return True when two universe levels are definitionally equal.
-    """
+    """Return True when two universe levels are definitionally equal."""
     return unify_univ_levels(l1, l2, {}) is not None
 
 
-def instantiate_univ_level(level: UnivLevel, param_assignment: dict[str, UnivLevel]) -> UnivLevel:
-    """
-    Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping.
-    """
+def instantiate_univ_level(
+    level: UnivLevel,
+    param_assignment: dict[str, UnivLevel]
+) -> UnivLevel:
+    """Recursively traverse a universe level and return a new level with UnivLevelParam replaced according to the substitution mapping."""
     if not param_assignment:
         return level
 
@@ -111,9 +116,7 @@ def instantiate_univ_level(level: UnivLevel, param_assignment: dict[str, UnivLev
 
 
 def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr:
-    """
-    Recursively traverse an expression (Expr) and return a new Expr with UnivLevelParam replaced in ESort and EConst.
-    """
+    """Traverse an expression and return a new Expr with UnivLevelParam replaced."""
     if not param_assignment:
         return expr
 
@@ -145,4 +148,6 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
         case EMatch(_, _, _, _) | EMetaVar(_):
             return expr
         case _:
-            raise NotImplementedError(f"instantiate_univ not implemented for {type(expr).__name__}")
+            raise NotImplementedError(
+                f"instantiate_univ not implemented for {type(expr).__name__}"
+            )

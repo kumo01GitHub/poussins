@@ -1,10 +1,21 @@
+"""Abstract Syntax Tree (AST) module.
 """
-Abstract Syntax Tree (AST) module.
-"""
-from .expr import Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar
-from .ops import has_metavar, substitute_metavar, substitute_expr_var, collect_metavar_ids, collect_free_vars
-from .universe import UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelMax, UnivLevelIMax
-
+from .expr import EApp, EConst, ELam, EMatch, EMetaVar, EPi, ESort, EVar, Expr
+from .ops import (
+    collect_free_vars,
+    collect_metavar_ids,
+    has_metavar,
+    substitute_expr_var,
+    substitute_metavar,
+)
+from .universe import (
+    UnivLevel,
+    UnivLevelIMax,
+    UnivLevelMax,
+    UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
+)
 
 __all__ = [
     # Expr classes

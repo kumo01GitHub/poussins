@@ -1,21 +1,25 @@
-"""
-Tactic for performing structural induction over an inductive hypothesis.
-"""
+"""Tactic for performing structural induction over an inductive hypothesis."""
 from __future__ import annotations
 
 from ..ast import (
-    EApp, EConst, ELam, EMatch, EMetaVar, EPi, EVar, Expr,
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    EVar,
+    Expr,
     UnivLevelParam,
-    substitute_expr_var)
+    substitute_expr_var,
+)
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 
 
 def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
-    """
-    Produce a fresh binder name that does not collide with the current context.
-    """
+    """Produce a fresh binder name that does not collide with the current context."""
     candidate = base
     counter = 0
     while candidate in context or candidate in used_names:
@@ -25,8 +29,7 @@ def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> st
 
 
 def induction(manager: ProofManager, hypothesis_name: str) -> None:
-    """
-    Perform structural induction on an inductive hypothesis in the current goal.
+    """Perform structural induction on an inductive hypothesis in the current goal.
 
     The tactic creates one subgoal per constructor of the inductive type.
     For each branch, the target is rewritten with the constructor application,
@@ -51,7 +54,8 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
 
     if not isinstance(head_expr, EConst):
             raise TacticError(
-                f"Induction hypothesis type must be an inductive type, found non-constant head: {hypothesis_type}"
+                "Induction hypothesis type must be an inductive type, " +
+                f"found non-constant head: {hypothesis_type}"
             )
     head_name = head_expr.name
 
@@ -81,12 +85,19 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         branch_expr: Expr = constructor
         current_type = constructor_type
         while isinstance(current_type, EPi):
-            var_name = _fresh_name(current_type.var, current_goal.context, used_names=set())
+            var_name = _fresh_name(
+                current_type.var,
+                current_goal.context, used_names=set()
+            )
             branch_binders.append((var_name, current_type.domain))
             branch_expr = EApp(branch_expr, EVar(var_name))
             current_type = current_type.body
 
-        branch_statement = substitute_expr_var(current_goal.statement, hypothesis_name, branch_expr)
+        branch_statement = substitute_expr_var(
+            current_goal.statement,
+            hypothesis_name,
+            branch_expr
+        )
         branch_local_context = {
             name: substitute_expr_var(type_expr, hypothesis_name, branch_expr)
             for name, type_expr in current_goal.local_context.items()
@@ -100,8 +111,16 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         induction_hypotheses: list[tuple[str, Expr]] = []
         for var_name, var_type in branch_binders:
             if isinstance(var_type, EConst) and var_type.name == head_name:
-                ih_name = _fresh_name("ih", current_goal.global_context | branch_local_context, used_names=set())
-                ih_expr = substitute_expr_var(current_goal.statement, hypothesis_name, EVar(var_name))
+                ih_name = _fresh_name(
+                    "ih",
+                    current_goal.global_context | branch_local_context,
+                    used_names=set()
+                )
+                ih_expr = substitute_expr_var(
+                    current_goal.statement,
+                    hypothesis_name,
+                    EVar(var_name)
+                )
                 branch_local_context[ih_name] = ih_expr
                 induction_hypotheses.append((ih_name, EVar(var_name)))
 

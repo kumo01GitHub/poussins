@@ -1,10 +1,21 @@
 import pytest
 
 from poussins.ast import (
-    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
     UnivLevelZero,
-    has_metavar, substitute_metavar, substitute_expr_var,
-    collect_metavar_ids, collect_free_vars,
+    collect_free_vars,
+    collect_metavar_ids,
+    has_metavar,
+    substitute_expr_var,
+    substitute_metavar,
 )
 
 
@@ -14,9 +25,7 @@ class DummyExpr(Expr):
 
 
 class TestHasMetaVar:
-    """
-    Test cases for `has_metavar`.
-    """
+    """Test cases for `has_metavar`."""
 
     def test_has_metavar(self):
         assert has_metavar(EMetaVar("m1"))
@@ -40,9 +49,7 @@ class TestHasMetaVar:
 
 
 class TestSubstituteMetaVar:
-    """
-    Test cases for `substitute_metavar`.
-    """
+    """Test cases for `substitute_metavar`."""
 
     def test_included(self):
         term = EConst("t", ())
@@ -91,9 +98,7 @@ class TestSubstituteMetaVar:
 
 
 class TestSubstituteExprVar:
-    """
-    Test cases for `substitute_expr_var`.
-    """
+    """Test cases for `substitute_expr_var`."""
 
     def test_included(self):
         before = EVar("x")
@@ -135,8 +140,7 @@ class TestSubstituteExprVar:
             _ = substitute_expr_var(DummyExpr(), "x", EVar("y"))
 
 class TestCollectMetaVarIds:
-    """
-    Test cases for `collect_metavar_ids`.
+    """Test cases for `collect_metavar_ids`.
     """
 
     def test_coverage_and_cases(self):
@@ -164,9 +168,7 @@ class TestCollectMetaVarIds:
             _ = collect_metavar_ids(DummyExpr())
 
 class TestCollectFreeVars:
-    """
-    Test cases for `collect_free_vars`.
-    """
+    """Test cases for `collect_free_vars`."""
 
     def test_coverage_and_cases(self):
         # Cases where no free variables are included (ESort, EConst, EMetaVar)

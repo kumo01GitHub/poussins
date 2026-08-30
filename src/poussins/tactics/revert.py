@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from ..ast import EApp, EPi, EVar, EMetaVar, collect_free_vars
+from ..ast import EApp, EMetaVar, EPi, EVar, collect_free_vars
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 
 
 def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
-    """
-    Revert one or more hypotheses from the local context back into the goal.
-    """
+    """Revert one or more hypotheses from the local context back into the goal."""
     targets = [hyp_names] if isinstance(hyp_names, str) else hyp_names
 
     if not targets:

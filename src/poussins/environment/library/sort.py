@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 from enum import Enum
 
-from ...ast import ESort, UnivLevelZero, UnivLevelSucc
+from ...ast import ESort, UnivLevelSucc, UnivLevelZero
 
 
 class Sort(Enum):

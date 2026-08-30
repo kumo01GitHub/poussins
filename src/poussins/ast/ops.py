@@ -1,23 +1,22 @@
-"""
-AST operation utilities for expression traversal, substitution, and analysis.
+"""AST operation utilities for expression traversal, substitution, and analysis.
 """
 from __future__ import annotations
+
 from .expr import (
-    Expr,
-    ESort,
-    EVar,
-    EConst,
-    EPi,
-    ELam,
     EApp,
+    EConst,
+    ELam,
     EMatch,
     EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
 )
 
 
 def has_metavar(expr: Expr) -> bool:
-    """
-    Check if the expression contains any meta-variables (holes).
+    """Check if the expression contains any meta-variables (holes).
     """
     match expr:
         case EMetaVar(_):
@@ -39,8 +38,7 @@ def has_metavar(expr: Expr) -> bool:
 
 
 def substitute_metavar(expr: Expr, target_goal_id: str, replacement: Expr) -> Expr:
-    """
-    Substitute all occurrences of the meta-variable with the given goal_id in the expression with the replacement expression.
+    """Substitute all occurrences of the meta-variable with the given goal_id in the expression with the replacement expression.
     """
     match expr:
         case EMetaVar(goal_id):
@@ -76,8 +74,7 @@ def substitute_metavar(expr: Expr, target_goal_id: str, replacement: Expr) -> Ex
 
 
 def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
-    """
-    Substitute all occurrences of the variable with the given name in the expression with the replacement expression.
+    """Substitute all occurrences of the variable with the given name in the expression with the replacement expression.
     """
     replacement_fvs = collect_free_vars(replacement)
 
@@ -87,10 +84,10 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                 return replacement if name == var_name else e
             case ESort(_) | EConst(_) | EMetaVar(_):
                 return e
-                
+
             case EPi(var, domain, body):
                 new_domain = subst(domain)
-                if var == var_name: 
+                if var == var_name:
                     return EPi(var, new_domain, body)
 
                 if var in replacement_fvs:
@@ -99,12 +96,12 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                         new_var += "_"
                     alpha_body = substitute_expr_var(body, var, EVar(new_var))
                     return EPi(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
-                
+
                 return EPi(var, new_domain, subst(body))
 
             case ELam(var, domain, body):
                 new_domain = subst(domain)
-                if var == var_name: 
+                if var == var_name:
                     return ELam(var, new_domain, body)
 
                 if var in replacement_fvs:
@@ -113,7 +110,7 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                         new_var += "_"
                     alpha_body = substitute_expr_var(body, var, EVar(new_var))
                     return ELam(new_var, new_domain, substitute_expr_var(alpha_body, var_name, replacement))
-                
+
                 return ELam(var, new_domain, subst(body))
 
             case EApp(fn, arg):
@@ -132,8 +129,7 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
 
 
 def collect_metavar_ids(expr: Expr) -> list[str]:
-    """
-    Collect all unique meta-variable goal IDs present in the expression.
+    """Collect all unique meta-variable goal IDs present in the expression.
     """
     ordered_ids: list[str] = []
 
@@ -163,8 +159,7 @@ def collect_metavar_ids(expr: Expr) -> list[str]:
 
 
 def collect_free_vars(expr: Expr) -> set[str]:
-    """
-    Collect all free variable names present in the expression.
+    """Collect all free variable names present in the expression.
     """
     match expr:
         case EVar(name):

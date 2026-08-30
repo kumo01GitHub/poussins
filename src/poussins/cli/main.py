@@ -1,15 +1,14 @@
-"""
-Command-line entrypoint wiring for poussins.
+"""Command-line entrypoint wiring for poussins.
 """
 import argparse
+
+from .lean import run_lean2py, run_py2lean
 from .prove import run_prove
 from .step import run_step
-from .lean import run_lean2py, run_py2lean
 
 
 def main():
-    """
-    Parse CLI arguments and dispatch to the selected subcommand.
+    """Parse CLI arguments and dispatch to the selected subcommand.
     """
     parser = argparse.ArgumentParser(description="poussins command line")
     subparsers = parser.add_subparsers(dest="subcmd", required=True)

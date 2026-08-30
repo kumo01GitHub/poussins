@@ -1,21 +1,28 @@
-"""
-Kernel-level equality checking functions for expressions, including alpha-equivalence and definitional equality.
+"""Kernel-level equality checking functions for expressions, including alpha-equivalence and definitional equality.
 """
 from __future__ import annotations
 
+from ..ast import (
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    collect_free_vars,
+    substitute_expr_var,
+)
+from ..environment import Environment
 from .eval import instantiate, whnf
 from .proof_state import MetaVar
 from .univ import is_def_eq_univ
-from ..ast import (
-    Expr, ESort, EVar, EConst, EApp, ELam, EPi, EMatch, EMetaVar,
-    collect_free_vars, substitute_expr_var
-)
-from ..environment import Environment
 
 
 def is_alpha_eq(t1: Expr, t2: Expr, bvars1: list[str] | None = None, bvars2: list[str] | None = None) -> bool:
-    """
-    Return True when two expressions are alpha-equivalent.
+    """Return True when two expressions are alpha-equivalent.
     """
     if type(t1) is not type(t2):
         return False
@@ -62,8 +69,7 @@ def is_def_eq(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> bool:
-    """
-    Return True when two expressions are definitionally equal.
+    """Return True when two expressions are definitionally equal.
     """
     t1 = instantiate(t1, metavars)
     t2 = instantiate(t2, metavars)

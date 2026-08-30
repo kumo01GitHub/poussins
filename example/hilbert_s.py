@@ -1,7 +1,6 @@
 from poussins.environment import Environment
 from poussins.framework import Lemma, Prop
 
-
 env = Environment.standard()
 
 p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)

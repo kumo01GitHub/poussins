@@ -1,19 +1,28 @@
-"""
-Kernel-level type checking and inference functions for the proof system.
+"""Kernel-level type checking and inference functions for the proof system.
 """
 from __future__ import annotations
 
-from .equality import is_def_eq
-from .eval import instantiate_metavar, whnf
-from .proof_state import MetaVar
-from .univ import is_universe_leq, instantiate_univ
 from ..ast import (
-    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
-    UnivLevelSucc, UnivLevelIMax,
-    substitute_expr_var, collect_metavar_ids
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    UnivLevelIMax,
+    UnivLevelSucc,
+    collect_metavar_ids,
+    substitute_expr_var,
 )
 from ..environment import Environment
 from ..errors import KernelTypeError
+from .equality import is_def_eq
+from .eval import instantiate_metavar, whnf
+from .proof_state import MetaVar
+from .univ import instantiate_univ, is_universe_leq
 
 
 def infer_type(
@@ -22,8 +31,7 @@ def infer_type(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> Expr:
-    """
-    Infer the type of an expression.
+    """Infer the type of an expression.
     """
     expr = instantiate_metavar(expr, metavars)
 
@@ -93,8 +101,7 @@ def check_type(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> bool:
-    """
-    Return True when the expression checks against the expected type.
+    """Return True when the expression checks against the expected type.
     """
     try:
         inferred = infer_type(expr, context, metavars, env)
@@ -114,8 +121,7 @@ def infer_metavar_types(
     metavars: dict[str, MetaVar],
     env: Environment | None = None,
 ) -> dict[str, Expr]:
-    """
-    Infer the expected types for each metavariable in an expression.
+    """Infer the expected types for each metavariable in an expression.
     """
     meta_types: dict[str, Expr] = {}
 

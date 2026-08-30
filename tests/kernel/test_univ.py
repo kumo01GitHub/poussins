@@ -1,16 +1,30 @@
-import pytest
 from typing import Final
 
+import pytest
+
 from poussins.ast import (
-    UnivLevel, UnivLevelZero, UnivLevelSucc, UnivLevelParam, UnivLevelMax, UnivLevelIMax,
-    Expr, ESort, EVar, EConst, EPi, ELam, EApp, EMatch, EMetaVar,
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    UnivLevel,
+    UnivLevelIMax,
+    UnivLevelMax,
+    UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
 )
 from poussins.kernel.univ import (
+    instantiate_univ,
+    instantiate_univ_level,
+    is_def_eq_univ,
     is_universe_leq,
     unify_univ_levels,
-    is_def_eq_univ,
-    instantiate_univ_level,
-    instantiate_univ,
 )
 
 
@@ -20,9 +34,7 @@ class DummyExpr(Expr):
 
 
 class TestIsUniverseLeq:
-    """
-    Test cases for `is_universe_leq`.
-    """
+    """Test cases for `is_universe_leq`."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -53,9 +65,7 @@ class TestIsUniverseLeq:
 
 
 class TestUnifyUnivLevels:
-    """
-    Test cases for `unify_univ_levels`.
-    """
+    """Test cases for `unify_univ_levels`."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -90,9 +100,7 @@ class TestUnifyUnivLevels:
 
 
 class TestIsDefEqUniv:
-    """
-    Test cases for `is_def_eq_univ`.
-    """
+    """Test cases for `is_def_eq_univ`."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -117,8 +125,7 @@ class TestIsDefEqUniv:
 
 
 class TestInstantiateUnivLevel:
-    """
-    Test cases for `instantiate_univ_level`.
+    """Test cases for `instantiate_univ_level`.
     """
 
     param_u: Final[UnivLevel] = UnivLevelParam("u")
@@ -137,9 +144,7 @@ class TestInstantiateUnivLevel:
 
 
 class TestInstantiateUniv:
-    """
-    Test cases for `instantiate_univ`.
-    """
+    """Test cases for `instantiate_univ`."""
 
     param_u: Final[UnivLevel] = UnivLevelParam("u")
     zero: Final[UnivLevel] = UnivLevelZero()

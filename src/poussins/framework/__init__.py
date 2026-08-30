@@ -1,37 +1,35 @@
-"""
-Public DSL layer: Prop, Axiom, Theorem, Example, and aliases.
+"""Public DSL layer: Prop, Axiom, Theorem, Example, and aliases.
 """
 from .axiom import Axiom
 from .bool import Bool
 from .inductive_type import InductiveType
+from .nat import Nat
 from .proof_script import ProofScript
 from .prop import Prop
-from .nat import Nat
 from .theorem import (
-    Theorem,
-    Lemma,
-    Proposition,
     Corollary,
-    Fact,
-    Remark,
-    Property,
     Example,
+    Fact,
+    Lemma,
+    Property,
+    Proposition,
+    Remark,
+    Theorem,
 )
-
 
 __all__ = [
     "Axiom",
     "Bool",
+    "Corollary",
+    "Example",
+    "Fact",
     "InductiveType",
+    "Lemma",
+    "Nat",
     "ProofScript",
     "Prop",
-    "Nat",
-    "Theorem",
-    "Lemma",
-    "Proposition",
-    "Corollary",
-    "Fact",
-    "Remark",
     "Property",
-    "Example",
+    "Proposition",
+    "Remark",
+    "Theorem",
 ]

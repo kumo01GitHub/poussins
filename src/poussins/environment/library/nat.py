@@ -1,19 +1,20 @@
 from __future__ import annotations
+
 from enum import Enum
 
-from .sort import Sort
+from ...ast.expr import EApp, EConst, ELam, EPi, ESort, EVar, UnivLevelParam
 from ..declaration import (
-    DefinitionDeclaration,
     ConstructorDeclaration,
     Declaration,
+    DefinitionDeclaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from ...ast.expr import EConst, ELam, EPi, EVar, EApp, ESort, UnivLevelParam
+from .sort import Sort
 
 
 class NatDeclaration(Enum):
-    """ Inductive declaration for natural numbers. """
+    """Inductive declaration for natural numbers."""
 
     """Nat inductive declaration for natural numbers."""
     NAT_DECLARATION = InductiveDeclaration(

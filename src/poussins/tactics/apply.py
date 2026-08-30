@@ -1,20 +1,13 @@
-"""
-Tactic for applying a theorem, hypothesis, or expression.
-"""
+"""Tactic for applying a theorem, hypothesis, or expression."""
 from __future__ import annotations
 
-from ..ast import (
-    EApp, EPi, EMetaVar, Expr,
-    substitute_expr_var
-)
-from ..kernel import ProofManager, Goal, infer_type, whnf
+from ..ast import EApp, EMetaVar, EPi, Expr, substitute_expr_var
 from ..errors import TacticError
+from ..kernel import Goal, ProofManager, infer_type, whnf
 
 
 def apply(manager: ProofManager, expr: Expr) -> None:
-    """
-    Apply an expression to the current goal.
-    """
+    """Apply an expression to the current goal."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 

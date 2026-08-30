@@ -1,5 +1,4 @@
-"""
-Prop: public-facing propositional formula DSL.
+"""Prop: public-facing propositional formula DSL.
 Wraps the internal Expr AST with Python operator overloads so that propositions
 can be written naturally in Python code:
 
@@ -14,31 +13,30 @@ can be written naturally in Python code:
 Prop is immutable. The underlying Expr is accessible via .expr.
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import override
 
 from ..ast import (
-    Expr,
-    EVar,
+    EApp,
     EConst,
     EPi,
-    EApp,
+    EVar,
+    Expr,
 )
-from ..environment import Environment, DefinitionDeclaration
+from ..environment import DefinitionDeclaration, Environment
 from ..environment.library import Sort
 
 
 @dataclass(frozen=True)
 class Prop:
-    """
-    Immutable wrapper for proposition expressions with operator syntax.
+    """Immutable wrapper for proposition expressions with operator syntax.
     """
 
     expr: Expr
 
     def __init__(self, expr_or_name: Expr | str, env: Environment | None = None) -> None:
-        """
-        Create a proposition from an expression or a named variable.
+        """Create a proposition from an expression or a named variable.
         """
         if isinstance(expr_or_name, Expr):
             object.__setattr__(self, "expr", expr_or_name)
@@ -60,8 +58,7 @@ class Prop:
 
     @staticmethod
     def to_expr(prop_or_expr: Prop | Expr) -> Expr:
-        """
-        Return the underlying expression for a proposition-like value.
+        """Return the underlying expression for a proposition-like value.
         """
         if isinstance(prop_or_expr, Prop):
             return prop_or_expr.expr
@@ -74,15 +71,13 @@ class Prop:
 
     @classmethod
     def top(cls) -> Prop:
-        """
-        ⊤ (True).
+        """⊤ (True).
         """
         return cls(EConst("True", levels=()))
 
     @classmethod
     def bottom(cls) -> Prop:
-        """
-        ⊥ (False).
+        """⊥ (False).
         """
         return cls(EConst("False", levels=()))
 
@@ -176,19 +171,19 @@ class Prop:
     # ------------------------------------------------------------------
 
     def __rshift__(self, other: Prop | Expr) -> Prop:
-        """ P >> Q  →  P → Q  (implication). """
+        """P >> Q  →  P → Q  (implication)."""
         return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(other)))
 
     def __and__(self, other: Prop | Expr) -> Prop:
-        """ P & Q  →  P ∧ Q  (conjunction). """
+        """P & Q  →  P ∧ Q  (conjunction)."""
         return Prop(EApp(EApp(EConst("And", levels=()), self.expr), self.to_expr(other)))
 
     def __or__(self, other: Prop | Expr) -> Prop:
-        """ P | Q  →  P ∨ Q  (disjunction). """
+        """P | Q  →  P ∨ Q  (disjunction)."""
         return Prop(EApp(EApp(EConst("Or", levels=()), self.expr), self.to_expr(other)))
 
     def __invert__(self) -> Prop:
-        """ ~P  →  P → ⊥  (negation). """
+        """~P  →  P → ⊥  (negation)."""
         return Prop(EPi(var="_", domain=self.expr, body=self.to_expr(self.bottom())))
 
     # ------------------------------------------------------------------
@@ -197,8 +192,7 @@ class Prop:
 
     @override
     def __eq__(self, other: object) -> bool:
-        """
-        Compare propositions by their underlying expression.
+        """Compare propositions by their underlying expression.
         """
         if isinstance(other, Prop):
             return self.expr == other.expr
@@ -208,14 +202,12 @@ class Prop:
 
     @override
     def __hash__(self) -> int:
-        """
-        Hash the wrapped expression.
+        """Hash the wrapped expression.
         """
         return hash(self.expr)
 
     @override
     def __repr__(self) -> str:
-        """
-        Return a debug representation of the proposition.
+        """Return a debug representation of the proposition.
         """
         return f"Prop({self.expr!r})"

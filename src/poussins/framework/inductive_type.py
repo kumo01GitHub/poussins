@@ -1,5 +1,4 @@
-"""
-InductiveType: shared frontend base for inductive-type DSL wrappers.
+"""InductiveType: shared frontend base for inductive-type DSL wrappers.
 """
 from __future__ import annotations
 
@@ -13,8 +12,7 @@ from ..environment.library import EqualityDeclaration
 
 @dataclass(frozen=True)
 class InductiveType(ABC):
-    """
-    Shared immutable wrapper for expressions inhabiting an inductive type.
+    """Shared immutable wrapper for expressions inhabiting an inductive type.
 
     Subclasses define ``TYPE_NAME`` and optionally add constructor helpers.
     """
@@ -35,12 +33,12 @@ class InductiveType(ABC):
         return EConst(cls.TYPE_NAME, ())
 
     @staticmethod
-    def to_expr(value: "InductiveType | Expr") -> Expr:
+    def to_expr(value: InductiveType | Expr) -> Expr:
         """Return the underlying expression."""
         return value.expr if isinstance(value, InductiveType) else value
 
     @classmethod
-    def eq(cls, left: "InductiveType | Expr", right: "InductiveType | Expr") -> Expr:
+    def eq(cls, left: InductiveType | Expr, right: InductiveType | Expr) -> Expr:
         """Construct an equality proposition over this inductive type."""
         left_expr = cls.to_expr(left)
         right_expr = cls.to_expr(right)

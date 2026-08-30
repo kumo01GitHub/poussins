@@ -1,18 +1,19 @@
 from __future__ import annotations
+
 from enum import Enum
 
-from .sort import Sort
+from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from ...ast import EConst, EPi, EVar, EApp, ESort, UnivLevelParam
+from .sort import Sort
 
 
 class EqualityDeclaration(Enum):
-    """ Inductive declaration for propositional equality. """
+    """Inductive declaration for propositional equality."""
 
     """Eq inductive declaration for propositional equality."""
     EQ_DECLARATION = InductiveDeclaration(

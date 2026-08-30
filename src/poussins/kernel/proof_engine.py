@@ -1,26 +1,23 @@
-"""
-Kernel-level proof engine for managing proof states, goals, and metavariables.
+"""Kernel-level proof engine for managing proof states, goals, and metavariables.
 """
 from __future__ import annotations
 
-from .equality import is_def_eq
-from .proof_state import ProofState, MetaVar
-from .goal import Goal
-from .typecheck import infer_type
-from .unification import unify
 from ..ast import Expr, collect_metavar_ids
 from ..environment import Environment
 from ..errors import KernelStateError, KernelValueError
+from .equality import is_def_eq
+from .goal import Goal
+from .proof_state import MetaVar, ProofState
+from .typecheck import infer_type
+from .unification import unify
 
 
 class ProofEngine:
-    """
-    Validate proof-state transitions against the current environment.
+    """Validate proof-state transitions against the current environment.
     """
 
     def create_initial_state(self, statement: Expr, env: Environment) -> ProofState:
-        """
-        Create the initial proof state with a single goal and its corresponding metavariable.
+        """Create the initial proof state with a single goal and its corresponding metavariable.
         """
         initial_goal = Goal(
             statement=statement,
@@ -31,8 +28,7 @@ class ProofEngine:
         return ProofState(goals=(initial_goal,), metavars=initial_metavars)
 
     def close_goal(self, state: ProofState, assignment: Expr, env: Environment) -> ProofState:
-        """
-        Close the current goal by providing an assignment that satisfies the goal's statement.
+        """Close the current goal by providing an assignment that satisfies the goal's statement.
         """
         current_goal = state.current_goal
         if current_goal is None:
@@ -65,8 +61,7 @@ class ProofEngine:
     def refine_goal(
         self, state: ProofState, assignment: Expr, subgoals: list[Goal], env: Environment
     ) -> ProofState:
-        """
-        Refine the current goal by providing an assignment that splits it into new subgoals.
+        """Refine the current goal by providing an assignment that splits it into new subgoals.
         """
         current_goal = state.current_goal
         if current_goal is None:
@@ -122,7 +117,7 @@ class ProofEngine:
         return ProofState(goals=tuple(truly_active_goals), metavars=final_metavars)
 
     def change_goal(self, state: ProofState, new_statement: Expr, env: Environment) -> ProofState:
-        """ Replace the current goal statement with a definitionally equal statement. """
+        """Replace the current goal statement with a definitionally equal statement."""
         current_goal = state.current_goal
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
@@ -151,8 +146,7 @@ class ProofEngine:
     def change_hypothesis(
         self, state: ProofState, hypothesis_name: str, new_type: Expr, env: Environment
     ) -> ProofState:
-        """
-        Replace the type of a local hypothesis with a definitionally equal type.
+        """Replace the type of a local hypothesis with a definitionally equal type.
         """
         current_goal = state.current_goal
         if current_goal is None:

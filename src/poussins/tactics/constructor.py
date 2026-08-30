@@ -1,20 +1,16 @@
-"""
-Tactic for applying inductive constructors.
-"""
+"""Tactic for applying inductive constructors."""
 from __future__ import annotations
 
-from .apply import apply
-from ..ast import EConst, EApp, EPi, UnivLevelParam
-from ..errors import TacticError
-from ..kernel import ProofManager, whnf, infer_type
-from ..environment import InductiveDeclaration, ConstructorDeclaration
+from ..ast import EApp, EConst, EPi, UnivLevelParam
+from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..environment.library import LogicDeclaration
+from ..errors import TacticError
+from ..kernel import ProofManager, infer_type, whnf
+from .apply import apply
 
 
 def constructor(manager: ProofManager, index: int | None = None) -> None:
-    """
-    Apply a matching constructor, or the constructor at the given index.
-    """
+    """Apply a matching constructor, or the constructor at the given index."""
     if manager.is_closed:
         raise TacticError("No active goals remain.")
 
@@ -89,9 +85,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
 
 
 def _goal_head_name(manager: ProofManager) -> str:
-    """
-    Resolve the head constant name of the current goal type.
-    """
+    """Resolve the head constant name of the current goal type."""
     state = manager.current_state
     current_goal = state.current_goal
     if current_goal is None:
@@ -116,12 +110,10 @@ def _apply_named_constructor(
     constructor_name: str,
     tactic_name: str,
 ) -> None:
-    """
-    Apply a specific constructor of an expected inductive goal.
-    """
+    """Apply a specific constructor of an expected inductive goal."""
     head_name = _goal_head_name(manager)
     if head_name != inductive_name:
-        if tactic_name == "left" or tactic_name == "right":
+        if tactic_name in {"left", "right"}:
             raise TacticError(f"{tactic_name} failed: Goal is not a disjunction. Found head '{head_name}'.")
         if tactic_name == "split":
             raise TacticError(f"split failed: Goal is not a conjunction. Found head '{head_name}'.")
@@ -140,13 +132,14 @@ def _apply_named_constructor(
     if not isinstance(decl, ConstructorDeclaration):
         raise TacticError(f"{tactic_name} failed: '{constructor_name}' is not a constructor declaration.")
 
-    apply(manager, EConst(name=constructor_name, levels=tuple(UnivLevelParam(param) for param in decl.level_params)))
+    apply(manager, EConst(
+        name=constructor_name,
+        levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+    ))
 
 
 def left(manager: ProofManager) -> None:
-    """
-    Prove an `Or` goal by selecting the left constructor (`Or.inl`).
-    """
+    """Prove an `Or` goal by selecting the left constructor (`Or.inl`)."""
     if manager.is_closed:
         raise TacticError("left failed: No active goals remain.")
 
@@ -159,9 +152,7 @@ def left(manager: ProofManager) -> None:
 
 
 def right(manager: ProofManager) -> None:
-    """
-    Prove an `Or` goal by selecting the right constructor (`Or.inr`).
-    """
+    """Prove an `Or` goal by selecting the right constructor (`Or.inr`)."""
     if manager.is_closed:
         raise TacticError("right failed: No active goals remain.")
 
@@ -174,9 +165,7 @@ def right(manager: ProofManager) -> None:
 
 
 def split(manager: ProofManager) -> None:
-    """
-    Prove an `And` goal by applying `And.intro`.
-    """
+    """Prove an `And` goal by applying `And.intro`."""
     if manager.is_closed:
         raise TacticError("split failed: No active goals remain.")
 

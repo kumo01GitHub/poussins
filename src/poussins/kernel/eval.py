@@ -1,19 +1,26 @@
-"""
-Kernel-level evaluation functions for expressions, including weak head normal form reduction and metavariable instantiation.
+"""Kernel-level evaluation functions for expressions, including weak head normal form reduction and metavariable instantiation.
 """
 from __future__ import annotations
 
-from .proof_state import MetaVar
 from ..ast import (
-    Expr, EConst, EApp, ELam, ESort, EVar, EMetaVar, EPi, EMatch,
-    substitute_metavar, substitute_expr_var
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    EPi,
+    ESort,
+    EVar,
+    Expr,
+    substitute_expr_var,
+    substitute_metavar,
 )
-from ..environment import Environment, DefinitionDeclaration
+from ..environment import DefinitionDeclaration, Environment
+from .proof_state import MetaVar
 
 
 def instantiate_metavar(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
-    """
-    Instantiate assigned metavariables in an expression.
+    """Instantiate assigned metavariables in an expression.
     """
     current = expr
     for goal_id, m in metavars.items():
@@ -23,8 +30,7 @@ def instantiate_metavar(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
 
 
 def instantiate(expr: Expr, metavars: dict[str, MetaVar]) -> Expr:
-    """
-    Recursively replace all assigned metavariables in an expression.
+    """Recursively replace all assigned metavariables in an expression.
     """
     current = expr
     while True:
@@ -41,8 +47,7 @@ def whnf(
     env: Environment | None = None,
     unfolding: frozenset[str] | None = None,
 ) -> Expr:
-    """
-    Reduce an expression to weak head normal form.
+    """Reduce an expression to weak head normal form.
     """
     if unfolding is None:
         unfolding = frozenset()

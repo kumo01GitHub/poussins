@@ -1,18 +1,16 @@
-"""
-Equality tactics including reflexivity and rfl.
+"""Equality tactics including reflexivity and rfl.
 """
 from __future__ import annotations
 
-from .apply import apply
 from ..ast import EApp, EConst, Expr, UnivLevelParam
+from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq, whnf
-from ..environment.library import EqualityDeclaration
+from .apply import apply
 
 
 def reflexivity(manager: ProofManager) -> None:
-    """
-    Solves a goal of the form `Eq A x y` where `x` and `y` are definitionally equal.
+    """Solves a goal of the form `Eq A x y` where `x` and `y` are definitionally equal.
     """
     if manager.is_closed:
         raise TacticError("reflexivity failed: No active goals remain.")
