@@ -1,5 +1,4 @@
-"""Propositional logic example using poussins DSL.
-"""
+"""Example 1: A simple proof of the proposition P → (Q → (P ∧ Q))."""
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 

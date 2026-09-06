@@ -1,3 +1,4 @@
+"""Example of a proof of the Hilbert S axiom in Poussins."""
 from poussins.environment import Environment
 from poussins.framework import Lemma, Prop
 

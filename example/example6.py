@@ -1,4 +1,4 @@
-"""Example proof demonstrating equality and addition properties for natural numbers."""
+"""Example 6: Prove that if n = m, then n + k = m + k."""
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 

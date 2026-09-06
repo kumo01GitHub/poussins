@@ -1,5 +1,4 @@
-"""Propositional logic example using poussins DSL.
-"""
+"""Example 3: Demonstrating the use of the Environment class in Poussins."""
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 

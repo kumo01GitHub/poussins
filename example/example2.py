@@ -1,5 +1,4 @@
-"""Propositional logic examples using poussins DSL.
-"""
+"""Example 2: Demonstrates the use of Or introduction rules in propositional logic."""
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 

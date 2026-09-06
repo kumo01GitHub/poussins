@@ -1,5 +1,4 @@
-"""Propositional logic example using poussins DSL.
-"""
+"""Example 4: Demonstrates the use of the bottom (false) proposition in Poussins."""
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 

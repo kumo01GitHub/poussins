@@ -1,8 +1,6 @@
 """Test cases for the `poussins.kernel.univ` module."""
 from typing import Final
 
-import pytest
-
 from poussins.ast import (
     EApp,
     EConst,
@@ -12,7 +10,6 @@ from poussins.ast import (
     EPi,
     ESort,
     EVar,
-    Expr,
     UnivLevel,
     UnivLevelIMax,
     UnivLevelMax,
@@ -75,7 +72,7 @@ class TestUnifyUnivLevels:
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_unify_univ_levels_success(self):
-        """Test cases where unification of universe levels succeeds and returns a substitution mapping."""
+        """Unify universe levels successfully and return updated substitutions."""
         # Identical levels
         assert unify_univ_levels(self.zero, self.zero, {}) == {}
         assert unify_univ_levels(self.max_uv, self.max_uv, {}) == {}
@@ -83,8 +80,12 @@ class TestUnifyUnivLevels:
         # Parameter and successor unification
         assert unify_univ_levels(self.param_u, self.zero, {}) == {"u": self.zero}
         assert unify_univ_levels(self.one, self.param_u, {}) == {"u": self.one}
-        assert unify_univ_levels(self.param_u, self.one, {"u": self.one}) == {"u": self.one}
-        assert unify_univ_levels(UnivLevelSucc(self.param_u), self.one, {}) == {"u": self.zero}
+        assert unify_univ_levels(
+            self.param_u, self.one, {"u": self.one}
+        ) == {"u": self.one}
+        assert unify_univ_levels(
+            UnivLevelSucc(self.param_u), self.one, {}
+        ) == {"u": self.zero}
 
         # IMax unification
         imax1 = UnivLevelIMax(self.param_u, self.param_v)
@@ -112,7 +113,7 @@ class TestIsDefEqUniv:
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_is_def_eq_univ_success(self):
-        """Test cases where universe levels are definitionally equal (returns True)."""
+        """Test cases where universe levels are definitionally equal."""
         assert is_def_eq_univ(self.zero, self.zero) is True
         assert is_def_eq_univ(self.one, self.one) is True
         assert is_def_eq_univ(self.param_u, self.zero) is True
@@ -120,7 +121,7 @@ class TestIsDefEqUniv:
         assert is_def_eq_univ(self.one, self.zero) is False
 
     def test_is_def_eq_univ_failure(self):
-        """Test cases where universe levels are not definitionally equal (returns False)."""
+        """Test cases where universe levels are not definitionally equal."""
         # Failure cases returning False
         assert is_def_eq_univ(self.one, self.zero) is False
         assert is_def_eq_univ(self.max_uv, self.zero) is False
@@ -140,7 +141,9 @@ class TestInstantiateUnivLevel:
         # Individual UnivLevel variants coverage (Success / substitution)
         assert instantiate_univ_level(self.param_u, self.assignment) == self.zero
         assert instantiate_univ_level(self.param_v, self.assignment) == self.one
-        assert instantiate_univ_level(UnivLevelSucc(self.param_u), self.assignment) == self.one
+        assert instantiate_univ_level(
+            UnivLevelSucc(self.param_u), self.assignment
+        ) == self.one
         assert (
             instantiate_univ_level(
                 UnivLevelMax(self.param_u, self.param_v),
@@ -165,7 +168,7 @@ class TestInstantiateUniv:
     assignment: Final[dict[str, UnivLevel]] = {"u": zero}
 
     def test_instantiate_univ_success(self):
-        """Test cases where expressions are successfully instantiated with universe levels."""
+        """Instantiate expressions with universe levels successfully."""
         # Empty substitution returns original expression
         var_expr = EVar("x")
         assert instantiate_univ(var_expr, {}) is var_expr

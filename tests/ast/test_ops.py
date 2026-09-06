@@ -1,6 +1,4 @@
 """Test cases for AST operations in `poussins.ast`."""
-import pytest
-
 from poussins.ast import (
     EApp,
     EConst,
@@ -10,7 +8,6 @@ from poussins.ast import (
     EPi,
     ESort,
     EVar,
-    Expr,
     UnivLevelZero,
     collect_free_vars,
     collect_metavar_ids,
@@ -51,13 +48,21 @@ class TestSubstituteMetaVar:
         m = EMetaVar("m")
 
         assert substitute_metavar(m, m.goal_id, term) == term
-        assert substitute_metavar(EPi("x", m, EVar("x")), m.goal_id, term) == EPi("x", term, EVar("x"))
-        assert substitute_metavar(ELam("x", EVar("A"), m), m.goal_id, term) == ELam("x", EVar("A"), term)
-        assert substitute_metavar(EApp(EVar("f"), m), m.goal_id, term) == EApp(EVar("f"), term)
-        assert substitute_metavar(EMatch("Nat", m, EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", term, EVar("P"), (EConst("z", ()),))
+        assert substitute_metavar(
+            EPi("x", m, EVar("x")), m.goal_id, term
+        ) == EPi("x", term, EVar("x"))
+        assert substitute_metavar(
+            ELam("x", EVar("A"), m), m.goal_id, term
+        ) == ELam("x", EVar("A"), term)
+        assert substitute_metavar(
+            EApp(EVar("f"), m), m.goal_id, term
+        ) == EApp(EVar("f"), term)
+        assert substitute_metavar(
+            EMatch("Nat", m, EVar("P"), (EConst("z", ()),)), m.goal_id, term
+        ) == EMatch("Nat", term, EVar("P"), (EConst("z", ()),))
 
     def test_substitute_only_target_metavar(self):
-        """Test cases where only the target meta-variable is substituted in the expression."""
+        """Substitue only the target meta-variable in the expression."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         m2 = EMetaVar("m2")
@@ -67,7 +72,7 @@ class TestSubstituteMetaVar:
         assert substitute_metavar(expr, m1.goal_id, term) == expected
 
     def test_multiple_occurrences(self):
-        """Test cases where the target meta-variable occurs multiple times in the expression."""
+        """Substitute multiple occurrences of the target meta-variable."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         expr = EApp(m1, m1)
@@ -79,13 +84,25 @@ class TestSubstituteMetaVar:
         term = EConst("t", ())
         m = EMetaVar("m")
 
-        assert substitute_metavar(ESort(UnivLevelZero()), m.goal_id, term) == ESort(UnivLevelZero())
+        assert substitute_metavar(
+            ESort(UnivLevelZero()), m.goal_id, term
+        ) == ESort(UnivLevelZero())
         assert substitute_metavar(EVar("x"), m.goal_id, term) == EVar("x")
-        assert substitute_metavar(EConst("nat", ()), m.goal_id, term) == EConst("nat", ())
-        assert substitute_metavar(EPi("x", EVar("A"), EVar("x")), m.goal_id, term) == EPi("x", EVar("A"), EVar("x"))
-        assert substitute_metavar(ELam("x", EVar("A"), EVar("x")), m.goal_id, term) == ELam("x", EVar("A"), EVar("x"))
-        assert substitute_metavar(EApp(EVar("f"), EVar("x")), m.goal_id, term) == EApp(EVar("f"), EVar("x"))
-        assert substitute_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
+        assert substitute_metavar(
+            EConst("nat", ()), m.goal_id, term
+        ) == EConst("nat", ())
+        assert substitute_metavar(
+            EPi("x", EVar("A"), EVar("x")), m.goal_id, term
+        ) == EPi("x", EVar("A"), EVar("x"))
+        assert substitute_metavar(
+            ELam("x", EVar("A"), EVar("x")), m.goal_id, term
+        ) == ELam("x", EVar("A"), EVar("x"))
+        assert substitute_metavar(
+            EApp(EVar("f"), EVar("x")), m.goal_id, term
+        ) == EApp(EVar("f"), EVar("x"))
+        assert substitute_metavar(
+            EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), m.goal_id, term
+        ) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
 
 class TestSubstituteExprVar:
@@ -97,13 +114,21 @@ class TestSubstituteExprVar:
         after = EVar("y")
 
         assert substitute_expr_var(before, before.name, after) == after
-        assert substitute_expr_var(EApp(before, before), "x", after) == EApp(after, after)
-        assert substitute_expr_var(EPi("x", before, EVar("x")), "x", after) == EPi("x", after, EVar("x"))
-        assert substitute_expr_var(ELam("x", EVar("x"), EVar("x")), "x", after) == ELam("x", after, EVar("x"))
-        assert substitute_expr_var(EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after) == EMatch("Nat", after, after, (after,))
+        assert substitute_expr_var(
+            EApp(before, before), "x", after
+        ) == EApp(after, after)
+        assert substitute_expr_var(
+            EPi("x", before, EVar("x")), "x", after
+        ) == EPi("x", after, EVar("x"))
+        assert substitute_expr_var(
+            ELam("x", EVar("x"), EVar("x")), "x", after
+        ) == ELam("x", after, EVar("x"))
+        assert substitute_expr_var(
+            EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after
+        ) == EMatch("Nat", after, after, (after,))
 
     def test_substitute_only_target_var(self):
-        """Test cases where only the target variable is substituted in the expression."""
+        """Substitue only the target variable in the expression."""
         before = EVar("x")
         after = EVar("y")
 
@@ -112,7 +137,7 @@ class TestSubstituteExprVar:
         assert substitute_expr_var(expr, "x", after) == expected
 
     def test_multiple_occurrences(self):
-        """Test cases where the target variable occurs multiple times in the expression."""
+        """Substitute multiple occurrences of the target variable in the expression."""
         before = EVar("x")
         after = EVar("y")
         expr = EApp(before, before)
@@ -123,12 +148,18 @@ class TestSubstituteExprVar:
         """Test cases where the variable is not included in the expression."""
         after = EVar("y")
 
-        assert substitute_expr_var(ESort(UnivLevelZero()), "x", after) == ESort(UnivLevelZero())
+        assert substitute_expr_var(
+            ESort(UnivLevelZero()), "x", after
+        ) == ESort(UnivLevelZero())
         assert substitute_expr_var(EConst("nat", ()), "x", after) == EConst("nat", ())
         assert substitute_expr_var(EMetaVar("g1"), "x", after) == EMetaVar("g1")
         assert substitute_expr_var(EVar("y"), "x", after) == EVar("y")
-        assert substitute_expr_var(EApp(EVar("f"), EVar("y")), "x", after) == EApp(EVar("f"), EVar("y"))
-        assert substitute_expr_var(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
+        assert substitute_expr_var(
+            EApp(EVar("f"), EVar("y")), "x", after
+        ) == EApp(EVar("f"), EVar("y"))
+        assert substitute_expr_var(
+            EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after
+        ) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
 
 class TestCollectMetaVarIds:
@@ -152,7 +183,12 @@ class TestCollectMetaVarIds:
         lam_expr = ELam("x", EMetaVar("g1"), EMetaVar("g4"))
         assert collect_metavar_ids(lam_expr) == ["g1", "g4"]
 
-        match_expr = EMatch("Nat", EMetaVar("g2"), EMetaVar("g1"), (EMetaVar("g2"), EMetaVar("g5")))
+        match_expr = EMatch(
+            "Nat",
+            EMetaVar("g2"),
+            EMetaVar("g1"),
+            (EMetaVar("g2"), EMetaVar("g5"))
+        )
         assert collect_metavar_ids(match_expr) == ["g2", "g1", "g5"]
 
 
