@@ -7,7 +7,7 @@ from typing import Final, override
 from ..ast import Expr
 from ..environment import Environment, TheoremDeclaration
 from ..errors import FrameworkError
-from ..utils.logging import getLogger
+from ..utils.logging import get_logger
 from .proof_script import ProofScript
 from .prop import Prop
 
@@ -38,7 +38,7 @@ class Theorem(ProofScript):
         self.level_params: Final[tuple[str, ...]] = level_params
         super().__init__(Prop.to_expr(statement), env)
 
-        self.logger: Logger = getLogger(__name__)
+        self.logger: Logger = get_logger(__name__)
         self.logger.info(f"Theorem '{self.name}': {self.statement}")
 
     @override
@@ -97,7 +97,7 @@ class Example(ProofScript):
         pure_expr = Prop.to_expr(statement)
         super().__init__(pure_expr, env)
 
-        self.logger: Logger = getLogger(__name__)
+        self.logger: Logger = get_logger(__name__)
         self.logger.info(f"Example: {self.statement}")
 
     @override

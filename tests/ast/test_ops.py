@@ -20,15 +20,11 @@ from poussins.ast import (
 )
 
 
-# Unknown expression node for verifying NotImplementedError
-class DummyExpr(Expr):
-    pass
-
-
 class TestHasMetaVar:
     """Test cases for `has_metavar`."""
 
     def test_has_metavar(self):
+        """Test cases where the expression has a meta-variable."""
         assert has_metavar(EMetaVar("m1"))
         assert has_metavar(EPi("x", EMetaVar("m1"), EVar("x")))
         assert has_metavar(ELam("x", EVar("A"), EMetaVar("m1")))
@@ -36,6 +32,7 @@ class TestHasMetaVar:
         assert has_metavar(EMatch("Nat", EMetaVar("m1"), EVar("P"), (EConst("z", ()),)))
 
     def test_not_has_metavar(self):
+        """Test cases where the expression does not have a meta-variable."""
         assert not has_metavar(ESort(UnivLevelZero()))
         assert not has_metavar(EVar("x"))
         assert not has_metavar(EConst("nat", ()))
@@ -44,15 +41,12 @@ class TestHasMetaVar:
         assert not has_metavar(EApp(EVar("f"), EVar("x")))
         assert not has_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)))
 
-    def test_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            _ = has_metavar(DummyExpr())
-
 
 class TestSubstituteMetaVar:
     """Test cases for `substitute_metavar`."""
 
     def test_included(self):
+        """Test cases where the meta-variable is included in the expression."""
         term = EConst("t", ())
         m = EMetaVar("m")
 
@@ -63,6 +57,7 @@ class TestSubstituteMetaVar:
         assert substitute_metavar(EMatch("Nat", m, EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", term, EVar("P"), (EConst("z", ()),))
 
     def test_substitute_only_target_metavar(self):
+        """Test cases where only the target meta-variable is substituted in the expression."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         m2 = EMetaVar("m2")
@@ -72,6 +67,7 @@ class TestSubstituteMetaVar:
         assert substitute_metavar(expr, m1.goal_id, term) == expected
 
     def test_multiple_occurrences(self):
+        """Test cases where the target meta-variable occurs multiple times in the expression."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         expr = EApp(m1, m1)
@@ -79,6 +75,7 @@ class TestSubstituteMetaVar:
         assert substitute_metavar(expr, m1.goal_id, term) == expected
 
     def test_not_included(self):
+        """Test cases where the meta-variable is not included in the expression."""
         term = EConst("t", ())
         m = EMetaVar("m")
 
@@ -90,18 +87,12 @@ class TestSubstituteMetaVar:
         assert substitute_metavar(EApp(EVar("f"), EVar("x")), m.goal_id, term) == EApp(EVar("f"), EVar("x"))
         assert substitute_metavar(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), m.goal_id, term) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
-    def test_not_implemented(self):
-        term = EConst("t", ())
-        m = EMetaVar("m")
-
-        with pytest.raises(NotImplementedError):
-            _ = substitute_metavar(DummyExpr(), m.goal_id, term)
-
 
 class TestSubstituteExprVar:
     """Test cases for `substitute_expr_var`."""
 
     def test_included(self):
+        """Test cases where the variable is included in the expression."""
         before = EVar("x")
         after = EVar("y")
 
@@ -112,6 +103,7 @@ class TestSubstituteExprVar:
         assert substitute_expr_var(EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after) == EMatch("Nat", after, after, (after,))
 
     def test_substitute_only_target_var(self):
+        """Test cases where only the target variable is substituted in the expression."""
         before = EVar("x")
         after = EVar("y")
 
@@ -120,6 +112,7 @@ class TestSubstituteExprVar:
         assert substitute_expr_var(expr, "x", after) == expected
 
     def test_multiple_occurrences(self):
+        """Test cases where the target variable occurs multiple times in the expression."""
         before = EVar("x")
         after = EVar("y")
         expr = EApp(before, before)
@@ -127,6 +120,7 @@ class TestSubstituteExprVar:
         assert substitute_expr_var(expr, "x", after) == expected
 
     def test_not_included(self):
+        """Test cases where the variable is not included in the expression."""
         after = EVar("y")
 
         assert substitute_expr_var(ESort(UnivLevelZero()), "x", after) == ESort(UnivLevelZero())
@@ -136,15 +130,12 @@ class TestSubstituteExprVar:
         assert substitute_expr_var(EApp(EVar("f"), EVar("y")), "x", after) == EApp(EVar("f"), EVar("y"))
         assert substitute_expr_var(EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
-    def test_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            _ = substitute_expr_var(DummyExpr(), "x", EVar("y"))
 
 class TestCollectMetaVarIds:
-    """Test cases for `collect_metavar_ids`.
-    """
+    """Test cases for `collect_metavar_ids`."""
 
     def test_coverage_and_cases(self):
+        """Test cases for coverage and various scenarios."""
         # Cases where no metavariables are included (ESort, EVar, EConst)
         assert collect_metavar_ids(ESort(UnivLevelZero())) == []
         assert collect_metavar_ids(EVar("x")) == []
@@ -164,14 +155,12 @@ class TestCollectMetaVarIds:
         match_expr = EMatch("Nat", EMetaVar("g2"), EMetaVar("g1"), (EMetaVar("g2"), EMetaVar("g5")))
         assert collect_metavar_ids(match_expr) == ["g2", "g1", "g5"]
 
-    def test_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            _ = collect_metavar_ids(DummyExpr())
 
 class TestCollectFreeVars:
     """Test cases for `collect_free_vars`."""
 
     def test_coverage_and_cases(self):
+        """Test cases for coverage and various scenarios."""
         # Cases where no free variables are included (ESort, EConst, EMetaVar)
         assert collect_free_vars(ESort(UnivLevelZero())) == set()
         assert collect_free_vars(EConst("nat", ())) == set()
@@ -192,7 +181,3 @@ class TestCollectFreeVars:
 
         match_expr = EMatch("Nat", EVar("x"), EVar("y"), (EVar("x"), EVar("z")))
         assert collect_free_vars(match_expr) == {"x", "y", "z"}
-
-    def test_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            _ = collect_free_vars(DummyExpr())

@@ -100,8 +100,6 @@ def infer_type(
             return substitute_expr_var(fn_type_whnf.body, fn_type_whnf.var, arg)
         case EMatch(_, discriminee, motive, _):
             return EApp(motive, discriminee)
-        case _:
-            raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
 def check_type(

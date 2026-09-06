@@ -71,5 +71,3 @@ def whnf(
             | EMetaVar(_)
         ):
             return expr
-        case _:
-            raise NotImplementedError(f"whnf not implemented for {type(expr).__name__}")

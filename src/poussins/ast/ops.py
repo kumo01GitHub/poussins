@@ -31,8 +31,6 @@ def has_metavar(expr: Expr) -> bool:
                 or has_metavar(motive)
                 or any(has_metavar(c) for c in cases)
             )
-        case _:
-            raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
 def substitute_metavar(
@@ -71,8 +69,6 @@ def substitute_metavar(
                 substitute_metavar(motive, target_goal_id, replacement),
                 tuple(substitute_metavar(c, target_goal_id, replacement) for c in cases)
             )
-        case _:
-            raise NotImplementedError(f"Unknown expression node: {expr}")
 
 
 def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
@@ -131,8 +127,6 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                     subst(motive),
                     tuple(subst(c) for c in cases)
                 )
-            case _:
-                raise NotImplementedError(f"Unknown expression node: {e}")
 
     return subst(expr)
 
@@ -159,8 +153,6 @@ def collect_metavar_ids(expr: Expr) -> list[str]:
                 _collect(motive)
                 for case_expr in cases:
                     _collect(case_expr)
-            case _:
-                raise NotImplementedError(f"Unknown expression node: {e}")
 
     _collect(expr)
     return ordered_ids
@@ -182,5 +174,3 @@ def collect_free_vars(expr: Expr) -> set[str]:
             for c in cases:
                 fvs |= collect_free_vars(c)
             return fvs
-        case _:
-            raise NotImplementedError(f"Unknown expression node: {expr}")

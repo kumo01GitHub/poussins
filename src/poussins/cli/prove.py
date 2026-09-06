@@ -3,12 +3,12 @@ import importlib.util
 import os
 import sys
 
-from ..utils.logging import getLogger
+from ..utils.logging import get_logger
 
 
 def run_prove(filepath: str):
     """Run batch proof execution: import the file, collect all theorems/lemmas."""
-    logger = getLogger(__name__)
+    logger = get_logger(__name__)
 
     file_abspath = os.path.abspath(filepath)
     file_dir = os.path.dirname(file_abspath)

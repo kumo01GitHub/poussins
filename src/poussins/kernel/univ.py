@@ -162,7 +162,3 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
             )
         case EMatch(_, _, _, _) | EMetaVar(_):
             return expr
-        case _:
-            raise NotImplementedError(
-                f"instantiate_univ not implemented for {type(expr).__name__}"
-            )

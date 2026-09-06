@@ -7,7 +7,7 @@ from typing import Final
 from ..ast import Expr
 from ..environment import AxiomDeclaration, Environment
 from ..errors import FrameworkError
-from ..utils.logging import getLogger
+from ..utils.logging import get_logger
 from .prop import Prop
 
 
@@ -26,7 +26,7 @@ class Axiom:
         self.level_params: Final[tuple[str, ...]] = level_params
         self.statement: Final[Expr] = Prop.to_expr(statement)
         self.env: Final[Environment] = env
-        self.logger: Final[Logger] = getLogger(__name__)
+        self.logger: Final[Logger] = get_logger(__name__)
 
         self.declare()
 

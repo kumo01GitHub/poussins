@@ -1,21 +1,14 @@
 """Core expression data types for the proof assistant."""
 from __future__ import annotations
 
-from abc import ABC
 from dataclasses import dataclass
 from typing import override
 
 from .universe import UnivLevel, UnivLevelParam, UnivLevelSucc, UnivLevelZero
 
 
-class Expr(ABC):
-    """Abstract base class for expressions."""
-
-    pass
-
-
 @dataclass(frozen=True)
-class ESort(Expr):
+class ESort:
     """Sort, e.g. Prop, Type u, etc."""
 
     level: UnivLevel
@@ -44,7 +37,7 @@ class ESort(Expr):
 
 
 @dataclass(frozen=True)
-class EVar(Expr):
+class EVar:
     """Variable, e.g. x, y."""
 
     name: str
@@ -55,7 +48,7 @@ class EVar(Expr):
 
 
 @dataclass(frozen=True)
-class EConst(Expr):
+class EConst:
     """Constant, e.g. nat, list, etc."""
 
     name: str
@@ -71,7 +64,7 @@ class EConst(Expr):
 
 
 @dataclass(frozen=True)
-class EPi(Expr):
+class EPi:
     """Dependent product (Π-type), e.g. Π x : A, B."""
 
     var: str
@@ -84,7 +77,7 @@ class EPi(Expr):
 
 
 @dataclass(frozen=True)
-class ELam(Expr):
+class ELam:
     """Lambda abstraction, e.g. λ x : A, b."""
 
     var: str
@@ -97,7 +90,7 @@ class ELam(Expr):
 
 
 @dataclass(frozen=True)
-class EApp(Expr):
+class EApp:
     """Application, e.g. f a."""
 
     fn: Expr
@@ -109,7 +102,7 @@ class EApp(Expr):
 
 
 @dataclass(frozen=True)
-class EMatch(Expr):
+class EMatch:
     """Pattern matching expression."""
 
     inductive_name: str
@@ -127,7 +120,7 @@ class EMatch(Expr):
 
 
 @dataclass(frozen=True)
-class EMetaVar(Expr):
+class EMetaVar:
     """Meta-variable, e.g. ?m."""
 
     goal_id: str
@@ -135,3 +128,15 @@ class EMetaVar(Expr):
     @override
     def __str__(self) -> str:
         return f"?{self.goal_id}"
+
+
+Expr = (
+    ESort
+    | EVar
+    | EConst
+    | EPi
+    | ELam
+    | EApp
+    | EMatch
+    | EMetaVar
+)

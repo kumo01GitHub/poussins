@@ -29,11 +29,6 @@ from poussins.kernel.univ import (
 )
 
 
-# Unknown expression node for verifying NotImplementedError
-class DummyExpr(Expr):
-    pass
-
-
 class TestIsUniverseLeq:
     """Test cases for `is_universe_leq`."""
 
@@ -47,6 +42,7 @@ class TestIsUniverseLeq:
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_equal(self):
+        """Test cases where the universe levels are equal (reflexivity)."""
         assert is_universe_leq(self.zero, self.zero) is True
         assert is_universe_leq(self.one, self.one) is True
         assert is_universe_leq(self.two, self.two) is True
@@ -56,6 +52,7 @@ class TestIsUniverseLeq:
         assert is_universe_leq(self.imax_uv, self.imax_uv) is True
 
     def test_right_zero(self):
+        """Test cases where the right universe level is zero (only left zero is leq)."""
         assert is_universe_leq(self.zero, self.zero) is True
         assert is_universe_leq(self.one, self.zero) is False
         assert is_universe_leq(self.two, self.zero) is False
@@ -78,6 +75,7 @@ class TestUnifyUnivLevels:
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_unify_univ_levels_success(self):
+        """Test cases where unification of universe levels succeeds and returns a substitution mapping."""
         # Identical levels
         assert unify_univ_levels(self.zero, self.zero, {}) == {}
         assert unify_univ_levels(self.max_uv, self.max_uv, {}) == {}
@@ -95,6 +93,7 @@ class TestUnifyUnivLevels:
         assert subst == {"u": self.zero, "v": self.one}
 
     def test_unify_univ_levels_failure(self):
+        """Test cases where unification of universe levels fails and returns None."""
         # Unification failures returning None (Failure cases)
         assert unify_univ_levels(self.one, self.zero, {}) is None
         assert unify_univ_levels(self.max_uv, self.zero, {}) is None
@@ -113,6 +112,7 @@ class TestIsDefEqUniv:
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
     def test_is_def_eq_univ_success(self):
+        """Test cases where universe levels are definitionally equal (returns True)."""
         assert is_def_eq_univ(self.zero, self.zero) is True
         assert is_def_eq_univ(self.one, self.one) is True
         assert is_def_eq_univ(self.param_u, self.zero) is True
@@ -120,14 +120,14 @@ class TestIsDefEqUniv:
         assert is_def_eq_univ(self.one, self.zero) is False
 
     def test_is_def_eq_univ_failure(self):
+        """Test cases where universe levels are not definitionally equal (returns False)."""
         # Failure cases returning False
         assert is_def_eq_univ(self.one, self.zero) is False
         assert is_def_eq_univ(self.max_uv, self.zero) is False
 
 
 class TestInstantiateUnivLevel:
-    """Test cases for `instantiate_univ_level`.
-    """
+    """Test cases for `instantiate_univ_level`."""
 
     param_u: Final[UnivLevel] = UnivLevelParam("u")
     param_v: Final[UnivLevel] = UnivLevelParam("v")
@@ -136,6 +136,7 @@ class TestInstantiateUnivLevel:
     assignment: Final[dict[str, UnivLevel]] = {"u": zero, "v": one}
 
     def test_instantiate_univ_level_success(self):
+        """Test cases where universe levels are successfully instantiated."""
         # Individual UnivLevel variants coverage (Success / substitution)
         assert instantiate_univ_level(self.param_u, self.assignment) == self.zero
         assert instantiate_univ_level(self.param_v, self.assignment) == self.one
@@ -164,6 +165,7 @@ class TestInstantiateUniv:
     assignment: Final[dict[str, UnivLevel]] = {"u": zero}
 
     def test_instantiate_univ_success(self):
+        """Test cases where expressions are successfully instantiated with universe levels."""
         # Empty substitution returns original expression
         var_expr = EVar("x")
         assert instantiate_univ(var_expr, {}) is var_expr
@@ -201,7 +203,3 @@ class TestInstantiateUniv:
         assert instantiate_univ(match_expr, self.assignment) == match_expr
         metavar_expr = EMetaVar("m1")
         assert instantiate_univ(metavar_expr, self.assignment) == metavar_expr
-
-    def test_instantiate_univ_not_implemented(self):
-        with pytest.raises(NotImplementedError):
-            _ = instantiate_univ(DummyExpr(), self.assignment)

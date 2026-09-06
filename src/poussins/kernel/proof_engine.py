@@ -1,5 +1,4 @@
-"""Kernel-level proof engine for managing proof states, goals, and metavariables.
-"""
+"""Kernel-level proof engine for managing proof states, goals, and metavariables."""
 from __future__ import annotations
 
 from ..ast import Expr, collect_metavar_ids

@@ -4,7 +4,7 @@ import os
 import sys
 
 
-def getLogger(name: str) -> logging.Logger:
+def get_logger(name: str) -> logging.Logger:
     """Get a logger."""
     logger = logging.getLogger(name)
     level = getattr(

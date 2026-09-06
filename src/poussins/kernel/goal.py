@@ -22,33 +22,34 @@ class Goal:
     context: dict[str, Expr]
     local_hypothesis_names: frozenset[str] | None = None
 
-    def __post_init__(self) -> None:
-        """Ensure that local_hypothesis_names is initialized."""
-        if self.local_hypothesis_names is None:
-            object.__setattr__(
-                self,
-                "local_hypothesis_names",
-                frozenset(self.context.keys())
-            )
-
     @property
     def local_context(self) -> dict[str, Expr]:
         """Return the local hypotheses and binders in scope for this goal."""
-        return {
-            name: self.context[name]
-            for name in self.local_hypothesis_names if name in self.context
-        }
+        if self.local_hypothesis_names is None:
+            return {}
+        else:
+            return {
+                name: self.context[name]
+                for name in self.local_hypothesis_names if name in self.context
+            }
 
     @property
     def global_context(self) -> dict[str, Expr]:
         """Return the visible global declarations for this goal."""
-        return {
-            name: typ for name, typ in self.context.items() if name not in self.local_hypothesis_names
-        }
+        if self.local_hypothesis_names is None:
+            return dict(self.context)
+        else:
+            return {
+                name: typ for name, typ in self.context.items()
+                if name not in self.local_hypothesis_names
+            }
 
     def has_local_hypothesis(self, name: str) -> bool:
         """Return whether the given name belongs to the local context."""
-        return name in self.local_hypothesis_names
+        if self.local_hypothesis_names is None:
+            return False
+        else:
+            return name in self.local_hypothesis_names
 
     def with_statement(self, statement: Expr) -> Goal:
         """Return a goal with the same identifier and context but a new statement."""
