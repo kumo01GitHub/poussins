@@ -9,6 +9,9 @@ A Python proof assistant with a small kernel and ergonomic proof DSL.
 <a href="https://pypi.org/project/poussins">
     <img alt="PyPI License" src="https://img.shields.io/pypi/l/poussins">
 </a>
+<a href="https://pepy.tech/project/poussins">
+    <img alt="Downloads" src="https://static.pepy.tech/badge/poussins/month">
+</a>
 <a href="https://github.com/kumo01GitHub/poussins/actions/workflows/pylint.yml">
     <img alt="Pylint" src="https://github.com/kumo01GitHub/poussins/actions/workflows/pylint.yml/badge.svg">
 </a>
