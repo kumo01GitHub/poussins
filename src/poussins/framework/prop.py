@@ -16,7 +16,7 @@ Prop is immutable. The underlying Expr is accessible via .expr.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import override, Sequence, Tuple, Union
+from typing import override
 
 from ..ast import (
     EApp,
@@ -28,15 +28,14 @@ from ..ast import (
 from ..environment import DefinitionDeclaration, Environment
 from ..environment.library import Sort
 
+Binding = tuple[str, Expr]
+
 
 @dataclass(frozen=True)
 class Prop:
     """Immutable wrapper for proposition expressions with operator syntax."""
 
     expr: Expr
-
-    # A binding is a (name, type) pair where the type can be an Expr or a Prop-like value.
-    Binding = Tuple[str, Union[Expr, "Prop"]]
 
     def __init__(
         self,
@@ -85,53 +84,44 @@ class Prop:
         return cls(EConst("False", levels=()))
 
     @classmethod
-    def forall(cls, bindings: Sequence[Binding], body: Prop | Expr) -> Prop:
+    def forall(cls, bindings: tuple[Binding, ...], body: Prop | Expr) -> Prop:
         """Construct a universal quantifier proposition.
 
-        New signature accepts a sequence (e.g. tuple) of (name, type) bindings as the
-        first argument and a single body (Prop or Expr) as the second argument.
+        The interface is intentionally explicit: a tuple of ``(name, type)``
+        bindings and a single body expression.
         """
         if not bindings:
             raise TypeError("forall() requires at least one binding")
-
         if not isinstance(body, (Expr, Prop)):
             raise TypeError("forall() missing required body argument")
 
-        expr: Expr = cls.to_expr(body)
-        for binding in reversed(list(bindings)):
-            if (
-                not isinstance(binding, (list, tuple))
-                or len(binding) != 2
-                or not isinstance(binding[0], str)
-            ):
-                raise TypeError("each binding must be a (name, type) pair")
-            name, typ = binding
+        expr = cls.to_expr(body)
+        for name, typ in reversed(tuple(bindings)):
+            if not isinstance(name, str):
+                raise TypeError("each binding name must be a string")
+            if not isinstance(typ, (Expr, Prop)):
+                raise TypeError("each binding type must be an Expr or Prop")
             expr = EPi(name, cls.to_expr(typ), expr)
         return cls(expr)
 
     @classmethod
-    def exists(cls, bindings: Sequence[Binding], body: Prop | Expr) -> Prop:
+    def exists(cls, bindings: tuple[Binding, ...], body: Prop | Expr) -> Prop:
         """Construct an existential quantifier proposition.
 
-        New signature accepts a sequence (e.g. tuple) of (name, type) bindings as the
-        first argument and a single body (Prop or Expr) as the second argument.
+        The interface is intentionally explicit: a tuple of ``(name, type)``
+        bindings and a single body expression.
         """
         if not bindings:
             raise TypeError("exists() requires at least one binding")
-
         if not isinstance(body, (Expr, Prop)):
             raise TypeError("exists() missing required body argument")
 
-        expr: Expr = cls.to_expr(body)
-        # Existential is encoded with dependent arrows in this system (EPi).
-        for binding in reversed(list(bindings)):
-            if (
-                not isinstance(binding, (list, tuple))
-                or len(binding) != 2
-                or not isinstance(binding[0], str)
-            ):
-                raise TypeError("each binding must be a (name, type) pair")
-            name, typ = binding
+        expr = cls.to_expr(body)
+        for name, typ in reversed(tuple(bindings)):
+            if not isinstance(name, str):
+                raise TypeError("each binding name must be a string")
+            if not isinstance(typ, (Expr, Prop)):
+                raise TypeError("each binding type must be an Expr or Prop")
             expr = EPi(name, cls.to_expr(typ), expr)
         return cls(expr)
 

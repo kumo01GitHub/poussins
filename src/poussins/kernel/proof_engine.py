@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ..ast import Expr, collect_metavar_ids
 from ..environment import Environment
-from ..errors import KernelStateError, KernelValueError
+from ..errors import KernelStateError, KernelTypeError, KernelValueError
 from .equality import is_def_eq
 from .goal import Goal
 from .proof_state import MetaVar, ProofState
@@ -131,6 +131,13 @@ class ProofEngine:
         if current_goal is None:
             raise KernelStateError("No active goal to change.")
 
+        try:
+            infer_type(new_statement, current_goal.context, state.metavars, env)
+        except KernelTypeError as e:
+            raise KernelValueError(
+                "New goal is not a well-typed expression in the current context."
+            ) from e
+
         if not is_def_eq(
             new_statement,
             current_goal.statement,
@@ -166,6 +173,14 @@ class ProofEngine:
             )
 
         current_type = current_goal.local_context[hypothesis_name]
+        try:
+            infer_type(new_type, current_goal.context, state.metavars, env)
+        except KernelTypeError as e:
+            raise KernelValueError(
+                f"New type for '{hypothesis_name}' is not well-typed "
+                + "in the current context."
+            ) from e
+
         if not is_def_eq(
             new_type,
             current_type,

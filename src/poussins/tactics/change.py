@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..ast import Expr
-from ..errors import KernelStateError, KernelValueError, TacticError
+from ..errors import KernelStateError, KernelTypeError, KernelValueError, TacticError
 from ..kernel import ProofManager
 
 
@@ -20,5 +20,5 @@ def change(
             manager.change_goal(expr)
         else:
             manager.change_hypothesis(hypothesis_name, expr)
-    except (KernelStateError, KernelValueError) as e:
+    except (KernelTypeError, KernelStateError, KernelValueError) as e:
         raise TacticError(f"change failed during kernel verification: {e}") from e

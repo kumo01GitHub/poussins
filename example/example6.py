@@ -1,5 +1,4 @@
-"""Example proof demonstrating equality and addition properties for natural numbers.
-"""
+"""Example proof demonstrating equality and addition properties for natural numbers."""
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 
@@ -7,8 +6,13 @@ env = Environment.standard()
 
 n, m, k = Nat("n"), Nat("m"), Nat("k")
 
+bindings = (
+    ("n", Nat.type()),
+    ("m", Nat.type()),
+    ("k", Nat.type()),
+)
 statement = Prop.forall(
-    ( ("n", Nat.type()), ("m", Nat.type()), ("k", Nat.type()) ),
+    bindings,
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(n + k, m + k)),
 )
 
