@@ -19,21 +19,18 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     if current_goal is None:
         raise TacticError("No active goals remain.")
 
-    goal_type = whnf(current_goal.statement, state.metavars, manager.env)
-
-    head_expr = goal_type
+    head_expr = whnf(current_goal.statement, state.metavars, manager.env)
     while isinstance(head_expr, EApp):
         head_expr = head_expr.fn
 
     if not isinstance(head_expr, EConst):
         raise TacticError(
             "Goal type head must be a constant, "
-            + f"found {type(head_expr).__name__}: {goal_type}"
+            + f"found {type(head_expr).__name__}: {head_expr}"
         )
     head_name = head_expr.name
 
-    env = manager.env
-    inductive_decl = env.get(head_name)
+    inductive_decl = manager.env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
         raise TacticError(f"'{head_name}' is not an inductive type.")
     elif not inductive_decl.constructor_names:
@@ -46,7 +43,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
                 + f"Expected 1..{len(inductive_decl.constructor_names)}."
             )
         target_name = inductive_decl.constructor_names[index - 1]
-        decl = env.get(target_name)
+        decl = manager.env.get(target_name)
         if not isinstance(decl, ConstructorDeclaration):
             raise TacticError(f"'{target_name}' is not a constructor declaration.")
 
@@ -62,7 +59,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
     matched_constructor_const: EConst | None = None
 
     for name in inductive_decl.constructor_names:
-        decl = env.get(name)
+        decl = manager.env.get(name)
         if not isinstance(decl, ConstructorDeclaration):
             raise TacticError(f"'{name}' is not a constructor declaration.")
 

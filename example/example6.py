@@ -8,9 +8,7 @@ env = Environment.standard()
 n, m, k = Nat("n"), Nat("m"), Nat("k")
 
 statement = Prop.forall(
-    ("n", Nat.type()),
-    ("m", Nat.type()),
-    ("k", Nat.type()),
+    ( ("n", Nat.type()), ("m", Nat.type()), ("k", Nat.type()) ),
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(n + k, m + k)),
 )
 

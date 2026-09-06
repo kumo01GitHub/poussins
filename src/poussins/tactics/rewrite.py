@@ -62,18 +62,12 @@ def rewrite(
     if not current_goal.has_local_hypothesis(hyp_name):
         raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
 
-    hyp_type_raw = current_goal.local_context[hyp_name]
-    metavars = state.metavars
-    definitions = manager.env
-
-    hyp_type = whnf(hyp_type_raw, metavars, definitions)
-
     eq_decl = EqualityDeclaration.EQ_DECLARATION
     eq_name = eq_decl.declaration.name
     eq_levels = tuple(UnivLevelParam(p) for p in eq_decl.declaration.level_params)
 
     raw_args: list[Expr] = []
-    head_expr = hyp_type
+    head_expr = whnf(current_goal.local_context[hyp_name], state.metavars, manager.env)
     while isinstance(head_expr, EApp):
         raw_args.append(head_expr.arg)
         head_expr = head_expr.fn
@@ -114,35 +108,31 @@ def rewrite(
             local_hypothesis_names=current_goal.local_hypothesis_names,
         )
 
-    try:
-        rec_decl = EqualityDeclaration.EQ_REC_DECLARATION
-        rec_levels = tuple(UnivLevelParam(p) for p in rec_decl.declaration.level_params)
-        eq_rec_const = EConst(name=rec_decl.declaration.name, levels=rec_levels)
+    rec_decl = EqualityDeclaration.EQ_REC_DECLARATION
+    rec_levels = tuple(UnivLevelParam(p) for p in rec_decl.declaration.level_params)
+    eq_rec_const = EConst(name=rec_decl.declaration.name, levels=rec_levels)
 
-        y_var = "_y"
-        h_var = "_h"
-        body_with_y = _replace_expr(target_expr, from_expr, EVar(y_var))
+    y_var = "_y"
+    h_var = "_h"
+    body_with_y = _replace_expr(target_expr, from_expr, EVar(y_var))
+    eq_lhs_y = _mk_app(
+        EConst(name=eq_name, levels=eq_levels),
+        eq_type,
+        from_expr,
+        EVar(y_var)
+    )
 
-        eq_const = EConst(name=eq_name, levels=eq_levels)
-        eq_lhs_y = _mk_app(eq_const, eq_type, from_expr, EVar(y_var))
+    assignment = _mk_app(
+        eq_rec_const,
+        eq_type,
+        from_expr,
+        ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
+        EMetaVar(new_goal.id),
+        to_expr,
+        EVar(hyp_name),
+    )
 
-        motive = ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y))
-        subgoal_placeholder = EMetaVar(new_goal.id)
-
-        assignment = _mk_app(
-            eq_rec_const,
-            eq_type,
-            from_expr,
-            motive,
-            subgoal_placeholder,
-            to_expr,
-            EVar(hyp_name),
-        )
-
-        manager.refine_goal(assignment, [new_goal])
-
-    except Exception as e:
-        raise TacticError(f"{e}") from e
+    manager.refine_goal(assignment, [new_goal])
 
 
 # Alias

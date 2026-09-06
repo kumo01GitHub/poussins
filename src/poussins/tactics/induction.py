@@ -63,8 +63,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
             )
     head_name = head_expr.name
 
-    env = manager.env
-    inductive_decl = env.get(head_name)
+    inductive_decl = manager.env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
         raise TacticError(f"'{head_name}' is not an inductive type.")
     if not inductive_decl.constructor_names:
@@ -75,7 +74,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     branch_terms: list[Expr] = []
 
     for constructor_name in constructor_names:
-        constructor_decl = env.get(constructor_name)
+        constructor_decl = manager.env.get(constructor_name)
         if not isinstance(constructor_decl, ConstructorDeclaration):
             raise TacticError(f"'{constructor_name}' is not a constructor declaration.")
 
@@ -142,14 +141,20 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
             branch_term = ELam(var_name, branch_local_context[var_name], branch_term)
         branch_terms.append(branch_term)
 
-    motive = ELam(
-        "_induction",
-        hypothesis_type,
-        substitute_expr_var(
-            current_goal.statement,
-            hypothesis_name,
-            EVar("_induction")
+    manager.refine_goal(
+        EMatch(
+            head_name,
+            EVar(hypothesis_name),
+            ELam(
+                "_induction",
+                hypothesis_type,
+                substitute_expr_var(
+                    current_goal.statement,
+                    hypothesis_name,
+                    EVar("_induction")
+                ),
+            ),
+            tuple(branch_terms)
         ),
+        subgoals
     )
-    assignment = EMatch(head_name, EVar(hypothesis_name), motive, tuple(branch_terms))
-    manager.refine_goal(assignment, subgoals)
