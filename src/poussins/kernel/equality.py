@@ -189,18 +189,18 @@ def is_def_eq(
 
     t1_whnf = whnf(t1, metavars, env)
     t2_whnf = whnf(t2, metavars, env)
-    if t1_whnf != t1 or t2_whnf != t2:
-        if is_alpha_eq(t1_whnf, t2_whnf):
-            return True
-        eta_result = _is_def_eq_eta_expanded_pair(
-            t1_whnf,
-            t2_whnf,
-            context,
-            metavars,
-            env,
-        )
-        if eta_result is not None:
-            return eta_result
+    if (t1_whnf != t1 or t2_whnf != t2) and is_alpha_eq(t1_whnf, t2_whnf):
+        return True
+
+    eta_result = _is_def_eq_eta_expanded_pair(
+        t1_whnf,
+        t2_whnf,
+        context,
+        metavars,
+        env,
+    )
+    if eta_result is not None:
+        return eta_result
 
     if type(t1_whnf) is not type(t2_whnf):
         return False

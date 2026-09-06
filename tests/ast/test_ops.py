@@ -1,4 +1,6 @@
 """Test cases for AST operations in `poussins.ast`."""
+import pytest
+
 from poussins.ast import (
     EApp,
     EConst,
@@ -20,16 +22,16 @@ from poussins.ast import (
 class TestHasMetaVar:
     """Test cases for `has_metavar`."""
 
-    def test_has_metavar(self):
-        """Test cases where the expression has a meta-variable."""
+    def test_positive_witnesses(self):
+        """Predicate returns True when a metavariable occurs."""
         assert has_metavar(EMetaVar("m1"))
         assert has_metavar(EPi("x", EMetaVar("m1"), EVar("x")))
         assert has_metavar(ELam("x", EVar("A"), EMetaVar("m1")))
         assert has_metavar(EApp(EVar("f"), EMetaVar("m1")))
         assert has_metavar(EMatch("Nat", EMetaVar("m1"), EVar("P"), (EConst("z", ()),)))
 
-    def test_not_has_metavar(self):
-        """Test cases where the expression does not have a meta-variable."""
+    def test_negative_witnesses(self):
+        """Predicate returns False when no metavariable occurs."""
         assert not has_metavar(ESort(UnivLevelZero()))
         assert not has_metavar(EVar("x"))
         assert not has_metavar(EConst("nat", ()))
@@ -42,8 +44,8 @@ class TestHasMetaVar:
 class TestSubstituteMetaVar:
     """Test cases for `substitute_metavar`."""
 
-    def test_included(self):
-        """Test cases where the meta-variable is included in the expression."""
+    def test_replaces_target_occurrences(self):
+        """Target metavariable occurrences are replaced structurally."""
         term = EConst("t", ())
         m = EMetaVar("m")
 
@@ -61,8 +63,8 @@ class TestSubstituteMetaVar:
             EMatch("Nat", m, EVar("P"), (EConst("z", ()),)), m.goal_id, term
         ) == EMatch("Nat", term, EVar("P"), (EConst("z", ()),))
 
-    def test_substitute_only_target_metavar(self):
-        """Substitue only the target meta-variable in the expression."""
+    def test_preserves_nontarget_metavariables(self):
+        """Only the specified metavariable is replaced."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         m2 = EMetaVar("m2")
@@ -71,16 +73,16 @@ class TestSubstituteMetaVar:
         expected = EApp(term, m2)
         assert substitute_metavar(expr, m1.goal_id, term) == expected
 
-    def test_multiple_occurrences(self):
-        """Substitute multiple occurrences of the target meta-variable."""
+    def test_replaces_all_occurrences(self):
+        """All occurrences of the target metavariable are replaced."""
         term = EConst("t", ())
         m1 = EMetaVar("m1")
         expr = EApp(m1, m1)
         expected = EApp(term, term)
         assert substitute_metavar(expr, m1.goal_id, term) == expected
 
-    def test_not_included(self):
-        """Test cases where the meta-variable is not included in the expression."""
+    def test_identity_when_target_absent(self):
+        """Substitution is identity when target metavariable is absent."""
         term = EConst("t", ())
         m = EMetaVar("m")
 
@@ -104,12 +106,17 @@ class TestSubstituteMetaVar:
             EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), m.goal_id, term
         ) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
+    def test_rejects_none_replacement(self):
+        """Substitution rejects missing replacement witnesses."""
+        with pytest.raises(ValueError):
+            substitute_metavar(EMetaVar("m1"), "m1", None)
+
 
 class TestSubstituteExprVar:
     """Test cases for `substitute_expr_var`."""
 
-    def test_included(self):
-        """Test cases where the variable is included in the expression."""
+    def test_replaces_target_occurrences(self):
+        """Target variable occurrences are replaced structurally."""
         before = EVar("x")
         after = EVar("y")
 
@@ -127,8 +134,8 @@ class TestSubstituteExprVar:
             EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after
         ) == EMatch("Nat", after, after, (after,))
 
-    def test_substitute_only_target_var(self):
-        """Substitue only the target variable in the expression."""
+    def test_preserves_nontarget_variables(self):
+        """Only the specified variable is replaced."""
         before = EVar("x")
         after = EVar("y")
 
@@ -136,16 +143,16 @@ class TestSubstituteExprVar:
         expected = EApp(after, EVar("z"))
         assert substitute_expr_var(expr, "x", after) == expected
 
-    def test_multiple_occurrences(self):
-        """Substitute multiple occurrences of the target variable in the expression."""
+    def test_replaces_all_occurrences(self):
+        """All occurrences of the target variable are replaced."""
         before = EVar("x")
         after = EVar("y")
         expr = EApp(before, before)
         expected = EApp(after, after)
         assert substitute_expr_var(expr, "x", after) == expected
 
-    def test_not_included(self):
-        """Test cases where the variable is not included in the expression."""
+    def test_identity_when_target_absent(self):
+        """Substitution is identity when target variable is absent."""
         after = EVar("y")
 
         assert substitute_expr_var(
@@ -161,12 +168,49 @@ class TestSubstituteExprVar:
             EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after
         ) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
+    def test_capture_avoiding_renaming_for_pi(self):
+        """Substitution alpha-renames Pi binders to avoid variable capture."""
+        result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("y"))
+        assert result == EPi("y_", EVar("y"), EVar("y"))
+
+    def test_capture_avoiding_renaming_for_lambda(self):
+        """Substitution alpha-renames lambda binders to avoid variable capture."""
+        result = substitute_expr_var(ELam("y", EVar("x"), EVar("x")), "x", EVar("y"))
+        assert result == ELam("y_", EVar("y"), EVar("y"))
+
+    def test_capture_renaming_with_collision_chain_for_pi(self):
+        """Pi binder renaming keeps extending underscores until fresh."""
+        replacement = EApp(EVar("y"), EVar("y_"))
+        result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", replacement)
+        assert result == EPi("y__", replacement, replacement)
+
+    def test_capture_renaming_with_collision_chain_for_lambda(self):
+        """Lambda binder renaming keeps extending underscores until fresh."""
+        replacement = EApp(EVar("y"), EVar("y_"))
+        result = substitute_expr_var(
+            ELam("y", EVar("x"), EVar("x")),
+            "x",
+            replacement,
+        )
+        assert result == ELam("y__", replacement, replacement)
+
+    def test_non_capture_substitution_descends_under_pi_and_lambda(self):
+        """Without capture risk, substitution proceeds under binders normally."""
+        pi_result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("z"))
+        lam_result = substitute_expr_var(
+            ELam("y", EVar("x"), EVar("x")),
+            "x",
+            EVar("z"),
+        )
+        assert pi_result == EPi("y", EVar("z"), EVar("z"))
+        assert lam_result == ELam("y", EVar("z"), EVar("z"))
+
 
 class TestCollectMetaVarIds:
     """Test cases for `collect_metavar_ids`."""
 
-    def test_coverage_and_cases(self):
-        """Test cases for coverage and various scenarios."""
+    def test_coverage_and_uniqueness(self):
+        """Collector traverses syntax and deduplicates in encounter order."""
         # Cases where no metavariables are included (ESort, EVar, EConst)
         assert collect_metavar_ids(ESort(UnivLevelZero())) == []
         assert collect_metavar_ids(EVar("x")) == []
@@ -195,8 +239,8 @@ class TestCollectMetaVarIds:
 class TestCollectFreeVars:
     """Test cases for `collect_free_vars`."""
 
-    def test_coverage_and_cases(self):
-        """Test cases for coverage and various scenarios."""
+    def test_coverage_and_binding_exclusion(self):
+        """Collector excludes bound variables and includes free occurrences."""
         # Cases where no free variables are included (ESort, EConst, EMetaVar)
         assert collect_free_vars(ESort(UnivLevelZero())) == set()
         assert collect_free_vars(EConst("nat", ())) == set()

@@ -1,4 +1,4 @@
-"""Test cases for the `poussins.kernel.univ` module."""
+"""Mathematical soundness tests for `poussins.kernel.univ`."""
 from typing import Final
 
 from poussins.ast import (
@@ -26,8 +26,8 @@ from poussins.kernel.univ import (
 )
 
 
-class TestIsUniverseLeq:
-    """Test cases for `is_universe_leq`."""
+class TestUniversePreorderChecks:
+    """Order-theoretic checks for universe cumulativity."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -38,8 +38,8 @@ class TestIsUniverseLeq:
     max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
-    def test_equal(self):
-        """Test cases where the universe levels are equal (reflexivity)."""
+    def test_reflexivity(self):
+        """Each universe level is less-than-or-equal to itself."""
         assert is_universe_leq(self.zero, self.zero) is True
         assert is_universe_leq(self.one, self.one) is True
         assert is_universe_leq(self.two, self.two) is True
@@ -48,8 +48,8 @@ class TestIsUniverseLeq:
         assert is_universe_leq(self.max_uv, self.max_uv) is True
         assert is_universe_leq(self.imax_uv, self.imax_uv) is True
 
-    def test_right_zero(self):
-        """Test cases where the right universe level is zero (only left zero is leq)."""
+    def test_zero_as_minimal_element_in_tested_fragment(self):
+        """In the tested fragment, only zero is below zero."""
         assert is_universe_leq(self.zero, self.zero) is True
         assert is_universe_leq(self.one, self.zero) is False
         assert is_universe_leq(self.two, self.zero) is False
@@ -58,9 +58,21 @@ class TestIsUniverseLeq:
         assert is_universe_leq(self.max_uv, self.zero) is False
         assert is_universe_leq(self.imax_uv, self.zero) is False
 
+    def test_max_left_and_right_rules(self):
+        """`max` uses conjunction on the left and disjunction on the right."""
+        assert is_universe_leq(UnivLevelMax(self.zero, self.one), self.one) is True
+        assert is_universe_leq(self.one, UnivLevelMax(self.zero, self.one)) is True
+        assert is_universe_leq(self.two, UnivLevelMax(self.zero, self.one)) is False
 
-class TestUnifyUnivLevels:
-    """Test cases for `unify_univ_levels`."""
+    def test_imax_rules(self):
+        """`imax` obeys the implementation's left/right comparison rules."""
+        assert is_universe_leq(UnivLevelIMax(self.one, self.zero), self.zero) is True
+        assert is_universe_leq(self.one, UnivLevelIMax(self.zero, self.one)) is True
+        assert is_universe_leq(self.param_u, self.one) is False
+
+
+class TestUniverseUnification:
+    """Constraint solving behavior for universe equations."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -71,8 +83,8 @@ class TestUnifyUnivLevels:
     max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
-    def test_unify_univ_levels_success(self):
-        """Unify universe levels successfully and return updated substitutions."""
+    def test_solvable_constraints(self):
+        """Solvable constraints produce consistent substitutions."""
         # Identical levels
         assert unify_univ_levels(self.zero, self.zero, {}) == {}
         assert unify_univ_levels(self.max_uv, self.max_uv, {}) == {}
@@ -93,15 +105,34 @@ class TestUnifyUnivLevels:
         subst = unify_univ_levels(imax1, imax2, {})
         assert subst == {"u": self.zero, "v": self.one}
 
-    def test_unify_univ_levels_failure(self):
-        """Test cases where unification of universe levels fails and returns None."""
+    def test_unsatisfiable_constraints(self):
+        """Unsatisfiable constraints return no substitution."""
         # Unification failures returning None (Failure cases)
         assert unify_univ_levels(self.one, self.zero, {}) is None
         assert unify_univ_levels(self.max_uv, self.zero, {}) is None
 
+    def test_uses_existing_parameter_assignment(self):
+        """Existing assignments are respected before solving new equations."""
+        assert unify_univ_levels(self.param_u, self.param_v, {"u": self.one}) == {
+            "u": self.one,
+            "v": self.one,
+        }
+        assert unify_univ_levels(self.param_u, self.one, {"u": self.zero}) is None
+        assert unify_univ_levels(self.one, self.param_u, {"u": self.one}) == {
+            "u": self.one,
+        }
+        assert (
+            unify_univ_levels(
+                UnivLevelIMax(self.one, self.zero),
+                UnivLevelIMax(self.zero, self.zero),
+                {},
+            )
+            is None
+        )
 
-class TestIsDefEqUniv:
-    """Test cases for `is_def_eq_univ`."""
+
+class TestUniverseDefinitionalEquality:
+    """Definitional equality checks at the universe level."""
 
     zero: Final[UnivLevel] = UnivLevelZero()
     one: Final[UnivLevel] = UnivLevelSucc(zero)
@@ -112,23 +143,23 @@ class TestIsDefEqUniv:
     max_uv: Final[UnivLevel] = UnivLevelMax(param_u, param_v)
     imax_uv: Final[UnivLevel] = UnivLevelIMax(param_u, param_v)
 
-    def test_is_def_eq_univ_success(self):
-        """Test cases where universe levels are definitionally equal."""
+    def test_convertible_levels(self):
+        """Convertible universe levels are considered definitionally equal."""
         assert is_def_eq_univ(self.zero, self.zero) is True
         assert is_def_eq_univ(self.one, self.one) is True
         assert is_def_eq_univ(self.param_u, self.zero) is True
         assert is_def_eq_univ(self.max_uv, self.max_uv) is True
         assert is_def_eq_univ(self.one, self.zero) is False
 
-    def test_is_def_eq_univ_failure(self):
-        """Test cases where universe levels are not definitionally equal."""
+    def test_nonconvertible_levels(self):
+        """Non-convertible universe levels are not definitionally equal."""
         # Failure cases returning False
         assert is_def_eq_univ(self.one, self.zero) is False
         assert is_def_eq_univ(self.max_uv, self.zero) is False
 
 
-class TestInstantiateUnivLevel:
-    """Test cases for `instantiate_univ_level`."""
+class TestUniverseLevelInstantiation:
+    """Substitution behavior for universe level expressions."""
 
     param_u: Final[UnivLevel] = UnivLevelParam("u")
     param_v: Final[UnivLevel] = UnivLevelParam("v")
@@ -136,8 +167,8 @@ class TestInstantiateUnivLevel:
     one: Final[UnivLevel] = UnivLevelSucc(zero)
     assignment: Final[dict[str, UnivLevel]] = {"u": zero, "v": one}
 
-    def test_instantiate_univ_level_success(self):
-        """Test cases where universe levels are successfully instantiated."""
+    def test_substitution_across_level_syntax(self):
+        """Substitution traverses all supported universe-level constructors."""
         # Individual UnivLevel variants coverage (Success / substitution)
         assert instantiate_univ_level(self.param_u, self.assignment) == self.zero
         assert instantiate_univ_level(self.param_v, self.assignment) == self.one
@@ -158,17 +189,19 @@ class TestInstantiateUnivLevel:
             )
             == UnivLevelIMax(self.zero, self.one)
         )
+        assert instantiate_univ_level(self.zero, self.assignment) == self.zero
+        assert instantiate_univ_level(self.param_u, {}) == self.param_u
 
 
-class TestInstantiateUniv:
-    """Test cases for `instantiate_univ`."""
+class TestUniverseInstantiationOverExpr:
+    """Substitution behavior for universe parameters inside expressions."""
 
     param_u: Final[UnivLevel] = UnivLevelParam("u")
     zero: Final[UnivLevel] = UnivLevelZero()
     assignment: Final[dict[str, UnivLevel]] = {"u": zero}
 
-    def test_instantiate_univ_success(self):
-        """Instantiate expressions with universe levels successfully."""
+    def test_substitution_across_expression_syntax(self):
+        """Universe substitution respects each expression constructor policy."""
         # Empty substitution returns original expression
         var_expr = EVar("x")
         assert instantiate_univ(var_expr, {}) is var_expr
