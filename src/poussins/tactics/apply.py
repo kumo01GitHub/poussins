@@ -4,17 +4,14 @@ from __future__ import annotations
 from ..ast import EApp, EMetaVar, EPi, Expr, substitute_expr_var
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, infer_type, whnf
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def apply(manager: ProofManager, expr: Expr) -> None:
     """Apply an expression to the current goal."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     implicit_subgoals: list[Goal] = []
     current_type = whnf(

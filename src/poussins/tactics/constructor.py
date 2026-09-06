@@ -1,34 +1,28 @@
 """Tactic for applying inductive constructors."""
 from __future__ import annotations
 
-from ..ast import EApp, EConst, EPi, UnivLevelParam
+from ..ast import EConst, EPi, UnivLevelParam
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..environment.library import LogicDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, infer_type, whnf
 from .apply import apply
+from .helpers import const_head_name, require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def constructor(manager: ProofManager, index: int | None = None) -> None:
     """Apply a matching constructor, or the constructor at the given index."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
-    head_expr = whnf(current_goal.statement, state.metavars, manager.env)
-    while isinstance(head_expr, EApp):
-        head_expr = head_expr.fn
-
-    if not isinstance(head_expr, EConst):
+    goal_type = whnf(current_goal.statement, state.metavars, manager.env)
+    head_name = const_head_name(goal_type)
+    if head_name is None:
         raise TacticError(
             "Goal type head must be a constant, "
-            + f"found {type(head_expr).__name__}: {head_expr}"
+            + f"found {type(goal_type).__name__}: {goal_type}"
         )
-    head_name = head_expr.name
 
     inductive_decl = manager.env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
@@ -78,11 +72,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         while isinstance(c_conclusion, EPi):
             c_conclusion = whnf(c_conclusion.body, state.metavars, manager.env)
 
-        c_head = c_conclusion
-        while isinstance(c_head, EApp):
-            c_head = c_head.fn
-
-        c_head_name = getattr(c_head, "name", None)
+        c_head_name = const_head_name(c_conclusion)
         if c_head_name == head_name:
             matched_constructor_const = const
             break
@@ -98,23 +88,18 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
 def _goal_head_name(manager: ProofManager) -> str:
     """Resolve the head constant name of the current goal type."""
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     goal_type = whnf(current_goal.statement, state.metavars, manager.env)
 
-    head_expr = goal_type
-    while isinstance(head_expr, EApp):
-        head_expr = head_expr.fn
-
-    if not isinstance(head_expr, EConst):
+    head_name = const_head_name(goal_type)
+    if head_name is None:
         raise TacticError(
             "Goal type head must be a constant, "
-            + "found {type(head_expr).__name__}: {goal_type}"
+            + f"found {type(goal_type).__name__}: {goal_type}"
         )
 
-    return head_expr.name
+    return head_name
 
 
 def _apply_named_constructor(
@@ -166,11 +151,9 @@ def _apply_named_constructor(
     ))
 
 
+@requires_active_goal
 def left(manager: ProofManager) -> None:
     """Prove an `Or` goal by selecting the left constructor (`Or.inl`)."""
-    if manager.is_closed:
-        raise TacticError("left failed: No active goals remain.")
-
     _apply_named_constructor(
         manager,
         inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
@@ -179,11 +162,9 @@ def left(manager: ProofManager) -> None:
     )
 
 
+@requires_active_goal
 def right(manager: ProofManager) -> None:
     """Prove an `Or` goal by selecting the right constructor (`Or.inr`)."""
-    if manager.is_closed:
-        raise TacticError("right failed: No active goals remain.")
-
     _apply_named_constructor(
         manager,
         inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
@@ -192,11 +173,9 @@ def right(manager: ProofManager) -> None:
     )
 
 
+@requires_active_goal
 def split(manager: ProofManager) -> None:
     """Prove an `And` goal by applying `And.intro`."""
-    if manager.is_closed:
-        raise TacticError("split failed: No active goals remain.")
-
     _apply_named_constructor(
         manager,
         inductive_name=LogicDeclaration.AND_DECLARATION.declaration.name,

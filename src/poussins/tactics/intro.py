@@ -4,17 +4,14 @@ from __future__ import annotations
 from ..ast import ELam, EMetaVar, EPi, EVar, substitute_expr_var
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def intro(manager: ProofManager, var_name: str) -> None:
     """Introduce one variable from a dependent product goal."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     goal_expr = whnf(current_goal.statement, state.metavars, manager.env)
     if not isinstance(goal_expr, EPi):

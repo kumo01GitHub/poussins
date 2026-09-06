@@ -42,6 +42,10 @@ select = [
 
 ignore = []
 
+[tool.ruff.lint.pylint]
+max-returns = 10
+max-branches = 20
+
 [build-system]
 requires = ["uv_build>=0.11.9,<0.12.0"]
 build-backend = "uv_build"

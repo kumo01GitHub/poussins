@@ -6,16 +6,13 @@ from ..environment import RecursorDeclaration
 from ..environment.library import LogicDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def exfalso(manager: ProofManager) -> None:
     """Replace the current goal with False and derive the target from it."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
-    current_goal = manager.current_state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     false_rec_decl = LogicDeclaration.FALSE_REC_DECLARATION.declaration
     if not isinstance(false_rec_decl, RecursorDeclaration):

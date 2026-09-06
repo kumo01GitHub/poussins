@@ -4,8 +4,10 @@ from __future__ import annotations
 from ..ast import EApp, EMetaVar, EPi, EVar, collect_free_vars
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
     """Revert one or more hypotheses from the local context back into the goal."""
     targets = [hyp_names] if isinstance(hyp_names, str) else hyp_names
@@ -14,9 +16,7 @@ def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
         raise TacticError("No hypothesis names provided.")
 
     for hyp_name in targets:
-        current_goal = manager.current_state.current_goal
-        if current_goal is None:
-            raise TacticError("No active goal.")
+        current_goal = require_current_goal(manager)
 
         if hyp_name not in current_goal.local_context:
             raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")

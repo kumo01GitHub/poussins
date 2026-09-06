@@ -4,17 +4,14 @@ from __future__ import annotations
 from ..ast import EMetaVar, Expr, collect_metavar_ids, substitute_metavar
 from ..errors import KernelStateError, KernelTypeError, KernelValueError, TacticError
 from ..kernel import Goal, ProofManager, infer_metavar_types
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def refine(manager: ProofManager, expr: Expr) -> None:
     """Refine current goal using an expression that may contain metavariables."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     meta_type_map = infer_metavar_types(
         expr=expr,

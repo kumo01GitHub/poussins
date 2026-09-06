@@ -4,17 +4,16 @@ from __future__ import annotations
 from ..ast import Expr
 from ..errors import KernelStateError, KernelTypeError, KernelValueError, TacticError
 from ..kernel import ProofManager
+from .helpers import requires_active_goal
 
 
+@requires_active_goal
 def change(
     manager: ProofManager,
     expr: Expr,
     hypothesis_name: str | None = None
 ) -> None:
     """Replace the current goal with a definitionally equal expression."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     try:
         if hypothesis_name is None:
             manager.change_goal(expr)

@@ -6,6 +6,7 @@ from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, whnf
 from ..kernel.goal import Goal
+from .helpers import build_app, require_current_goal, requires_active_goal, split_eq_app
 
 
 def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
@@ -35,14 +36,7 @@ def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
             return expr
 
 
-def _mk_app(fn: Expr, *args: Expr) -> Expr:
-    """Make an chain of EApp applications."""
-    res = fn
-    for arg in args:
-        res = EApp(res, arg)
-    return res
-
-
+@requires_active_goal
 def rewrite(
     manager: ProofManager,
     hyp_name: str,
@@ -51,13 +45,8 @@ def rewrite(
     at: str | None = None,
 ) -> None:
     """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     if not current_goal.has_local_hypothesis(hyp_name):
         raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
@@ -66,19 +55,12 @@ def rewrite(
     eq_name = eq_decl.declaration.name
     eq_levels = tuple(UnivLevelParam(p) for p in eq_decl.declaration.level_params)
 
-    raw_args: list[Expr] = []
-    head_expr = whnf(current_goal.local_context[hyp_name], state.metavars, manager.env)
-    while isinstance(head_expr, EApp):
-        raw_args.append(head_expr.arg)
-        head_expr = head_expr.fn
-
-    args = list(reversed(raw_args))
-    head_name = head_expr.name if isinstance(head_expr, EConst) else None
-
-    if head_name != eq_name or len(args) < 3:
+    hyp_type = whnf(current_goal.local_context[hyp_name], state.metavars, manager.env)
+    eq_args = split_eq_app(hyp_type, eq_name)
+    if eq_args is None:
         raise TacticError(f"Hypothesis '{hyp_name}' is not an equality.")
 
-    eq_type, lhs, rhs = args[0], args[1], args[2]
+    eq_type, lhs, rhs = eq_args
     from_expr, to_expr = (rhs, lhs) if symm else (lhs, rhs)
 
     if at is not None:
@@ -115,14 +97,14 @@ def rewrite(
     y_var = "_y"
     h_var = "_h"
     body_with_y = _replace_expr(target_expr, from_expr, EVar(y_var))
-    eq_lhs_y = _mk_app(
+    eq_lhs_y = build_app(
         EConst(name=eq_name, levels=eq_levels),
         eq_type,
         from_expr,
         EVar(y_var)
     )
 
-    assignment = _mk_app(
+    assignment = build_app(
         eq_rec_const,
         eq_type,
         from_expr,

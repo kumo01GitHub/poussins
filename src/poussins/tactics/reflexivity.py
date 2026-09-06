@@ -1,22 +1,19 @@
 """Equality tactics including reflexivity and rfl."""
 from __future__ import annotations
 
-from ..ast import EApp, EConst, Expr, UnivLevelParam
+from ..ast import EConst, UnivLevelParam
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq, whnf
 from .apply import apply
+from .helpers import require_current_goal, requires_active_goal, split_eq_app
 
 
+@requires_active_goal
 def reflexivity(manager: ProofManager) -> None:
     """Solves a goal of the form `Eq A x y` where `x` and `y` are equal."""
-    if manager.is_closed:
-        raise TacticError("reflexivity failed: No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("reflexivity failed: No active goals remain.")
+    current_goal = require_current_goal(manager, tactic_name="reflexivity")
 
     target = current_goal.statement
     context = current_goal.context
@@ -24,23 +21,14 @@ def reflexivity(manager: ProofManager) -> None:
     definitions = manager.env
 
     goal_type = whnf(target, metavars, definitions)
-
-    raw_args: list[Expr] = []
-    head_expr = goal_type
-    while isinstance(head_expr, EApp):
-        raw_args.append(head_expr.arg)
-        head_expr = head_expr.fn
-
-    args = list(reversed(raw_args))
-
-    head_name = getattr(head_expr, "name", None)
     eq_name = EqualityDeclaration.EQ_DECLARATION.declaration.name
+    eq_args = split_eq_app(goal_type, eq_name)
 
-    if head_name != eq_name or len(args) < 3:
+    if eq_args is None:
+        head_name = getattr(goal_type, "name", None)
         raise TacticError(f"Goal is not an equality. Found '{head_name}'.")
 
-    x = args[1]
-    y = args[2]
+    _, x, y = eq_args
 
     if not is_def_eq(x, y, context, metavars, definitions):
         raise TacticError("LHS and RHS are not definitionally equal.")

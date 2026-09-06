@@ -2,25 +2,20 @@
 from ..ast import EVar, Expr
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq
+from .helpers import require_current_goal, requires_active_goal
 
 
+@requires_active_goal
 def exact(manager: ProofManager, expr: Expr) -> None:
     """Close the current goal with the given expression."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     manager.close_goal(expr)
 
 
+@requires_active_goal
 def assumption(manager: ProofManager) -> None:
     """Close the current goal with a matching local hypothesis."""
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     target = current_goal.statement
     context = current_goal.context

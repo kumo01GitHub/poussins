@@ -16,18 +16,16 @@ from ..ast import (
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
+from .helpers import (
+    build_lambda_chain,
+    const_head_name,
+    fresh_binder_name,
+    require_current_goal,
+    requires_active_goal,
+)
 
 
-def _fresh_name(base: str, context: dict[str, Expr], used_names: set[str]) -> str:
-    """Produce a fresh binder name that does not collide with the current context."""
-    candidate = base
-    counter = 0
-    while candidate in context or candidate in used_names:
-        counter += 1
-        candidate = f"{base}{counter}"
-    return candidate
-
-
+@requires_active_goal
 def induction(manager: ProofManager, hypothesis_name: str) -> None:
     """Perform structural induction on an inductive hypothesis in the current goal.
 
@@ -36,13 +34,8 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     and any constructor arguments whose types are the same inductive type receive
     an induction hypothesis of the form ``ih : P prev``.
     """
-    if manager.is_closed:
-        raise TacticError("No active goals remain.")
-
     state = manager.current_state
-    current_goal = state.current_goal
-    if current_goal is None:
-        raise TacticError("No active goals remain.")
+    current_goal = require_current_goal(manager)
 
     if not current_goal.has_local_hypothesis(hypothesis_name):
         raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
@@ -52,16 +45,12 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         state.metavars,
         manager.env
     )
-    head_expr = hypothesis_type
-    while isinstance(head_expr, EApp):
-        head_expr = head_expr.fn
-
-    if not isinstance(head_expr, EConst):
-            raise TacticError(
-                "Induction hypothesis type must be an inductive type, "
-                + f"found non-constant head: {hypothesis_type}"
-            )
-    head_name = head_expr.name
+    head_name = const_head_name(hypothesis_type)
+    if head_name is None:
+        raise TacticError(
+            "Induction hypothesis type must be an inductive type, "
+            + f"found non-constant head: {hypothesis_type}"
+        )
 
     inductive_decl = manager.env.get(head_name)
     if not isinstance(inductive_decl, InductiveDeclaration):
@@ -90,7 +79,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         branch_expr: Expr = constructor
         current_type = constructor_type
         while isinstance(current_type, EPi):
-            var_name = _fresh_name(
+            var_name = fresh_binder_name(
                 current_type.var,
                 current_goal.context, used_names=set()
             )
@@ -116,7 +105,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         induction_hypotheses: list[tuple[str, Expr]] = []
         for var_name, var_type in branch_binders:
             if isinstance(var_type, EConst) and var_type.name == head_name:
-                ih_name = _fresh_name(
+                ih_name = fresh_binder_name(
                     "ih",
                     current_goal.global_context | branch_local_context,
                     used_names=set()
@@ -136,10 +125,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
         )
         subgoals.append(subgoal)
 
-        branch_term = EMetaVar(subgoal.id)
-        for var_name, _ in reversed(branch_binders):
-            branch_term = ELam(var_name, branch_local_context[var_name], branch_term)
-        branch_terms.append(branch_term)
+        branch_terms.append(build_lambda_chain(branch_binders, EMetaVar(subgoal.id)))
 
     manager.refine_goal(
         EMatch(

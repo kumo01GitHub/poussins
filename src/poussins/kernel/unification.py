@@ -21,6 +21,31 @@ from .proof_state import MetaVar
 from .univ import unify_univ_levels
 
 
+def _assign_open_metavar(
+    mvar_expr: Expr, replacement: Expr, metavars: dict[str, MetaVar]
+) -> dict[str, MetaVar] | None:
+    """Assign an open metavariable when possible and return updated assignments."""
+    if not isinstance(mvar_expr, EMetaVar):
+        return None
+
+    mvar_id = mvar_expr.goal_id
+    if mvar_id not in metavars or metavars[mvar_id].is_assigned:
+        return None
+    if mvar_id in collect_metavar_ids(replacement):
+        raise KernelTypeError(
+            f"Unification failed: occurs check failed for ?{mvar_id} in {replacement}"
+        )
+    return (
+        metavars
+        | {
+            mvar_id: MetaVar(
+                statement=metavars[mvar_id].statement,
+                assignment=replacement,
+            )
+        }
+    )
+
+
 def unify(
     t1: Expr,
     t2: Expr,
@@ -34,38 +59,12 @@ def unify(
     if is_alpha_eq(t1, t2):
         return metavars
 
-    if isinstance(t1, EMetaVar):
-        mvar_id = t1.goal_id
-        if mvar_id in metavars and not metavars[mvar_id].is_assigned:
-            if mvar_id in collect_metavar_ids(t2):
-                raise KernelTypeError(
-                    f"Unification failed: occurs check failed for ?{mvar_id} in {t2}"
-                )
-            return (
-                metavars
-                | {
-                    mvar_id: MetaVar(
-                        statement=metavars[mvar_id].statement,
-                        assignment=t2
-                    )
-                }
-            )
-    if isinstance(t2, EMetaVar):
-        mvar_id = t2.goal_id
-        if mvar_id in metavars and not metavars[mvar_id].is_assigned:
-            if mvar_id in collect_metavar_ids(t1):
-                raise KernelTypeError(
-                    f"Unification failed: occurs check failed for ?{mvar_id} in {t1}"
-                )
-            return (
-                metavars
-                | {
-                    mvar_id: MetaVar(
-                        statement=metavars[mvar_id].statement,
-                        assignment=t1
-                    )
-                }
-            )
+    assigned_metavars = _assign_open_metavar(t1, t2, metavars)
+    if assigned_metavars is not None:
+        return assigned_metavars
+    assigned_metavars = _assign_open_metavar(t2, t1, metavars)
+    if assigned_metavars is not None:
+        return assigned_metavars
 
     t1_whnf = whnf(t1, metavars, env)
     t2_whnf = whnf(t2, metavars, env)
@@ -103,14 +102,14 @@ def unify(
                 b2_inst = substitute_expr_var(
                     b2_inst,
                     var_name=v2,
-                    replacement=EVar(v1)
+                    replacement=EVar(v1),
                 )
             return unify(
                 b1_inst,
                 b2_inst,
                 context | {v1: d1_inst},
                 current_metavars,
-                env
+                env,
             )
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:
@@ -133,7 +132,7 @@ def unify(
                     b2_inst,
                     context,
                     current_metavars,
-                    env
+                    env,
                 )
             return current_metavars
         case _:
