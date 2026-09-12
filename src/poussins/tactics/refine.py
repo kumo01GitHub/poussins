@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from ..ast import EMetaVar, Expr, collect_metavar_ids, substitute_metavar
-from ..errors import KernelStateError, KernelTypeError, KernelValueError, TacticError
 from ..kernel import Goal, ProofManager, infer_metavar_types
 from .helpers import require_current_goal, requires_active_goal
 
@@ -42,10 +41,7 @@ def refine(manager: ProofManager, expr: Expr) -> None:
             replacement=EMetaVar(new_goal.id),
         )
 
-    try:
-        if not subgoals:
-            manager.close_goal(assignment_expr)
-        else:
-            manager.refine_goal(assignment_expr, subgoals)
-    except (KernelTypeError, KernelStateError, KernelValueError) as e:
-        raise TacticError(f"refine failed during kernel verification: {e}") from e
+    if not subgoals:
+        manager.close_goal(assignment_expr)
+    else:
+        manager.refine_goal(assignment_expr, subgoals)

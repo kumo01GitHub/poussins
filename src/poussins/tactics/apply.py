@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from ..ast import EApp, EMetaVar, EPi, Expr, substitute_expr_var
-from ..errors import TacticError
 from ..kernel import Goal, ProofManager, infer_type, whnf
 from .helpers import require_current_goal, requires_active_goal
 
@@ -14,12 +13,12 @@ def apply(manager: ProofManager, expr: Expr) -> None:
     current_goal = require_current_goal(manager)
 
     implicit_subgoals: list[Goal] = []
+    assignment = expr
     current_type = whnf(
         infer_type(expr, current_goal.context, state.metavars, manager.env),
         state.metavars,
         manager.env,
     )
-    assignment = expr
 
     while isinstance(current_type, EPi):
         new_goal = Goal(
@@ -41,10 +40,7 @@ def apply(manager: ProofManager, expr: Expr) -> None:
             manager.env,
         )
 
-    try:
-        if not implicit_subgoals:
-            manager.close_goal(assignment)
-        else:
-            manager.refine_goal(assignment, implicit_subgoals)
-    except Exception as e:
-        raise TacticError(f"apply failed during kernel verification: {e}") from e
+    if not implicit_subgoals:
+        manager.close_goal(assignment)
+    else:
+        manager.refine_goal(assignment, implicit_subgoals)
