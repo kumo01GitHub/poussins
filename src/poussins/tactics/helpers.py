@@ -34,13 +34,13 @@ def require_current_goal(
     return current_goal
 
 
-def requires_active_goal(
-    func: Callable[Concatenate[ProofManager, _P], _R],
-) -> Callable[Concatenate[ProofManager, _P], _R]:
+def requires_active_goal[**P, R](
+    func: Callable[Concatenate[ProofManager, P], R],
+) -> Callable[Concatenate[ProofManager, P], R]:
     """Require that the tactic has an active goal before executing the function."""
 
     @wraps(func)
-    def wrapper(manager: ProofManager, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+    def wrapper(manager: ProofManager, *args: P.args, **kwargs: P.kwargs) -> R:
         require_current_goal(manager, tactic_name=func.__name__)
         return func(manager, *args, **kwargs)
 

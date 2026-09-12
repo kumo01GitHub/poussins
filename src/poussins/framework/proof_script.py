@@ -34,16 +34,16 @@ from ..tactics import (
 
 _TacticParams = ParamSpec('_TacticParams')
 
-def log_tactic(
-    func: Callable[Concatenate[ProofScript, _TacticParams], None]
-) -> Callable[..., None]:
+def log_tactic[**TacticParams](
+    func: Callable[Concatenate[ProofScript, TacticParams], None]
+) -> Callable[Concatenate[ProofScript, TacticParams], None]:
     """Log the execution of a tactic method in ProofScript."""
 
     @functools.wraps(func)
     def wrapper(
         self: ProofScript,
-        *args: _TacticParams.args,
-        **kwargs: _TacticParams.kwargs
+        *args: TacticParams.args,
+        **kwargs: TacticParams.kwargs
     ) -> None:
         self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
 
