@@ -30,6 +30,7 @@ from ..tactics import (
     rfl,
     right,
     rw,
+    specialize,
     split,
 )
 
@@ -212,3 +213,9 @@ class ProofScript(ABC):
     def have(self, var_name: str, proof_type: Expr) -> None:
         """Introduce an intermediate assertion (have h : P)."""
         have(self.manager, var_name, proof_type)
+
+    @log_tactic
+    def specialize(self, hyp_name: str, arg_or_name: Expr | str) -> None:
+        """Specialize a hypothesis in the local context with an argument."""
+        arg = arg_or_name if isinstance(arg_or_name, Expr) else EVar(arg_or_name)
+        specialize(self.manager, hyp_name, arg)

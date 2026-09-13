@@ -12,6 +12,7 @@ from .refine import refine
 from .reflexivity import reflexivity, rfl
 from .revert import revert
 from .rewrite import rewrite, rw
+from .specialize import specialize
 
 __all__ = [
     "apply",
@@ -33,5 +34,6 @@ __all__ = [
     "rfl",
     "right",
     "rw",
+    "specialize",
     "split",
 ]

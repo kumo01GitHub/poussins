@@ -44,7 +44,7 @@ def have(manager: ProofManager, var_name: str, proof_type: Expr) -> None:
         current_goal.local_hypothesis_names or frozenset()
     ) | {bound_name}
 
-    main_goal = Goal(
+    new_goal = Goal(
         statement=current_goal.statement,
         context=new_context,
         local_hypothesis_names=new_local_hypothesis_names,
@@ -57,8 +57,8 @@ def have(manager: ProofManager, var_name: str, proof_type: Expr) -> None:
     )
     cut_arg = build_lambda_chain(
         [(bound_name, proof_type)],
-        EMetaVar(main_goal.id),
+        EMetaVar(new_goal.id),
     )
     assignment_expr = build_app(cut_fn, cut_arg)
 
-    manager.refine_goal(assignment_expr, [proof_goal, main_goal])
+    manager.refine_goal(assignment_expr, [proof_goal, new_goal])

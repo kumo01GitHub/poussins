@@ -9,9 +9,8 @@ trans = Lemma("Transitivity", (p >> q) >> ((q >> r) >> (p >> r)), env)
 
 trans.intros(["hPQ", "hQR", "hP"])
 trans.have("hQ", q.expr)
-trans.apply("hPQ")
-trans.exact("hP")
+trans.specialize("hPQ", "hP")
+trans.exact("hPQ")
 trans.apply("hQR")
 trans.exact("hQ")
-
 trans.qed()
