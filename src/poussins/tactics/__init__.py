@@ -13,6 +13,7 @@ from .reflexivity import reflexivity, rfl
 from .revert import revert
 from .rewrite import rewrite, rw
 from .specialize import specialize
+from .suffices import suffices
 
 __all__ = [
     "apply",
@@ -36,4 +37,5 @@ __all__ = [
     "rw",
     "specialize",
     "split",
+    "suffices",
 ]

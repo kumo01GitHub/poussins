@@ -1,7 +1,7 @@
-"""Tactic for introducing intermediate assertions (have h : P)."""
+"""Tactic for asserting a sufficient hypothesis (suffices h : P)."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, EPi, EVar, Expr
+from ..ast import EMetaVar, Expr
 from ..kernel import Goal, ProofManager
 from .helpers import (
     build_app,
@@ -13,12 +13,12 @@ from .helpers import (
 
 
 @requires_active_goal
-def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
-    """Introduce an intermediate assertion (have h : P).
+def suffices(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
+    """Assert that hypothesis h : P is sufficient to prove current goal G.
 
     Splits the current goal into:
-    1. Context |- P
-    2. Context, h : P |- G
+    1. Context, h : P |- G  (prove main goal using hypothesis h : P)
+    2. Context |- P         (prove that P holds)
     """
     current_goal = require_current_goal(manager)
 
@@ -33,12 +33,6 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         used_hypothesis_names,
     )
 
-    proof_goal = Goal(
-        statement=expr,
-        context=current_goal.context,
-        local_hypothesis_names=current_goal.local_hypothesis_names,
-    )
-
     new_context = current_goal.context | {bound_name: expr}
     new_local_hypothesis_names = (
         current_goal.local_hypothesis_names or frozenset()
@@ -50,15 +44,16 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         local_hypothesis_names=new_local_hypothesis_names,
     )
 
-    p_to_g = EPi("_", expr, current_goal.statement)
-    cut_fn = build_lambda_chain(
-        [("f", p_to_g)],
-        build_app(EVar("f"), EMetaVar(proof_goal.id)),
+    proof_goal = Goal(
+        statement=expr,
+        context=current_goal.context,
+        local_hypothesis_names=current_goal.local_hypothesis_names,
     )
-    cut_arg = build_lambda_chain(
+
+    cut_lambda = build_lambda_chain(
         [(bound_name, expr)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app(cut_fn, cut_arg)
+    assignment_expr = build_app(cut_lambda, EMetaVar(proof_goal.id))
 
-    manager.refine_goal(assignment_expr, [proof_goal, new_goal])
+    manager.refine_goal(assignment_expr, [new_goal, proof_goal])

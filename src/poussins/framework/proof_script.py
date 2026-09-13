@@ -32,6 +32,7 @@ from ..tactics import (
     rw,
     specialize,
     split,
+    suffices,
 )
 
 _TacticParams = ParamSpec('_TacticParams')
@@ -210,12 +211,17 @@ class ProofScript(ABC):
         rw(self.manager, hyp_name)
 
     @log_tactic
-    def have(self, var_name: str, proof_type: Expr) -> None:
+    def have(self, hyp_name: str, expr: Expr) -> None:
         """Introduce an intermediate assertion (have h : P)."""
-        have(self.manager, var_name, proof_type)
+        have(self.manager, hyp_name, expr)
 
     @log_tactic
     def specialize(self, hyp_name: str, arg_or_name: Expr | str) -> None:
         """Specialize a hypothesis in the local context with an argument."""
         arg = arg_or_name if isinstance(arg_or_name, Expr) else EVar(arg_or_name)
         specialize(self.manager, hyp_name, arg)
+
+    @log_tactic
+    def suffices(self, hyp_name: str, expr: Expr) -> None:
+        """Assert hypothesis hyp_name : expr to prove the goal."""
+        suffices(self.manager, hyp_name, expr)
