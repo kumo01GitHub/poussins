@@ -77,6 +77,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
 -　`reflexivity() / rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
 -　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.
+-　`have(var_name, proof_type)`: introduce an intermediate assertion var_name : proof_type, creating a subgoal to prove proof_type first before continuing the main goal with the new hypothesis.
 - `undo()`: rollback one proof step
 
 ### Induction and the Nat DSL

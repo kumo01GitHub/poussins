@@ -4,6 +4,7 @@ from .cases import cases
 from .change import change
 from .constructor import constructor, left, right, split
 from .exact import assumption, exact
+from .have import have
 from .induction import induction
 from .intro import intro, intros
 from .logic import exfalso
@@ -20,6 +21,7 @@ __all__ = [
     "constructor",
     "exact",
     "exfalso",
+    "have",
     "induction",
     "intro",
     "intros",

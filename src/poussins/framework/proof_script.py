@@ -18,6 +18,7 @@ from ..tactics import (
     constructor,
     exact,
     exfalso,
+    have,
     induction,
     intro,
     intros,
@@ -206,3 +207,8 @@ class ProofScript(ABC):
     def rw(self, hyp_name: str) -> None:
         """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
         rw(self.manager, hyp_name)
+
+    @log_tactic
+    def have(self, var_name: str, proof_type: Expr) -> None:
+        """Introduce an intermediate assertion (have h : P)."""
+        have(self.manager, var_name, proof_type)
