@@ -3,7 +3,7 @@ from .apply import apply
 from .cases import cases
 from .change import change
 from .constructor import constructor, left, right, split
-from .equality import reflexivity, rfl, symm, symmetry
+from .equality import reflexivity, rfl, symm, symmetry, trans, transitivity
 from .exact import assumption, exact
 from .have import have
 from .induction import induction
@@ -41,4 +41,6 @@ __all__ = [
     "suffices",
     "symm",
     "symmetry",
+    "trans",
+    "transitivity",
 ]

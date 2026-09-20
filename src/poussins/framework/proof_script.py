@@ -36,6 +36,8 @@ from ..tactics import (
     specialize,
     split,
     suffices,
+    trans,
+    transitivity,
 )
 
 _TacticParams = ParamSpec('_TacticParams')
@@ -217,6 +219,26 @@ class ProofScript(ABC):
     def symm(self) -> None:
         """Swap the left and right sides of an equality goal."""
         symm(self.manager)
+
+    @log_tactic
+    def transitivity(self, expr_or_name: Expr | str) -> None:
+        """Split an equality goal into two subgoals using a middle term."""
+        middle = (
+            expr_or_name
+            if isinstance(expr_or_name, Expr)
+            else EVar(expr_or_name)
+        )
+        transitivity(self.manager, middle)
+
+    @log_tactic
+    def trans(self, expr_or_name: Expr | str) -> None:
+        """Split an equality goal into two subgoals using a middle term."""
+        middle = (
+            expr_or_name
+            if isinstance(expr_or_name, Expr)
+            else EVar(expr_or_name)
+        )
+        trans(self.manager, middle)
 
     @log_tactic
     def rewrite(self, hyp_name: str) -> None:

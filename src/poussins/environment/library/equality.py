@@ -161,6 +161,160 @@ class EqualityDeclaration(Enum):
         ),
     )
 
+    """Eq.trans definition for transitivity of equality."""
+    EQ_TRANS_DECLARATION = DefinitionDeclaration(
+        name="Eq.trans",
+        level_params=(),
+        type=EPi(
+            "A",
+            Sort.TYPE.sort,
+            EPi(
+                "x",
+                EVar("A"),
+                EPi(
+                    "y",
+                    EVar("A"),
+                    EPi(
+                        "z",
+                        EVar("A"),
+                        EPi(
+                            "h1",
+                            EApp(EApp(EApp(
+                                EConst("Eq", ()), EVar("A")),
+                                EVar("x")),
+                                EVar("y")
+                            ),
+                            EPi(
+                                "h2",
+                                EApp(EApp(EApp(
+                                    EConst("Eq", ()), EVar("A")),
+                                    EVar("y")),
+                                    EVar("z")
+                                ),
+                                EApp(EApp(EApp(
+                                    EConst("Eq", ()), EVar("A")),
+                                    EVar("x")),
+                                    EVar("z")
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        value=ELam(
+            "A",
+            Sort.TYPE.sort,
+            ELam(
+                "x",
+                EVar("A"),
+                ELam(
+                    "y",
+                    EVar("A"),
+                    ELam(
+                        "z",
+                        EVar("A"),
+                        ELam(
+                            "h1",
+                            EApp(
+                                EApp(
+                                    EApp(EConst("Eq", ()), EVar("A")),
+                                    EVar("x")
+                                ),
+                                EVar("y")
+                            ),
+                            ELam(
+                                "h2",
+                                EApp(
+                                    EApp(
+                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EVar("y")
+                                    ),
+                                    EVar("z")
+                                ),
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EApp(
+                                                EApp(
+                                                    EApp(
+                                                        EApp(
+                                                            EConst(
+                                                                "Eq.rec",
+                                                                (UnivLevelZero(),)
+                                                            ),
+                                                            EVar("A"),
+                                                        ),
+                                                        EVar("x"),
+                                                    ),
+                                                    ELam(
+                                                        "y'",
+                                                        EVar("A"),
+                                                        ELam(
+                                                            "_",
+                                                            EApp(EApp(
+                                                                EApp(
+                                                                    EConst("Eq", ()),
+                                                                    EVar("A")
+                                                                ),
+                                                                EVar("x")),
+                                                                EVar("y'")
+                                                            ),
+                                                            EPi(
+                                                                "_",
+                                                                EApp(
+                                                                    EApp(
+                                                                        EApp(
+                                                                            EConst(
+                                                                                "Eq",
+                                                                                ()
+                                                                            ),
+                                                                            EVar("A")
+                                                                        ),
+                                                                        EVar("y'")
+                                                                    ),
+                                                                    EVar("z")
+                                                                ),
+                                                                EApp(
+                                                                    EApp(
+                                                                        EApp(
+                                                                            EConst(
+                                                                                "Eq",
+                                                                                ()
+                                                                            ),
+                                                                            EVar("A")
+                                                                        ),
+                                                                        EVar("x")
+                                                                    ), EVar("z")
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                                ELam(
+                                                    "h2",
+                                                    EApp(EApp(EApp(
+                                                        EConst("Eq", ()), EVar("A")),
+                                                        EVar("x")),
+                                                        EVar("z")
+                                                    ),
+                                                    EVar("h2"),
+                                                ),
+                                            ),
+                                            EVar("y"),
+                                        ),
+                                        EVar("h1"),
+                                    ),
+                                    EVar("h2"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
     @property
     def declaration(self) -> Declaration:
         """Return the underlying declaration."""

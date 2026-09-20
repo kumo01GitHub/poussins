@@ -78,6 +78,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
 -　`reflexivity()` / `rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
 -　`symmetry()` / `symm()`: transform an equality goal `a = b` into `b = a`
+- `transitivity(middle)` / `trans(middle)`: split an equality goal `a = c` into two goals `a = b` and `b = c` using an intermediate term `b`
 -　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.
 -　`have(hyp_name, expr)`: introduce an intermediate assertion `hyp_name : expr`, creating a subgoal to prove `expr` first before continuing the main goal with the new hypothesis.
 -　`specialize(hyp_name, arg)`: specialize hypothesis `hyp_name` with argument `arg` to `hyp_name : B[x := arg]`.

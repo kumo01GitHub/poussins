@@ -1,7 +1,7 @@
 """Equality tactics including reflexivity and symmetry."""
 from __future__ import annotations
 
-from ..ast import EMetaVar
+from ..ast import EMetaVar, Expr
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, is_def_eq, whnf
@@ -87,6 +87,59 @@ def symmetry(manager: ProofManager) -> None:
         [new_goal]
     )
 
-
 # Alias for symmetry tactic
 symm = symmetry
+
+
+@requires_active_goal
+def transitivity(manager: ProofManager, middle: Expr) -> None:
+    """Split an equality goal into two subgoals using a middle term."""
+    current_goal = require_current_goal(manager, tactic_name="transitivity")
+
+    eq_args = split_eq_app(
+        whnf(
+            current_goal.statement,
+            manager.current_state.metavars,
+            manager.env
+        ),
+        EqualityDeclaration.EQ_DECLARATION.declaration.name,
+    )
+
+    if eq_args is None:
+        raise TacticError("Goal is not an equality.")
+
+    type_a, lhs, rhs = eq_args
+
+    eq_const = const_from_decl(
+        EqualityDeclaration.EQ_DECLARATION.declaration, manager
+    )
+    eq_trans_const = const_from_decl(
+        EqualityDeclaration.EQ_TRANS_DECLARATION.declaration, manager
+    )
+
+    goal1 = Goal(
+        statement=build_app(eq_const, type_a, lhs, middle),
+        context=current_goal.context,
+        local_hypothesis_names=current_goal.local_hypothesis_names,
+    )
+
+    goal2 = Goal(
+        statement=build_app(eq_const, type_a, middle, rhs),
+        context=current_goal.context,
+        local_hypothesis_names=current_goal.local_hypothesis_names,
+    )
+
+    proof = build_app(
+        eq_trans_const,
+        type_a,
+        lhs,
+        middle,
+        rhs,
+        EMetaVar(goal1.id),
+        EMetaVar(goal2.id),
+    )
+
+    manager.refine_goal(proof, [goal1, goal2])
+
+# Alias for transitivity tactic
+trans = transitivity
