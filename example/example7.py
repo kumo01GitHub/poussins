@@ -1,5 +1,4 @@
-"""Basic usage examples of 'have', 'specialize', and 'suffices' tactics in Poussins."""
-
+"""Example 7: Basic usage examples of 'have', 'specialize', and 'suffices' tactics."""
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 

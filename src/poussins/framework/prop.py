@@ -21,9 +21,11 @@ from typing import override
 from ..ast import (
     EApp,
     EConst,
+    ELam,
     EPi,
     EVar,
     Expr,
+    UnivLevelParam,
 )
 from ..environment import DefinitionDeclaration, Environment
 from ..environment.library import Sort
@@ -117,12 +119,21 @@ class Prop:
             raise TypeError("exists() missing required body argument")
 
         expr = cls.to_expr(body)
-        for name, typ in reversed(tuple(bindings)):
+        for name, type in reversed(tuple(bindings)):
             if not isinstance(name, str):
                 raise TypeError("each binding name must be a string")
-            if not isinstance(typ, (Expr, Prop)):
+            if not isinstance(type, (Expr, Prop)):
                 raise TypeError("each binding type must be an Expr or Prop")
-            expr = EPi(name, cls.to_expr(typ), expr)
+
+            domain_expr = cls.to_expr(type)
+            expr = EApp(
+                EApp(
+                    EConst("Exists", levels=(UnivLevelParam("u"),)),
+                    domain_expr
+                ),
+                ELam(name, domain_expr, expr)
+            )
+
         return cls(expr)
 
     # ------------------------------------------------------------------

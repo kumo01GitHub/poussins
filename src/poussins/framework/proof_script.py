@@ -7,8 +7,6 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final, ParamSpec
 
-from poussins.tactics.equality import symm, symmetry
-
 from ..ast import EVar, Expr
 from ..environment import Environment
 from ..kernel import ProofManager, ProofState
@@ -21,6 +19,7 @@ from ..tactics import (
     contradiction,
     exact,
     exfalso,
+    exists,
     have,
     induction,
     intro,
@@ -36,8 +35,11 @@ from ..tactics import (
     specialize,
     split,
     suffices,
+    symm,
+    symmetry,
     trans,
     transitivity,
+    use,
 )
 
 _TacticParams = ParamSpec('_TacticParams')
@@ -265,3 +267,13 @@ class ProofScript(ABC):
     def suffices(self, hyp_name: str, expr: Expr) -> None:
         """Assert hypothesis hyp_name : expr to prove the goal."""
         suffices(self.manager, hyp_name, expr)
+
+    @log_tactic
+    def use(self, expr: Expr) -> None:
+        """Refine the current goal of the form `Exists A P` by providing a witness."""
+        use(self.manager, expr)
+
+    @log_tactic
+    def exists(self, expr: Expr) -> None:
+        """Refine the current goal of the form `Exists A P` by providing a witness."""
+        exists(self.manager, expr)

@@ -83,6 +83,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 -　`have(hyp_name, expr)`: introduce an intermediate assertion `hyp_name : expr`, creating a subgoal to prove `expr` first before continuing the main goal with the new hypothesis.
 -　`specialize(hyp_name, arg)`: specialize hypothesis `hyp_name` with argument `arg` to `hyp_name : B[x := arg]`.
 -　`suffices(hyp_name, expr)`: assert `hypothesis hyp_name : expr` to prove the goal, creating subgoals to prove the main goal using `hyp_name` first, then prove `expr`.
+-　`use(expr)` / `exists(expr)`: solve an existential goal by providing a witness term, transforming the goal into the predicate applied to that witness.
 - `undo()`: rollback one proof step
 
 ### Induction and the Nat DSL

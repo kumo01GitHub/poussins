@@ -5,6 +5,7 @@ from .change import change
 from .constructor import constructor, left, right, split
 from .equality import reflexivity, rfl, symm, symmetry, trans, transitivity
 from .exact import assumption, exact
+from .exists import exists, use
 from .have import have
 from .induction import induction
 from .intro import intro, intros
@@ -24,6 +25,7 @@ __all__ = [
     "contradiction",
     "exact",
     "exfalso",
+    "exists",
     "have",
     "induction",
     "intro",
@@ -43,4 +45,5 @@ __all__ = [
     "symmetry",
     "trans",
     "transitivity",
+    "use",
 ]

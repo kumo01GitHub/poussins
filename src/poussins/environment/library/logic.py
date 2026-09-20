@@ -182,6 +182,125 @@ class LogicDeclaration(Enum):
         value=ELam("A", Sort.PROP.sort, EPi("_", EVar("A"), EConst("False", ()))),
     )
 
+    """Exists (∃) inductive declaration for existential quantification."""
+    EXISTS_DECLARATION = InductiveDeclaration(
+        name="Exists",
+        level_params=("u",),
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "p",
+                EPi("_", EVar("A"), Sort.PROP.sort),
+                Sort.PROP.sort,
+            ),
+        ),
+        constructor_names=("Exists.intro",),
+    )
+
+    """Exists.intro constructor declaration."""
+    EXISTS_INTRO_DECLARATION = ConstructorDeclaration(
+        name="Exists.intro",
+        level_params=("u",),
+        inductive_name="Exists",
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "p",
+                EPi("_", EVar("A"), Sort.PROP.sort),
+                EPi(
+                    "w",
+                    EVar("A"),
+                    EPi(
+                        "h",
+                        EApp(EVar("p"), EVar("w")),
+                        EApp(
+                            EApp(
+                                EConst("Exists", (UnivLevelParam("u"),)),
+                                EVar("A"),
+                            ),
+                            EVar("p"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    """Exists.rec recursor declaration for existential elimination."""
+    EXISTS_REC_DECLARATION = RecursorDeclaration(
+        name="Exists.rec",
+        level_params=("u", "v"),
+        inductive_name="Exists",
+        num_params=2,
+        num_indices=0,
+        num_minors=1,
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "p",
+                EPi("_", EVar("A"), Sort.PROP.sort),
+                EPi(
+                    "motive",
+                    EPi(
+                        "_",
+                        EApp(
+                            EApp(
+                                EConst("Exists", (UnivLevelParam("u"),)),
+                                EVar("A"),
+                            ),
+                            EVar("p"),
+                        ),
+                        ESort(UnivLevelParam("v")),
+                    ),
+                    EPi(
+                        "minor",
+                        EPi(
+                            "w",
+                            EVar("A"),
+                            EPi(
+                                "h",
+                                EApp(EVar("p"), EVar("w")),
+                                EApp(
+                                    EVar("motive"),
+                                    EApp(
+                                        EApp(
+                                            EApp(
+                                                EApp(
+                                                    EConst(
+                                                        "Exists.intro",
+                                                        (UnivLevelParam("u"),),
+                                                    ),
+                                                    EVar("A"),
+                                                ),
+                                                EVar("p"),
+                                            ),
+                                            EVar("w"),
+                                        ),
+                                        EVar("h"),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        EPi(
+                            "t",
+                            EApp(
+                                EApp(
+                                    EConst("Exists", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("p"),
+                            ),
+                            EApp(EVar("motive"), EVar("t")),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
     @property
     def declaration(self) -> Declaration:
         """Return the underlying declaration."""
