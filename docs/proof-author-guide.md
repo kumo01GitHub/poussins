@@ -74,6 +74,7 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
 - `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
 - `exfalso()`: change target to `False` and prove contradiction first
+- `contradiction()`: close current goal if local hypotheses contain a contradiction (e.g. `h : False` or `h1 : P` and `h2 : P -> False`)
 - `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
 -　`reflexivity() / rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
 -　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.

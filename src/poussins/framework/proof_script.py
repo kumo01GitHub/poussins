@@ -16,6 +16,7 @@ from ..tactics import (
     cases,
     change,
     constructor,
+    contradiction,
     exact,
     exfalso,
     have,
@@ -174,6 +175,11 @@ class ProofScript(ABC):
     def exfalso(self) -> None:
         """Switch the current goal to False."""
         exfalso(self.manager)
+
+    @log_tactic
+    def contradiction(self) -> None:
+        """Close the current goal if local hypotheses contain a contradiction."""
+        contradiction(self.manager)
 
     @log_tactic
     def induction(self, hypothesis_name: str) -> None:

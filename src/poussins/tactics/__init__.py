@@ -7,7 +7,7 @@ from .exact import assumption, exact
 from .have import have
 from .induction import induction
 from .intro import intro, intros
-from .logic import exfalso
+from .logic import contradiction, exfalso
 from .refine import refine
 from .reflexivity import reflexivity, rfl
 from .revert import revert
@@ -21,6 +21,7 @@ __all__ = [
     "cases",
     "change",
     "constructor",
+    "contradiction",
     "exact",
     "exfalso",
     "have",
