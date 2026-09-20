@@ -119,13 +119,13 @@ class Prop:
             raise TypeError("exists() missing required body argument")
 
         expr = cls.to_expr(body)
-        for name, type in reversed(tuple(bindings)):
+        for name, typ in reversed(tuple(bindings)):
             if not isinstance(name, str):
                 raise TypeError("each binding name must be a string")
-            if not isinstance(type, (Expr, Prop)):
+            if not isinstance(typ, (Expr, Prop)):
                 raise TypeError("each binding type must be an Expr or Prop")
 
-            domain_expr = cls.to_expr(type)
+            domain_expr = cls.to_expr(typ)
             expr = EApp(
                 EApp(
                     EConst("Exists", levels=(UnivLevelParam("u"),)),
