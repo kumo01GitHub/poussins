@@ -5,7 +5,8 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate, ParamSpec, TypeVar
 
-from ..ast import EApp, EConst, ELam, Expr
+from ..ast import EApp, EConst, ELam, Expr, UnivLevelParam
+from ..environment import Declaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 
@@ -112,3 +113,17 @@ def split_eq_app(expr: Expr, eq_name: str = "Eq") -> tuple[Expr, Expr, Expr] | N
     if args is None:
         return None
     return args[0], args[1], args[2]
+
+
+def const_from_decl(decl: Declaration, manager: ProofManager) -> EConst:
+    """Get the constant expression corresponding to a declaration."""
+    decl_name = decl.name
+    if manager.env.get(decl_name) is None:
+        raise TacticError(
+            f"Required declaration '{decl_name}' is not present in the environment."
+        )
+
+    return EConst(
+            name=decl.name,
+            levels=tuple(UnivLevelParam(param) for param in decl.level_params),
+        )

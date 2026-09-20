@@ -1,12 +1,16 @@
 """Equality tactics including reflexivity and rfl."""
 from __future__ import annotations
 
-from ..ast import EConst, UnivLevelParam
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq, whnf
 from .apply import apply
-from .helpers import require_current_goal, requires_active_goal, split_eq_app
+from .helpers import (
+    const_from_decl,
+    require_current_goal,
+    requires_active_goal,
+    split_eq_app,
+)
 
 
 @requires_active_goal
@@ -33,13 +37,13 @@ def reflexivity(manager: ProofManager) -> None:
     if not is_def_eq(x, y, context, metavars, definitions):
         raise TacticError("LHS and RHS are not definitionally equal.")
 
-    refl_decl = EqualityDeclaration.EQ_REFL_DECLARATION.declaration
-    refl_const = EConst(
-        name=refl_decl.name,
-        levels=tuple(UnivLevelParam(param) for param in refl_decl.level_params)
+    apply(
+        manager,
+        const_from_decl(
+            EqualityDeclaration.EQ_REFL_DECLARATION.declaration,
+            manager
+        )
     )
-
-    apply(manager, refl_const)
 
 
 # Alias for reflexivity tactic

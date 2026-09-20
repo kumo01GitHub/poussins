@@ -1,12 +1,18 @@
 """Advanced Rewrite tactic for equality substitution."""
 from __future__ import annotations
 
-from ..ast import EApp, EConst, ELam, EMetaVar, EPi, EVar, Expr, UnivLevelParam
+from ..ast import EApp, ELam, EMetaVar, EPi, EVar, Expr
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, whnf
 from ..kernel.goal import Goal
-from .helpers import build_app, require_current_goal, requires_active_goal, split_eq_app
+from .helpers import (
+    build_app,
+    const_from_decl,
+    require_current_goal,
+    requires_active_goal,
+    split_eq_app,
+)
 
 
 def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
@@ -51,12 +57,10 @@ def rewrite(
     if not current_goal.has_local_hypothesis(hyp_name):
         raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
 
-    eq_decl = EqualityDeclaration.EQ_DECLARATION
-    eq_name = eq_decl.declaration.name
-    eq_levels = tuple(UnivLevelParam(p) for p in eq_decl.declaration.level_params)
-
-    hyp_type = whnf(current_goal.local_context[hyp_name], state.metavars, manager.env)
-    eq_args = split_eq_app(hyp_type, eq_name)
+    eq_args = split_eq_app(
+        whnf(current_goal.local_context[hyp_name], state.metavars, manager.env),
+        EqualityDeclaration.EQ_DECLARATION.declaration.name
+    )
     if eq_args is None:
         raise TacticError(f"Hypothesis '{hyp_name}' is not an equality.")
 
@@ -90,22 +94,24 @@ def rewrite(
             local_hypothesis_names=current_goal.local_hypothesis_names,
         )
 
-    rec_decl = EqualityDeclaration.EQ_REC_DECLARATION
-    rec_levels = tuple(UnivLevelParam(p) for p in rec_decl.declaration.level_params)
-    eq_rec_const = EConst(name=rec_decl.declaration.name, levels=rec_levels)
-
     y_var = "_y"
     h_var = "_h"
     body_with_y = _replace_expr(target_expr, from_expr, EVar(y_var))
     eq_lhs_y = build_app(
-        EConst(name=eq_name, levels=eq_levels),
+        const_from_decl(
+            EqualityDeclaration.EQ_DECLARATION.declaration,
+            manager
+        ),
         eq_type,
         from_expr,
         EVar(y_var)
     )
 
     assignment = build_app(
-        eq_rec_const,
+        const_from_decl(
+            EqualityDeclaration.EQ_REC_DECLARATION.declaration,
+            manager
+        ),
         eq_type,
         from_expr,
         ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
