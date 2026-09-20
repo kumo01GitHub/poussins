@@ -16,13 +16,32 @@ A Python proof assistant with a small kernel and ergonomic proof DSL.
 
 ## Quick Start
 
+### Installation
+
+Install `poussins` from PyPI:
+
 ```bash
-uv sync
-uv run -m poussins --help
+pip install poussins
+poussins --help
 ```
 
-Run an example proof:
+Run a proof file:
 
 ```bash
+poussins prove path/to/proof.py
+# or
+python -m poussins prove path/to/proof.py
+```
+
+### From Source / Development
+
+If you clone the repository or want to run examples directly with `uv`:
+
+```bash
+git clone https://github.com/kumo01GitHub/poussins.git
+cd poussins
+
+uv sync
+uv run -m poussins --help
 uv run -m poussins prove example/hilbert_s.py
 ```
