@@ -76,7 +76,8 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `exfalso()`: change target to `False` and prove contradiction first
 - `contradiction()`: close current goal if local hypotheses contain a contradiction (e.g. `h : False` or `h1 : P` and `h2 : P -> False`)
 - `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
--　`reflexivity() / rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
+-　`reflexivity()` / `rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
+-　`symmetry()` / `symm()`: transform an equality goal `a = b` into `b = a`
 -　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.
 -　`have(hyp_name, expr)`: introduce an intermediate assertion `hyp_name : expr`, creating a subgoal to prove `expr` first before continuing the main goal with the new hypothesis.
 -　`specialize(hyp_name, arg)`: specialize hypothesis `hyp_name` with argument `arg` to `hyp_name : B[x := arg]`.

@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
+from ...ast import EApp, EConst, ELam, EPi, ESort, EVar, UnivLevelParam, UnivLevelZero
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
+    DefinitionDeclaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
@@ -68,6 +69,96 @@ class EqualityDeclaration(Enum):
                 )
             )
         )
+    )
+
+    """Eq.symm definition for symmetry of equality."""
+    EQ_SYMM_DECLARATION = DefinitionDeclaration(
+        name="Eq.symm",
+        level_params=(),
+        type=EPi(
+            "A",
+            Sort.TYPE.sort,
+            EPi(
+                "x",
+                EVar("A"),
+                EPi(
+                    "y",
+                    EVar("A"),
+                    EPi(
+                        "h",
+                        EApp(EApp(
+                            EApp(EConst("Eq", ()), EVar("A")),
+                            EVar("x")),
+                            EVar("y")
+                        ),
+                        EApp(EApp(
+                            EApp(EConst("Eq", ()), EVar("A")),
+                            EVar("y")),
+                            EVar("x")
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        value=ELam(
+            "A",
+            Sort.TYPE.sort,
+            ELam(
+                "x",
+                EVar("A"),
+                ELam(
+                    "y",
+                    EVar("A"),
+                    ELam(
+                        "h",
+                        EApp(EApp(
+                            EApp(EConst("Eq", ()), EVar("A")),
+                            EVar("x")),
+                            EVar("y")
+                        ),
+                        EApp(
+                            EApp(
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EApp(
+                                                EConst("Eq.rec", (UnivLevelZero(),)),
+                                                EVar("A"),
+                                            ),
+                                            EVar("x"),
+                                        ),
+                                        ELam(
+                                            "z",
+                                            EVar("A"),
+                                            ELam(
+                                                "_",
+                                                EApp(EApp(
+                                                    EApp(EConst("Eq", ()),EVar("A")),
+                                                    EVar("x")),
+                                                    EVar("z")
+                                                ),
+                                                EApp(EApp(
+                                                    EApp(EConst("Eq", ()), EVar("A")),
+                                                    EVar("z")),
+                                                    EVar("x")
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                    EApp(EApp(
+                                        EConst("Eq.refl", ()),
+                                        EVar("A")),
+                                        EVar("x")
+                                    ),
+                                ),
+                                EVar("y"),
+                            ),
+                            EVar("h"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
     )
 
     @property

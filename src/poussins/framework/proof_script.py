@@ -7,6 +7,8 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final, ParamSpec
 
+from poussins.tactics.equality import symm, symmetry
+
 from ..ast import EVar, Expr
 from ..environment import Environment
 from ..kernel import ProofManager, ProofState
@@ -205,6 +207,16 @@ class ProofScript(ABC):
     def rfl(self) -> None:
         """Solve the current goal if it is an equality of definitionally equal terms."""
         rfl(self.manager)
+
+    @log_tactic
+    def symmetry(self) -> None:
+        """Swap the left and right sides of an equality goal."""
+        symmetry(self.manager)
+
+    @log_tactic
+    def symm(self) -> None:
+        """Swap the left and right sides of an equality goal."""
+        symm(self.manager)
 
     @log_tactic
     def rewrite(self, hyp_name: str) -> None:
