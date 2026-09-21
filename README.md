@@ -35,7 +35,7 @@ python -m poussins prove path/to/proof.py
 
 ### From Source / Development
 
-If you clone the repository or want to run examples directly with `uv`:
+If you clone the repository or want to run examples directly with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 git clone https://github.com/kumo01GitHub/poussins.git
