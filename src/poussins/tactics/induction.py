@@ -26,7 +26,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def induction(manager: ProofManager, hypothesis_name: str) -> None:
+def induction(manager: ProofManager, hyp_name: str) -> None:
     """Perform structural induction on an inductive hypothesis in the current goal.
 
     The tactic creates one subgoal per constructor of the inductive type.
@@ -37,11 +37,11 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     state = manager.current_state
     current_goal = require_current_goal(manager)
 
-    if not current_goal.has_local_hypothesis(hypothesis_name):
-        raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
+    if not current_goal.has_local_hypothesis(hyp_name):
+        raise TacticError(f"Unknown hypothesis '{hyp_name}'.")
 
     hypothesis_type = whnf(
-        current_goal.local_context[hypothesis_name],
+        current_goal.local_context[hyp_name],
         state.metavars,
         manager.env
     )
@@ -89,15 +89,15 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
 
         branch_statement = substitute_expr_var(
             current_goal.statement,
-            hypothesis_name,
+            hyp_name,
             branch_expr
         )
         branch_local_context = {
-            name: substitute_expr_var(type_expr, hypothesis_name, branch_expr)
+            name: substitute_expr_var(type_expr, hyp_name, branch_expr)
             for name, type_expr in current_goal.local_context.items()
-            if name != hypothesis_name
+            if name != hyp_name
         }
-        branch_local_context[hypothesis_name] = branch_expr
+        branch_local_context[hyp_name] = branch_expr
 
         for var_name, var_type in branch_binders:
             branch_local_context[var_name] = var_type
@@ -112,7 +112,7 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
                 )
                 ih_expr = substitute_expr_var(
                     current_goal.statement,
-                    hypothesis_name,
+                    hyp_name,
                     EVar(var_name)
                 )
                 branch_local_context[ih_name] = ih_expr
@@ -130,13 +130,13 @@ def induction(manager: ProofManager, hypothesis_name: str) -> None:
     manager.refine_goal(
         EMatch(
             head_name,
-            EVar(hypothesis_name),
+            EVar(hyp_name),
             ELam(
                 "_induction",
                 hypothesis_type,
                 substitute_expr_var(
                     current_goal.statement,
-                    hypothesis_name,
+                    hyp_name,
                     EVar("_induction")
                 ),
             ),

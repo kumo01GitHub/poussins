@@ -11,6 +11,7 @@ from ..ast import EVar, Expr
 from ..environment import Environment
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
+    RCasesPattern,
     apply,
     assumption,
     cases,
@@ -25,6 +26,8 @@ from ..tactics import (
     intro,
     intros,
     left,
+    obtain,
+    rcases,
     refine,
     reflexivity,
     revert,
@@ -171,11 +174,21 @@ class ProofScript(ABC):
     @log_tactic
     def cases(
         self,
-        hypothesis_name: str,
+        hyp_name: str,
         patterns: tuple[tuple[str, ...], ...] | None = None,
     ) -> None:
         """Case-split on an inductive hypothesis."""
-        cases(self.manager, hypothesis_name, patterns)
+        cases(self.manager, hyp_name, patterns)
+
+    @log_tactic
+    def rcases(self, hyp_name, pattern: RCasesPattern):
+        """Destruct a hypothesis recursively using a nested pattern structure."""
+        rcases(self.manager, hyp_name, pattern)
+
+    @log_tactic
+    def obtain(self, pattern: RCasesPattern, expr: Expr):
+        """Introduce a new witness and immediately destructure it using rcases."""
+        obtain(self.manager, pattern, expr)
 
     @log_tactic
     def exfalso(self) -> None:
@@ -188,9 +201,9 @@ class ProofScript(ABC):
         contradiction(self.manager)
 
     @log_tactic
-    def induction(self, hypothesis_name: str) -> None:
+    def induction(self, hyp_name: str) -> None:
         """Perform induction on a Nat-valued hypothesis."""
-        induction(self.manager, hypothesis_name)
+        induction(self.manager, hyp_name)
 
     @log_tactic
     def refine(self, expr: Expr) -> None:

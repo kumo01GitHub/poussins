@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Union
 
 from ..ast import (
     EApp,
@@ -18,7 +19,9 @@ from ..ast import (
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
-from ..kernel import Goal, ProofManager, whnf
+from ..kernel import Goal, ProofManager, infer_type, whnf
+from .exact import exact
+from .have import have
 from .helpers import (
     build_lambda_chain,
     const_head_name,
@@ -132,7 +135,7 @@ def _specialize_with_parameter_substitutions(
 
 def _build_branch_local_context(
     current_goal: Goal,
-    hypothesis_name: str,
+    hyp_name: str,
     constructor_pattern: Expr,
     branch_binders: list[tuple[str, Expr]],
     branch_alias_spec: tuple[
@@ -147,9 +150,9 @@ def _build_branch_local_context(
     ) = branch_alias_spec
 
     branch_local_context = {
-        name: substitute_expr_var(type_expr, hypothesis_name, constructor_pattern)
+        name: substitute_expr_var(type_expr, hyp_name, constructor_pattern)
         for name, type_expr in current_goal.local_context.items()
-        if name != hypothesis_name
+        if name != hyp_name
     }
     for var_name, var_type in branch_binders:
         branch_local_context[var_name] = var_type
@@ -166,9 +169,9 @@ def _build_branch_local_context(
             binder_type, parameter_substitutions
         )
 
-    branch_local_context[hypothesis_name] = substitute_expr_var(
-        current_goal.local_context[hypothesis_name],
-        hypothesis_name,
+    branch_local_context[hyp_name] = substitute_expr_var(
+        current_goal.local_context[hyp_name],
+        hyp_name,
         constructor_pattern,
     )
     return branch_local_context
@@ -177,18 +180,18 @@ def _build_branch_local_context(
 @requires_active_goal
 def cases(
     manager: ProofManager,
-    hypothesis_name: str,
+    hyp_name: str,
     patterns: tuple[tuple[str, ...], ...] | None = None,
 ) -> None:
     """Case-split on an inductive hypothesis."""
     state = manager.current_state
     current_goal = require_current_goal(manager)
 
-    if not current_goal.has_local_hypothesis(hypothesis_name):
-        raise TacticError(f"Unknown hypothesis '{hypothesis_name}'.")
+    if not current_goal.has_local_hypothesis(hyp_name):
+        raise TacticError(f"Unknown hypothesis '{hyp_name}'.")
 
     hypothesis_type = whnf(
-        current_goal.local_context[hypothesis_name],
+        current_goal.local_context[hyp_name],
         state.metavars,
         manager.env
     )
@@ -243,12 +246,12 @@ def cases(
 
         branch_goal_statement = substitute_expr_var(
             current_goal.statement,
-            hypothesis_name,
+            hyp_name,
             constructor_pattern,
         )
         branch_local_context = _build_branch_local_context(
             current_goal=current_goal,
-            hypothesis_name=hypothesis_name,
+            hyp_name=hyp_name,
             constructor_pattern=constructor_pattern,
             branch_binders=branch_binders,
             branch_alias_spec=(
@@ -271,8 +274,96 @@ def cases(
     motive = ELam(
         "_case",
         hypothesis_type,
-        substitute_expr_var(current_goal.statement, hypothesis_name, EVar("_case")),
+        substitute_expr_var(current_goal.statement, hyp_name, EVar("_case")),
     )
-    assignment = EMatch(head_name, EVar(hypothesis_name), motive, tuple(branch_terms))
+    assignment = EMatch(head_name, EVar(hyp_name), motive, tuple(branch_terms))
 
     manager.refine_goal(assignment, subgoals)
+
+
+RCasesPattern = str | tuple[Union[str, "RCasesPattern"], ...]
+
+def _apply_rcases_pattern(
+    manager: ProofManager,
+    hyp_name: str,
+    pattern: RCasesPattern,
+) -> None:
+    """Recursively destruct a hypothesis according to the given pattern structure."""
+    if isinstance(pattern, str):
+        return
+
+    if not pattern:
+        return
+
+    if isinstance(pattern[0], str) and "." in pattern[0]:
+        constructor_name = pattern[0]
+        raw_binders = list(pattern[1:])
+    else:
+        constructor_name = None
+        raw_binders = list(pattern)
+
+    current_goal = require_current_goal(manager)
+    used_names = set(current_goal.local_context.keys())
+
+    bound_names: list[str] = []
+    nested_targets: list[tuple[str, RCasesPattern]] = []
+
+    for idx, sub in enumerate(raw_binders):
+        if isinstance(sub, str):
+            bound_names.append(sub)
+        else:
+            tmp_sub_name = fresh_binder_name(
+                f"_rcases{idx}", current_goal.context, used_names
+            )
+            used_names.add(tmp_sub_name)
+            bound_names.append(tmp_sub_name)
+            nested_targets.append((tmp_sub_name, sub))
+
+    if constructor_name:
+        branch_pattern = (constructor_name, *bound_names)
+    else:
+        branch_pattern = tuple(bound_names)
+
+    cases(manager, hyp_name=hyp_name, patterns=(branch_pattern,))
+
+    for sub_name, sub_pattern in nested_targets:
+        _apply_rcases_pattern(manager, sub_name, sub_pattern)
+
+@requires_active_goal
+def rcases(
+    manager: ProofManager,
+    hyp_name: str,
+    pattern: RCasesPattern,
+) -> None:
+    """Destruct a hypothesis recursively using a nested pattern structure."""
+    _apply_rcases_pattern(manager, hyp_name, pattern)
+
+
+@requires_active_goal
+def obtain(
+    manager: ProofManager,
+    pattern: RCasesPattern,
+    expr: Expr,
+) -> None:
+    """Introduce a hypothesis by destructing a proof term according to a pattern."""
+    if isinstance(expr, EVar):
+        rcases(manager, hyp_name=expr.name, pattern=pattern)
+        return
+
+    current_goal = require_current_goal(manager)
+
+    hyp_name = fresh_binder_name(
+        "_obtain",
+        current_goal.context,
+        set(current_goal.local_context.keys()),
+    )
+    inferred_type = infer_type(
+        expr,
+        context=current_goal.context,
+        metavars=manager.current_state.metavars,
+        env=manager.env,
+    )
+
+    have(manager, hyp_name=hyp_name, expr=inferred_type)
+    exact(manager, expr)
+    rcases(manager, hyp_name=hyp_name, pattern=pattern)

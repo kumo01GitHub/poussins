@@ -1,6 +1,6 @@
 """Public tactic API."""
 from .apply import apply
-from .cases import cases
+from .cases import RCasesPattern, cases, obtain, rcases
 from .change import change
 from .constructor import constructor, left, right, split
 from .equality import reflexivity, rfl, symm, symmetry, trans, transitivity
@@ -17,6 +17,7 @@ from .specialize import specialize
 from .suffices import suffices
 
 __all__ = [
+    "RCasesPattern",
     "apply",
     "assumption",
     "cases",
@@ -31,6 +32,8 @@ __all__ = [
     "intro",
     "intros",
     "left",
+    "obtain",
+    "rcases",
     "refine",
     "reflexivity",
     "revert",

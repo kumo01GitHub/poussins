@@ -72,6 +72,8 @@ You can call tactics as methods on `Example`/`Theorem`:
 - `refine(expr)`: refine the current goal using an expression that may contain metavariables (e.g. `EMetaVar("m")`), creating new subgoals for each unsolved metavariable
 - `constructor(index=None)`: apply a matching constructor (or choose 1-based constructor index)
 - `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
+- `rcases(hyp_name, pattern)` : recursively destruct an inductive hypothesis using a nested pattern structure (e.g., `("And.intro", "hP", ("Or.inl", "hQ"))`).
+- `obtain(pattern, expr)` : introduce a new witness or proof term into the context and immediately destructure it using a nested pattern.
 - `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
 - `exfalso()`: change target to `False` and prove contradiction first
 - `contradiction()`: close current goal if local hypotheses contain a contradiction (e.g. `h : False` or `h1 : P` and `h2 : P -> False`)
