@@ -4,7 +4,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ...environment import Environment
-from .proof_orchestrator import ProofOrchestrator
+from .aggregator import ProofAggregator
+from .orchestrator import ProofOrchestrator
 from .registry import ProofTaskRegistry
 
 if TYPE_CHECKING:
@@ -25,13 +26,23 @@ class SparkProofContext:
         return cls(spark)
 
     def solve(
-        self, registry: ProofTaskRegistry, env: Environment | None = None
+        self,
+        registry: ProofTaskRegistry,
+        env: Environment | None = None,
+        main_theorem_name: str = "main_theorem",
     ) -> Environment:
-        """Execute all proof tasks registered in the ProofTaskRegistry."""
+        """Execute all proof tasks registered in the registry and aggregate results."""
         current_env = env if env is not None else Environment()
         dag = registry.build_dag()
+
         orchestrator = ProofOrchestrator(spark=self.spark, env=current_env)
-        return orchestrator.run(dag)
+        declarations = orchestrator.run(dag)
+
+        aggregator = ProofAggregator(current_env)
+        return aggregator.assemble(
+            declarations=declarations,
+            main_theorem_name=main_theorem_name,
+        )
 
     def stop(self) -> None:
         """Stop the underlying SparkSession."""
