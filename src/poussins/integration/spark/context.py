@@ -19,7 +19,7 @@ class SparkProofContext:
         self.spark = spark
 
     @classmethod
-    def get_or_create(cls, app_name: str = "PoussinsSparkEngine") -> SparkProofContext:
+    def get_or_create(cls, app_name: str = "poussins") -> SparkProofContext:
         """Create or retrieve a SparkSession and return a SparkProofContext instance."""
         spark = SparkSession.builder.appName(app_name).getOrCreate()
         return cls(spark)
