@@ -281,7 +281,7 @@ def cases(
     manager.refine_goal(assignment, subgoals)
 
 
-RCasesPattern = str | tuple[Union[str, "RCasesPattern"], ...]
+type RCasesPattern = str | tuple[str | RCasesPattern, ...]
 
 def _apply_rcases_pattern(
     manager: ProofManager,
