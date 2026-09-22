@@ -295,12 +295,20 @@ class ProofScript(ABC):
         exists(self.manager, expr)
 
     @log_tactic
-    def simpl(self, hyp_name: str | None = None, unfolding: frozenset[str] | None = None) -> None:
+    def simpl(
+        self,
+        hyp_name: str | None = None,
+        unfolding: frozenset[str] | None = None
+    ) -> None:
         """Simplify the current goal using definitional unfolding."""
         simpl(self.manager, hyp_name, unfolding)
 
     @log_tactic
-    def dsimp(self, hyp_name: str | None = None, unfolding: frozenset[str] | None = None) -> None:
+    def dsimp(
+        self,
+        hyp_name: str | None = None,
+        unfolding: frozenset[str] | None = None
+    ) -> None:
         """Definitional simplify without expanding unnecessary definitions."""
         dsimp(self.manager, hyp_name, unfolding)
 

@@ -1,4 +1,4 @@
-"""Example 8: Demonstrates the use of existential and universal quantifiers in Poussins."""
+"""Example 8: Demonstrates the use of existential and universal quantifiers."""
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 
