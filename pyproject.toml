@@ -16,7 +16,7 @@ Changelog = "https://github.com/kumo01GitHub/poussins/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 spark = [
-    "pyspark>=4.2.0",
+    "pyspark>=4",
 ]
 
 [tool.setuptools]
