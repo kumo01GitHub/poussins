@@ -197,35 +197,19 @@ class ProofTaskSerializer:
     @classmethod
     def serialize_node(cls, node: ProofTaskNode) -> SerializedNodeDict:
         """Serialize a ProofTaskNode instance into a dictionary."""
-        try:
-            return {
-                "name": node.name,
-                "statement": cls.serialize_expr(node.statement),
-                "tactic_recipe": node.tactic_recipe,
-                "depends_on": node.depends_on,
-            }
-        except Exception as e:
-            raise SparkIntegrationError(
-                f"Failed to serialize ProofTaskNode '{node.name}': {e}"
-            ) from e
+        return {
+            "name": node.name,
+            "statement": cls.serialize_expr(node.statement),
+            "tactic_recipe": node.tactic_recipe,
+            "depends_on": node.depends_on,
+        }
 
     @classmethod
     def deserialize_node(cls, data: SerializedNodeDict) -> ProofTaskNode:
         """Deserialize a dictionary into a ProofTaskNode instance."""
-        try:
-            name = cast(str, data["name"])
-            statement_data = cast(SerializedExpr, data["statement"])
-            statement = cls.deserialize_expr(statement_data)
-            tactic_recipe = cast(list[TacticRecipeItem], data["tactic_recipe"])
-            depends_on = cast(list[str], data.get("depends_on", []))
-
-            return ProofTaskNode(
-                name=name,
-                statement=statement,
-                tactic_recipe=tactic_recipe,
-                depends_on=depends_on,
-            )
-        except Exception as e:
-            raise SparkIntegrationError(
-                f"Failed to deserialize ProofTaskNode: {e}"
-            ) from e
+        return ProofTaskNode(
+            name=cast(str, data["name"]),
+            statement=cls.deserialize_expr(cast(SerializedExpr, data["statement"])),
+            tactic_recipe=cast(list[TacticRecipeItem], data["tactic_recipe"]),
+            depends_on=cast(list[str], data.get("depends_on", [])),
+        )
