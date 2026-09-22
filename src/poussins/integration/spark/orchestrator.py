@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Final
 from ...environment import Environment
 from ...errors import SparkIntegrationError
 from ...utils.logging import get_logger
-from .proof_task import ProofTaskDAG
-from .proof_task_executor import (
+from .serializer import ProofTaskSerializer
+from .task import ProofTaskDAG
+from .task_executor import (
     ProofTaskExecutor,
     TaskExecutionResult,
 )
-from .serializer import ProofTaskSerializer
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession

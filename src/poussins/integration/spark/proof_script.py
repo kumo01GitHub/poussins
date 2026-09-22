@@ -6,7 +6,7 @@ from typing import Final, override
 from ...environment import Environment, TheoremDeclaration
 from ...errors import SparkIntegrationError
 from ...framework import ProofScript
-from .proof_task import ProofTaskNode, TacticRecipeItem
+from .task import ProofTaskNode, TacticRecipeItem
 
 
 class SparkProofScript(ProofScript):

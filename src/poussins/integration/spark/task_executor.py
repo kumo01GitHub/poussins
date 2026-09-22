@@ -6,11 +6,11 @@ from typing import TypedDict
 from ...environment import Environment, TheoremDeclaration
 from ...utils.logging import get_logger
 from .proof_script import SparkProofScript
-from .proof_task import ProofTaskNode
 from .serializer import (
     ProofTaskSerializer,
     SerializedNodeDict,
 )
+from .task import ProofTaskNode
 
 
 class TaskExecutionResult(TypedDict):
