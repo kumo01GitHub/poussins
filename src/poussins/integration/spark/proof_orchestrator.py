@@ -67,7 +67,7 @@ class ProofOrchestrator:
                 current_env.add(res["declaration"])
                 self.logger.info(
                     f"Registered declaration for theorem '{res['task_name']}'"
-                   + "into Driver Environment"
+                   + " into Driver Environment"
                 )
 
         self.logger.info("Successfully executed all tasks in proof DAG")
