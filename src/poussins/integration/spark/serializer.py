@@ -20,7 +20,7 @@ from ...ast import (
     UnivLevelZero,
 )
 from ...errors import SparkIntegrationError
-from .proof_task import ProofTaskNode, TacticRecipeItem
+from .task import ProofTaskNode, TacticRecipeItem
 
 type SerializedExpr = dict[str, object]
 type SerializedNodeDict = dict[

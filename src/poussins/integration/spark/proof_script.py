@@ -1,11 +1,13 @@
 """Spark ProofScript implementation for distributed proof execution."""
 from __future__ import annotations
 
+from logging import Logger
 from typing import Final, override
 
 from ...environment import Environment, TheoremDeclaration
 from ...errors import SparkIntegrationError
 from ...framework import ProofScript
+from ...utils.logging import get_logger
 from .task import ProofTaskNode, TacticRecipeItem
 
 
@@ -27,6 +29,9 @@ class SparkProofScript(ProofScript):
         self.level_params: Final[tuple[str, ...]] = level_params
         self.recipe: Final[list[TacticRecipeItem]] = node.tactic_recipe
         super().__init__(node.statement, env)
+
+        self.logger: Logger = get_logger(__name__)
+        self.logger.info(f"'{self.name}': {self.statement}")
 
     def execute_recipe(self) -> None:
         """Sequentially executes tactic recipes sent from Master."""

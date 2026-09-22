@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ...environment import Environment, TheoremDeclaration
+from ...errors import SparkIntegrationError
 
 
 class ProofAggregator:
@@ -18,11 +19,11 @@ class ProofAggregator:
     ) -> Environment:
         """Assemble executed declarations and update the Environment."""
         for decl in declarations:
-            self.env.add(decl)
+            if self.env.get(decl.name) is None:
+                self.env.add(decl)
 
-        main_decl = self.env.get(main_theorem_name)
-        if main_decl is None:
-            raise ValueError(
+        if self.env.get(main_theorem_name) is None:
+            raise SparkIntegrationError(
                 f"Main theorem '{main_theorem_name}' was not found"
                 + " in the environment after aggregation."
             )

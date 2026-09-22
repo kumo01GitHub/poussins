@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ...ast import Expr
 from ...errors import SparkIntegrationError
-from .proof_task import (
+from .task import (
     ProofTaskDAG,
     ProofTaskNode,
     TacticRecipeItem,
