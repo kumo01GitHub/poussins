@@ -34,7 +34,8 @@ class ProofTaskRegistry:
         for dep in deps:
             if dep not in self._tasks:
                 raise SparkIntegrationError(
-                    f"Dependency '{dep}' for task '{name}' is not registered in the registry."
+                    f"Dependency '{dep}' for task '{name}' is not registered"
+                    + " in the registry."
                 )
 
         node = ProofTaskNode(
