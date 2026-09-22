@@ -8,7 +8,7 @@ from logging import Logger
 from typing import Concatenate, Final, ParamSpec
 
 from ..ast import EVar, Expr
-from ..environment import Environment
+from ..environment import Environment, TheoremDeclaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     RCasesPattern,
@@ -113,7 +113,7 @@ class ProofScript(ABC):
         self.manager.undo()
 
     @abstractmethod
-    def qed(self):
+    def qed(self) -> TheoremDeclaration | None:
         """Finalize the proof script."""
         pass
 
