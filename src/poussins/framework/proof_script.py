@@ -18,6 +18,7 @@ from ..tactics import (
     change,
     constructor,
     contradiction,
+    dsimp,
     exact,
     exfalso,
     exists,
@@ -35,6 +36,7 @@ from ..tactics import (
     rfl,
     right,
     rw,
+    simpl,
     specialize,
     split,
     suffices,
@@ -42,6 +44,7 @@ from ..tactics import (
     symmetry,
     trans,
     transitivity,
+    unfold,
     use,
 )
 
@@ -290,3 +293,18 @@ class ProofScript(ABC):
     def exists(self, expr: Expr) -> None:
         """Refine the current goal of the form `Exists A P` by providing a witness."""
         exists(self.manager, expr)
+
+    @log_tactic
+    def simpl(self, hyp_name: str | None = None, unfolding: frozenset[str] | None = None) -> None:
+        """Simplify the current goal using definitional unfolding."""
+        simpl(self.manager, hyp_name, unfolding)
+
+    @log_tactic
+    def dsimp(self, hyp_name: str | None = None, unfolding: frozenset[str] | None = None) -> None:
+        """Definitional simplify without expanding unnecessary definitions."""
+        dsimp(self.manager, hyp_name, unfolding)
+
+    @log_tactic
+    def unfold(self, name: str, hyp_name: str | None = None) -> None:
+        """Unfold a specific definition in the current goal or hypothesis."""
+        unfold(self.manager, name, hyp_name)

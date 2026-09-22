@@ -13,6 +13,7 @@ from .logic import contradiction, exfalso
 from .refine import refine
 from .revert import revert
 from .rewrite import rewrite, rw
+from .simpl import dsimp, simpl, unfold
 from .specialize import specialize
 from .suffices import suffices
 
@@ -24,6 +25,7 @@ __all__ = [
     "change",
     "constructor",
     "contradiction",
+    "dsimp",
     "exact",
     "exfalso",
     "exists",
@@ -41,6 +43,7 @@ __all__ = [
     "rfl",
     "right",
     "rw",
+    "simpl",
     "specialize",
     "split",
     "suffices",
@@ -48,5 +51,6 @@ __all__ = [
     "symmetry",
     "trans",
     "transitivity",
+    "unfold",
     "use",
 ]

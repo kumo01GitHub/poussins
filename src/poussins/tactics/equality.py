@@ -18,16 +18,12 @@ from .helpers import (
 @requires_active_goal
 def reflexivity(manager: ProofManager) -> None:
     """Solves a goal of the form `Eq A x y` where `x` and `y` are equal."""
-    state = manager.current_state
     current_goal = require_current_goal(manager, tactic_name="reflexivity")
-
-    target = current_goal.statement
-    context = current_goal.context
-    metavars = state.metavars
+    metavars = manager.current_state.metavars
     env = manager.env
 
     eq_args = split_eq_app(
-        whnf(target, metavars, env),
+        whnf(current_goal.statement, metavars, env),
         EqualityDeclaration.EQ_DECLARATION.declaration.name
     )
 
@@ -36,7 +32,7 @@ def reflexivity(manager: ProofManager) -> None:
 
     _, lhs, rhs = eq_args
 
-    if not is_def_eq(lhs, rhs, context, metavars, env):
+    if not is_def_eq(lhs, rhs, current_goal.context, metavars, env):
         raise TacticError("LHS and RHS are not definitionally equal.")
 
     apply(

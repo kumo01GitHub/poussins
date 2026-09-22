@@ -71,3 +71,46 @@ def whnf(
             | EMetaVar(_)
         ):
             return expr
+
+
+def normalize(
+    expr: Expr,
+    metavars: dict[str, MetaVar] | None = None,
+    env: Environment | None = None,
+    unfolding: frozenset[str] | None = None,
+) -> Expr:
+    """Fully normalize an expression by evaluating it to Strong Normal Form."""
+    actual_metavars = metavars if metavars is not None else {}
+
+    e = whnf(expr, actual_metavars, env, unfolding)
+
+    match e:
+        case EApp(fn, arg):
+            return EApp(
+                normalize(fn, actual_metavars, env, unfolding),
+                normalize(arg, actual_metavars, env, unfolding),
+            )
+        case ELam(var, domain, body):
+            return ELam(
+                var,
+                normalize(domain, actual_metavars, env, unfolding),
+                normalize(body, actual_metavars, env, unfolding),
+            )
+        case EPi(var, domain, body):
+            return EPi(
+                var,
+                normalize(domain, actual_metavars, env, unfolding),
+                normalize(body, actual_metavars, env, unfolding),
+            )
+        case EMatch(inductive_name, discriminee, motive, cases):
+            return EMatch(
+                inductive_name=inductive_name,
+                discriminee=normalize(discriminee, actual_metavars, env, unfolding),
+                motive=normalize(motive, actual_metavars, env, unfolding),
+                cases=tuple(
+                    normalize(case_expr, actual_metavars, env, unfolding)
+                    for case_expr in cases
+                ),
+            )
+        case ESort() | EVar() | EConst() | EMetaVar():
+            return e

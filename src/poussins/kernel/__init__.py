@@ -1,6 +1,6 @@
 """Kernel-level components of the proof system."""
 from .equality import is_alpha_eq, is_def_eq
-from .eval import instantiate, whnf
+from .eval import instantiate, normalize, whnf
 from .goal import Goal
 from .proof_engine import ProofEngine
 from .proof_manager import ProofManager
@@ -20,6 +20,7 @@ __all__ = [
     "instantiate",
     "is_alpha_eq",
     "is_def_eq",
+    "normalize",
     "unify",
     "whnf",
 ]

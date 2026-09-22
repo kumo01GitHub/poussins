@@ -1,4 +1,4 @@
-"""Example 6: Prove that if n = m, then n + k = m + k."""
+"""Example 6: Demonstrates the use of equality in Poussins."""
 from poussins.environment import Environment
 from poussins.framework import Example, Nat, Prop
 
