@@ -45,7 +45,7 @@ class ProofOrchestrator:
 
             try:
                 serialized_tasks = [
-                    ProofTaskSerializer.serialize_node(node) for node in stage
+                    ProofTaskSerializer.serialize(node) for node in stage
                 ]
                 rdd = self.spark.sparkContext.parallelize(serialized_tasks)
                 results: list[TaskExecutionResult] = rdd.map(

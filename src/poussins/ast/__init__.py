@@ -7,6 +7,12 @@ from .ops import (
     substitute_expr_var,
     substitute_metavar,
 )
+from .serializer import (
+    ExprSerializer,
+    SerializedExpr,
+    SerializedUnivLevel,
+    UnivLevelSerializer,
+)
 from .universe import (
     UnivLevel,
     UnivLevelIMax,
@@ -27,12 +33,6 @@ __all__ = [
     "EMetaVar",
     "ESort",
     "EMatch",
-    # Expr operations
-    "has_metavar",
-    "substitute_metavar",
-    "collect_metavar_ids",
-    "substitute_expr_var",
-    "collect_free_vars",
     # Universe level classes
     "UnivLevel",
     "UnivLevelZero",
@@ -40,4 +40,15 @@ __all__ = [
     "UnivLevelParam",
     "UnivLevelMax",
     "UnivLevelIMax",
+    # Expr operations
+    "has_metavar",
+    "substitute_metavar",
+    "collect_metavar_ids",
+    "substitute_expr_var",
+    "collect_free_vars",
+    # Serializer classes
+    "ExprSerializer",
+    "SerializedExpr",
+    "SerializedUnivLevel",
+    "UnivLevelSerializer",
 ]

@@ -8,7 +8,7 @@ from ...utils.logging import get_logger
 from .proof_script import SparkProofScript
 from .serializer import (
     ProofTaskSerializer,
-    SerializedNodeDict,
+    SerializedTaskNode,
 )
 from .task import ProofTaskNode
 
@@ -31,13 +31,13 @@ class ProofTaskExecutor:
 
     def execute_task(
         self,
-        serialized_task: SerializedNodeDict,
+        serialized_task: SerializedTaskNode,
         env: Environment,
     ) -> TaskExecutionResult:
         """Task execution entry point for PySpark worker nodes."""
         task_name = "<unknown>"
         try:
-            node: ProofTaskNode = ProofTaskSerializer.deserialize_node(serialized_task)
+            node: ProofTaskNode = ProofTaskSerializer.deserialize(serialized_task)
             task_name = node.name
             self.logger.info(f"Starting proof task execution on Worker: '{task_name}'")
 
