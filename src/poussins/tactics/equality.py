@@ -88,7 +88,7 @@ symm = symmetry
 
 
 @requires_active_goal
-def transitivity(manager: ProofManager, middle: Expr) -> None:
+def transitivity(manager: ProofManager, expr: Expr) -> None:
     """Split an equality goal into two subgoals using a middle term."""
     current_goal = require_current_goal(manager, tactic_name="transitivity")
 
@@ -114,13 +114,13 @@ def transitivity(manager: ProofManager, middle: Expr) -> None:
     )
 
     goal1 = Goal(
-        statement=build_app(eq_const, type_a, lhs, middle),
+        statement=build_app(eq_const, type_a, lhs, expr),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
     goal2 = Goal(
-        statement=build_app(eq_const, type_a, middle, rhs),
+        statement=build_app(eq_const, type_a, expr, rhs),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
@@ -129,7 +129,7 @@ def transitivity(manager: ProofManager, middle: Expr) -> None:
         eq_trans_const,
         type_a,
         lhs,
-        middle,
+        expr,
         rhs,
         EMetaVar(goal1.id),
         EMetaVar(goal2.id),
