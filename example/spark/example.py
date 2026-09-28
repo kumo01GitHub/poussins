@@ -5,7 +5,7 @@ from __future__ import annotations
 from pyspark.sql import SparkSession
 
 from poussins import Environment, Nat, Prop
-from poussins.integration.spark import ProofTaskRegistry, SparkProofContext
+from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 from poussins.utils.logging import get_logger
 
 
@@ -20,7 +20,7 @@ def main() -> None:
         .master("spark://localhost:7077")
         .getOrCreate()
     )
-    psc = SparkProofContext(spark)
+    runner = ProofRunner(spark)
 
     logger.info("=== 2. Setting up Environment and Task Registry ===")
     env = Environment.standard()
@@ -49,7 +49,7 @@ def main() -> None:
 
     logger.info("=== 3. Executing Distributed Proof Solve ===")
     try:
-        final_env = psc.solve(registry, env, main_theorem_name="main_theorem")
+        final_env = runner.run(registry, env, main_theorem_name="main_theorem")
 
         main_decl = final_env.get("main_theorem")
         logger.info(f"🎉 Success! Main theorem verified: {main_decl}")
@@ -58,7 +58,7 @@ def main() -> None:
         raise
     finally:
         logger.info("=== 4. Stopping Spark Session ===")
-        psc.stop()
+        runner.stop()
 
 
 if __name__ == "__main__":

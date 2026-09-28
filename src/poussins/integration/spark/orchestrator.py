@@ -1,25 +1,21 @@
-"""Orchestrates the execution of proof tasks across a Spark cluster."""
+"""Orchestrates the execution and aggregation of proof tasks across a Spark cluster."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import Final
 
-from ...environment import Environment, TheoremDeclaration
+from pyspark.sql import SparkSession
+
+from ...environment import Environment
 from ...errors import SparkIntegrationError
 from ...utils.logging import get_logger
 from .serializer import ProofTaskSerializer
 from .task import ProofTaskDAG
-from .task_executor import (
-    ProofTaskExecutor,
-    TaskExecutionResult,
-)
-
-if TYPE_CHECKING:
-    from pyspark.sql import SparkSession
+from .task_executor import ProofTaskExecutor, TaskExecutionResult
 
 
 class ProofOrchestrator:
-    """Orchestrates distributed proof DAG execution across a Spark cluster."""
+    """Orchestrates the execution of proof tasks across Spark stages."""
 
     def __init__(self, spark: SparkSession, env: Environment) -> None:
         """Initialize the orchestrator."""
@@ -27,11 +23,25 @@ class ProofOrchestrator:
         self.env: Final[Environment] = env
         self.logger = get_logger(__name__)
 
-    def run(self, dag: ProofTaskDAG) -> list[TheoremDeclaration]:
-        """Run the orchestrator to execute the proof DAG."""
-        current_env = self.env
+    def run(
+        self,
+        dag: ProofTaskDAG,
+        main_theorem_name: str = "main_theorem",
+    ) -> Environment:
+        """Execute the proof DAG across Spark stages, aggregate declarations."""
+        if not dag.has_task(main_theorem_name):
+            raise SparkIntegrationError(
+                f"Main theorem task '{main_theorem_name}' is not registered"
+                + " in the proof DAG."
+            )
+
+        if self.env.get(main_theorem_name) is not None:
+            raise SparkIntegrationError(
+                f"Theorem '{main_theorem_name}' already exists"
+                + " in the provided Environment."
+            )
+
         stages = dag.compute_execution_stages()
-        collected_declarations: list[TheoremDeclaration] = []
 
         self.logger.info(
             f"Starting orchestrator run for DAG with {len(stages)} execution stages"
@@ -41,8 +51,8 @@ class ProofOrchestrator:
             self.logger.info(
                 f"Executing Stage {stage_idx + 1}/{len(stages)} with {len(stage)} tasks"
             )
-            broadcast_env = self.spark.sparkContext.broadcast(current_env)
 
+            broadcast_env = self.spark.sparkContext.broadcast(self.env)
             try:
                 serialized_tasks = [
                     ProofTaskSerializer.serialize(node) for node in stage
@@ -66,12 +76,11 @@ class ProofOrchestrator:
                     raise SparkIntegrationError(error_msg)
 
                 decl = res["declaration"]
-                collected_declarations.append(decl)
-                current_env.add(decl)
+                self.env.add(decl)
                 self.logger.info(
                     f"Registered declaration for theorem '{res['task_name']}'"
                     " into staging Environment"
                 )
 
-        self.logger.info("Successfully executed all tasks in proof DAG")
-        return collected_declarations
+        self.logger.info("Successfully executed all tasks in proof DAG.")
+        return self.env

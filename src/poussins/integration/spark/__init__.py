@@ -1,8 +1,8 @@
 """Integration module for Spark."""
-from .context import SparkProofContext
 from .registry import ProofTaskRegistry
+from .runner import ProofRunner
 
 __all__ = [
-    "SparkProofContext",
+    "ProofRunner",
     "ProofTaskRegistry",
 ]

@@ -46,6 +46,10 @@ class ProofTaskDAG:
             raise SparkIntegrationError(f"Task '{name}' not found in DAG.")
         return self._tasks[name]
 
+    def has_task(self, task_name: str) -> bool:
+        """Check if a task with the given name exists in the DAG."""
+        return task_name in self._tasks
+
     def validate(self) -> None:
         """Validate that all dependencies exist and checks for circular references."""
         # 1. Check for unregistered dependencies
