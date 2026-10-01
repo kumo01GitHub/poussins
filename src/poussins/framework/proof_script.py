@@ -274,10 +274,10 @@ class ProofScript(ABC):
         have(self.manager, hyp_name, expr)
 
     @log_tactic
-    def specialize(self, hyp_name: str, arg_or_name: Expr | str) -> None:
+    def specialize(self, hyp_name: str, expr_or_name: Expr | str) -> None:
         """Specialize a hypothesis in the local context with an argument."""
-        arg = arg_or_name if isinstance(arg_or_name, Expr) else EVar(arg_or_name)
-        specialize(self.manager, hyp_name, arg)
+        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
+        specialize(self.manager, hyp_name, expr)
 
     @log_tactic
     def suffices(self, hyp_name: str, expr: Expr) -> None:

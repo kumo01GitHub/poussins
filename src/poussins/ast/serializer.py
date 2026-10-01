@@ -1,6 +1,7 @@
 """Serialization and deserialization of AST nodes for expressions."""
 from __future__ import annotations
 
+import json
 from typing import cast
 
 from .expr import (
@@ -16,173 +17,196 @@ from .expr import (
 )
 from .universe import (
     UnivLevel,
+    UnivLevelIMax,
     UnivLevelMax,
     UnivLevelParam,
     UnivLevelSucc,
     UnivLevelZero,
 )
 
-type SerializedExpr = dict[str, object]
-type SerializedUnivLevel = dict[str, object]
-
 
 class UnivLevelSerializer:
     """Serializes and deserializes UnivLevel instances."""
 
     @classmethod
-    def serialize(cls, level: UnivLevel) -> SerializedUnivLevel:
-        """Serialize a UnivLevel instance into a dictionary."""
+    def to_dict(cls, level: UnivLevel) -> dict:
+        """Convert a UnivLevel instance into a dictionary."""
         match level:
             case UnivLevelZero():
                 return {"type": "UnivLevelZero"}
             case UnivLevelSucc(pred):
                 return {
                     "type": "UnivLevelSucc",
-                    "pred": cls.serialize(pred),
-                }
-            case UnivLevelMax(lhs, rhs):
-                return {
-                    "type": "UnivLevelMax",
-                    "lhs": cls.serialize(lhs),
-                    "rhs": cls.serialize(rhs),
+                    "pred": cls.to_dict(pred),
                 }
             case UnivLevelParam(name):
-                return {"type": "UnivLevelParam", "name": name}
-            case _:
-                raise NotImplementedError(
-                    f"Unsupported UnivLevel type: {type(level)}"
-                )
+                return {
+                    "type": "UnivLevelParam",
+                    "name": name
+                }
+            case UnivLevelMax(left, right):
+                return {
+                    "type": "UnivLevelMax",
+                    "left": cls.to_dict(left),
+                    "right": cls.to_dict(right),
+                }
+            case UnivLevelIMax(left, right):
+                return {
+                    "type": "UnivLevelIMax",
+                    "left": cls.to_dict(left),
+                    "right": cls.to_dict(right),
+                }
 
     @classmethod
-    def deserialize(cls, data: SerializedUnivLevel) -> UnivLevel:
-        """Deserialize a dictionary into a UnivLevel instance."""
-        match data.get("type"):
+    def from_dict(cls, data: dict) -> UnivLevel:
+        """Convert a dictionary into a UnivLevel instance."""
+        match data["type"]:
             case "UnivLevelZero":
                 return UnivLevelZero()
             case "UnivLevelSucc":
-                pred_data = cast(SerializedUnivLevel, data["pred"])
-                return UnivLevelSucc(cls.deserialize(pred_data))
-            case "UnivLevelMax":
-                lhs_data = cast(SerializedUnivLevel, data["lhs"])
-                rhs_data = cast(SerializedUnivLevel, data["rhs"])
-                return UnivLevelMax(
-                    cls.deserialize(lhs_data),
-                    cls.deserialize(rhs_data),
-                )
+                return UnivLevelSucc(cls.from_dict(data["pred"]))
             case "UnivLevelParam":
                 return UnivLevelParam(cast(str, data["name"]))
+            case "UnivLevelMax":
+                return UnivLevelMax(
+                    cls.from_dict(data["left"]),
+                    cls.from_dict(data["right"]),
+                )
+            case "UnivLevelIMax":
+                lhs_data = cast(dict, data["lhs"])
+                rhs_data = cast(dict, data["rhs"])
+                return UnivLevelIMax(
+                    cls.from_dict(lhs_data),
+                    cls.from_dict(rhs_data),
+                )
             case _:
                 raise ValueError(
                     f"Unknown UnivLevel type: {data.get('type')}"
                 )
+
+    @classmethod
+    def serialize(cls, level: UnivLevel) -> str:
+        """Serialize a UnivLevel instance into a JSON string."""
+        return json.dumps(cls.to_dict(level))
+
+    @classmethod
+    def deserialize(cls, json_str: str) -> UnivLevel:
+        """Deserialize a JSON string into a UnivLevel instance."""
+        return cls.from_dict(json.loads(json_str))
 
 
 class ExprSerializer:
     """Serializes and deserializes Expr instances."""
 
     @classmethod
-    def serialize(cls, expr: Expr) -> SerializedExpr:
-        """Serialize an Expr instance into a dictionary."""
+    def to_dict(cls, expr: Expr) -> dict:
+        """Convert an Expr instance into a dictionary."""
         match expr:
             case ESort(level):
                 return {
                     "type": "ESort",
-                    "level": UnivLevelSerializer.serialize(level),
+                    "level": UnivLevelSerializer.to_dict(level),
                 }
             case EVar(name):
-                return {"type": "EVar", "name": name}
+                return {
+                    "type": "EVar",
+                    "name": name
+                }
             case EConst(name, levels):
                 return {
                     "type": "EConst",
                     "name": name,
-                    "levels": [UnivLevelSerializer.serialize(lv) for lv in levels],
+                    "levels": [UnivLevelSerializer.to_dict(lv) for lv in levels],
                 }
             case EPi(var, domain, body):
                 return {
                     "type": "EPi",
                     "var": var,
-                    "domain": cls.serialize(domain),
-                    "body": cls.serialize(body),
+                    "domain": cls.to_dict(domain),
+                    "body": cls.to_dict(body),
                 }
             case ELam(var, domain, body):
                 return {
                     "type": "ELam",
                     "var": var,
-                    "domain": cls.serialize(domain),
-                    "body": cls.serialize(body),
+                    "domain": cls.to_dict(domain),
+                    "body": cls.to_dict(body),
                 }
             case EApp(fn, arg):
                 return {
                     "type": "EApp",
-                    "fn": cls.serialize(fn),
-                    "arg": cls.serialize(arg),
+                    "fn": cls.to_dict(fn),
+                    "arg": cls.to_dict(arg),
                 }
             case EMatch(inductive_name, discriminee, motive, cases):
                 return {
                     "type": "EMatch",
                     "inductive_name": inductive_name,
-                    "discriminee": cls.serialize(discriminee),
-                    "motive": cls.serialize(motive),
-                    "cases": [cls.serialize(c) for c in cases],
+                    "discriminee": cls.to_dict(discriminee),
+                    "motive": cls.to_dict(motive),
+                    "cases": [cls.to_dict(case) for case in cases],
                 }
             case EMetaVar(goal_id):
-                return {"type": "EMetaVar", "goal_id": goal_id}
-            case _:
-                raise NotImplementedError(f"Unsupported Expr type: {type(expr)}")
+                return {
+                    "type": "EMetaVar",
+                    "goal_id": goal_id
+                }
 
     @classmethod
-    def deserialize(cls, data: SerializedExpr) -> Expr:
-        """Deserialize a dictionary into an Expr instance."""
+    def from_dict(cls, data: dict) -> Expr:
+        """Convert a dictionary into an Expr instance."""
         match data.get("type"):
             case "ESort":
-                level_data = cast(SerializedUnivLevel, data["level"])
-                return ESort(UnivLevelSerializer.deserialize(level_data))
+                level_data = cast(dict, data["level"])
+                return ESort(UnivLevelSerializer.from_dict(level_data))
             case "EVar":
                 return EVar(cast(str, data["name"]))
             case "EConst":
-                levels_data = cast(list[SerializedUnivLevel], data["levels"])
+                levels_data = cast(list[dict], data["levels"])
                 return EConst(
                     name=cast(str, data["name"]),
                     levels=tuple(
-                        UnivLevelSerializer.deserialize(lv) for lv in levels_data
+                        UnivLevelSerializer.from_dict(lv) for lv in levels_data
                     ),
                 )
             case "EPi":
                 return EPi(
                     var=cast(str, data["var"]),
-                    domain=cls.deserialize(
-                        cast(SerializedExpr, data["domain"])
-                    ),
-                    body=cls.deserialize(cast(SerializedExpr, data["body"])),
+                    domain=cls.from_dict(cast(dict, data["domain"])),
+                    body=cls.from_dict(cast(dict, data["body"])),
                 )
             case "ELam":
                 return ELam(
                     var=cast(str, data["var"]),
-                    domain=cls.deserialize(
-                        cast(SerializedExpr, data["domain"])
-                    ),
-                    body=cls.deserialize(cast(SerializedExpr, data["body"])),
+                    domain=cls.from_dict(cast(dict, data["domain"])),
+                    body=cls.from_dict(cast(dict, data["body"])),
                 )
             case "EApp":
                 return EApp(
-                    fn=cls.deserialize(cast(SerializedExpr, data["fn"])),
-                    arg=cls.deserialize(cast(SerializedExpr, data["arg"])),
+                    fn=cls.from_dict(cast(dict, data["fn"])),
+                    arg=cls.from_dict(cast(dict, data["arg"])),
                 )
             case "EMatch":
-                cases_data = cast(list[SerializedExpr], data["cases"])
+                cases_data = cast(list[dict], data["cases"])
                 return EMatch(
                     inductive_name=cast(str, data["inductive_name"]),
-                    discriminee=cls.deserialize(
-                        cast(SerializedExpr, data["discriminee"])
+                    discriminee=cls.from_dict(
+                        cast(dict, data["discriminee"])
                     ),
-                    motive=cls.deserialize(
-                        cast(SerializedExpr, data["motive"])
-                    ),
-                    cases=tuple(cls.deserialize(c) for c in cases_data),
+                    motive=cls.from_dict(cast(dict, data["motive"])),
+                    cases=tuple(cls.from_dict(c) for c in cases_data),
                 )
             case "EMetaVar":
                 return EMetaVar(cast(str, data["goal_id"]))
             case _:
-                raise ValueError(
-                    f"Unknown Expr type: {data.get('type')}"
-                )
+                raise ValueError(f"Unknown Expr type: {data.get('type')}")
+
+    @classmethod
+    def serialize(cls, expr: Expr) -> str:
+        """Serialize an Expr instance into a JSON string."""
+        return json.dumps(cls.to_dict(expr))
+
+    @classmethod
+    def deserialize(cls, json_str: str) -> Expr:
+        """Deserialize a JSON string into an Expr instance."""
+        return cls.from_dict(json.loads(json_str))

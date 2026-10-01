@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC
 from dataclasses import dataclass
+from typing import override
 
 from ..ast.expr import Expr
 
@@ -14,6 +15,10 @@ class Declaration(ABC):
     name: str
     level_params: tuple[str, ...]
     type: Expr
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} : {self.type}"
 
 
 @dataclass(frozen=True)
@@ -29,12 +34,20 @@ class DefinitionDeclaration(Declaration):
 
     value: Expr
 
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} : {self.type} := {self.value}"
+
 
 @dataclass(frozen=True)
 class TheoremDeclaration(Declaration):
     """Theorem declaration."""
 
     value: Expr
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} : {self.type} := {self.value}"
 
 
 @dataclass(frozen=True)
@@ -54,12 +67,21 @@ class InductiveDeclaration(Declaration):
 
     constructor_names: tuple[str, ...]
 
+    @override
+    def __str__(self) -> str:
+        constructors = ", ".join(self.constructor_names) if self.constructor_names else "[]"
+        return f"{self.name} : {self.type} [{constructors}]"
+
 
 @dataclass(frozen=True)
 class ConstructorDeclaration(Declaration):
     """Constructor information for an inductive type."""
 
     inductive_name: str
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} : {self.type} (constructor for {self.inductive_name})"
 
 
 @dataclass(frozen=True)
@@ -71,9 +93,21 @@ class RecursorDeclaration(Declaration):
     num_indices: int
     num_minors: int
 
+    @override
+    def __str__(self) -> str:
+        return (
+            f"{self.name} : {self.type} "
+            f"(recursor for {self.inductive_name}, "
+            f"params={self.num_params}, indices={self.num_indices}, minors={self.num_minors})"
+        )
+
 
 @dataclass(frozen=True)
 class QuotDeclaration(Declaration):
     """Quotient type information."""
 
     variant: str
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.name} : {self.type} (quotient variant={self.variant})"

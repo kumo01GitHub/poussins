@@ -33,7 +33,7 @@ def main() -> None:
     registry.register_task(
         name="lemma_base",
         statement=stmt_lemma,
-        tactic_recipe=[
+        tactic_plan=[
             ("rfl", {})
         ]
     )
@@ -41,7 +41,7 @@ def main() -> None:
     registry.register_task(
         name="main_theorem",
         statement=stmt_lemma,
-        tactic_recipe=[
+        tactic_plan=[
             ("exact", {"expr_or_name": "lemma_base"})
         ],
         depends_on=["lemma_base"]

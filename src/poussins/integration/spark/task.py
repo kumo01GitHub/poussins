@@ -6,10 +6,7 @@ from dataclasses import dataclass, field
 
 from ...ast import Expr
 from ...errors import SparkIntegrationError
-
-# Type alias for allowable tactic argument values (excluding Any for type safety)
-type TacticArgValue = str | int | float | bool | Expr | list[str] | None
-type TacticRecipeItem = tuple[str, dict[str, TacticArgValue]]
+from ..tactic import TacticPlan
 
 
 @dataclass(frozen=True)
@@ -18,7 +15,7 @@ class ProofTaskNode:
 
     name: str
     statement: Expr
-    tactic_recipe: list[TacticRecipeItem]
+    tactic_plan: list[TacticPlan]
     depends_on: list[str] = field(default_factory=list)
 
 

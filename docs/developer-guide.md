@@ -2,7 +2,7 @@
 
 This guide explains the internal architecture of poussins and how the major modules interact.
 
-For daily proof writing, see [Proof Author Guide](proof-author-guide.md).
+For daily proof writing, see [Proof Author Guide](proof-author-guide.md). For distributed execution or Spark-backed workloads, see the [Integration Docs](integration/README.md).
 
 ## Local Setup
 

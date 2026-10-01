@@ -9,8 +9,6 @@ from .ops import (
 )
 from .serializer import (
     ExprSerializer,
-    SerializedExpr,
-    SerializedUnivLevel,
     UnivLevelSerializer,
 )
 from .universe import (
@@ -48,7 +46,5 @@ __all__ = [
     "collect_free_vars",
     # Serializer classes
     "ExprSerializer",
-    "SerializedExpr",
-    "SerializedUnivLevel",
     "UnivLevelSerializer",
 ]

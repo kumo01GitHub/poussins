@@ -6,7 +6,7 @@ from ...errors import SparkIntegrationError
 from .task import (
     ProofTaskDAG,
     ProofTaskNode,
-    TacticRecipeItem,
+    TacticPlan,
 )
 
 
@@ -21,7 +21,7 @@ class ProofTaskRegistry:
         self,
         name: str,
         statement: Expr,
-        tactic_recipe: list[TacticRecipeItem],
+        tactic_plan: list[TacticPlan],
         depends_on: list[str] | None = None,
     ) -> ProofTaskNode:
         """Register a proof task (lemma/theorem) into the registry."""
@@ -41,7 +41,7 @@ class ProofTaskRegistry:
         node = ProofTaskNode(
             name=name,
             statement=statement,
-            tactic_recipe=tactic_recipe,
+            tactic_plan=tactic_plan,
             depends_on=deps,
         )
         self._tasks[name] = node
