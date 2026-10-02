@@ -69,7 +69,10 @@ class InductiveDeclaration(Declaration):
 
     @override
     def __str__(self) -> str:
-        constructors = ", ".join(self.constructor_names) if self.constructor_names else "[]"
+        constructors = (
+            ", ".join(self.constructor_names)
+            if self.constructor_names else "[]"
+        )
         return f"{self.name} : {self.type} [{constructors}]"
 
 
@@ -97,8 +100,10 @@ class RecursorDeclaration(Declaration):
     def __str__(self) -> str:
         return (
             f"{self.name} : {self.type} "
-            f"(recursor for {self.inductive_name}, "
-            f"params={self.num_params}, indices={self.num_indices}, minors={self.num_minors})"
+            + f"(recursor for {self.inductive_name}, "
+            + f"params={self.num_params}, "
+            + f"indices={self.num_indices}, "
+            + f"minors={self.num_minors})"
         )
 
 
