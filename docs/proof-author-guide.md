@@ -39,7 +39,7 @@ Prefer importing from the subpackage that owns the API.
 
 The framework layer gives you a friendly interface:
 
-- `Environment.default()`: creates a default logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`)
+- `Environment.default()`: creates a default logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`)
 - `Prop`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`)
 - `Example(statement, env)`: anonymous proof (useful for exploration)
 - `Theorem(name, statement, env)`: named proof; `qed()` registers it into the environment
