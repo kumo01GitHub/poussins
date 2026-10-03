@@ -13,6 +13,8 @@ A Python proof assistant with a small kernel and ergonomic proof DSL.
 
 - Proof authors: [Proof Author Guide](docs/proof-author-guide.md)
 - Contributors and maintainers: [Developer Guide](docs/developer-guide.md)
+- Distributed execution users: [Integration Docs](docs/integration/README.md)
+- Spark users: [Spark Integration Guide](docs/integration/spark.md)
 
 ## Quick Start
 
