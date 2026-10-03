@@ -160,12 +160,55 @@ class TestInferType:
         with pytest.raises(KernelTypeError):
             infer_type(EMetaVar("m1"), {}, {})
 
-    def test_match_typing_current_kernel_rule(self):
-        """Current match typing returns motive application to discriminee."""
-        motive = ELam("n", self.prop, self.type0)
-        expr = EMatch("Nat", EVar("n"), motive, (EVar("z"),))
-        context: dict[str, Expr] = {"n": self.prop}
-        assert infer_type(expr, context, {}) == EApp(motive, EVar("n"))
+    def test_match_typing_checks_constructor_branches(self):
+        """Match typing validates branch arity/types against constructors."""
+        env = Environment.standard()
+        nat = EConst("Nat", ())
+        motive = ELam("_n", nat, nat)
+        expr = EMatch(
+            "Nat",
+            EVar("n"),
+            motive,
+            (
+                EConst("Nat.zero", ()),
+                ELam("k", nat, EVar("k")),
+            ),
+        )
+        context: dict[str, Expr] = {"n": nat}
+        assert infer_type(expr, context, {}, env) == EApp(motive, EVar("n"))
+
+    def test_match_typing_rejects_invalid_branch_type(self):
+        """Match typing rejects branches that do not match constructor binders."""
+        env = Environment.standard()
+        nat = EConst("Nat", ())
+        motive = ELam("_n", nat, nat)
+        expr = EMatch(
+            "Nat",
+            EVar("n"),
+            motive,
+            (
+                EConst("Nat.zero", ()),
+                EConst("Nat.zero", ()),
+            ),
+        )
+        context: dict[str, Expr] = {"n": nat}
+        with pytest.raises(KernelTypeError):
+            infer_type(expr, context, {}, env)
+
+    def test_sigma_type_is_registered_in_standard_environment(self):
+        """Sigma is available as a dependent inductive family."""
+        env = Environment.standard()
+        sigma = EConst("Sigma", (UnivLevelZero(), UnivLevelZero()))
+        assert env.get("Sigma") is not None
+        assert infer_type(sigma, {}, {}, env) == EPi(
+            "A",
+            self.prop,
+            EPi(
+                "B",
+                EPi("_", EVar("A"), self.prop),
+                ESort(UnivLevelIMax(UnivLevelZero(), UnivLevelZero())),
+            ),
+        )
 
 
 class TestCheckType:

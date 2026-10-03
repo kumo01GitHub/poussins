@@ -1,17 +1,16 @@
 """Equality tactics including reflexivity and symmetry."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, Expr
+from ..ast import EMetaVar, Expr, build_app_chain
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, is_def_eq, whnf
 from .apply import apply
 from .helpers import (
-    build_app,
     const_from_decl,
+    parse_eq_app,
     require_current_goal,
     requires_active_goal,
-    split_eq_app,
 )
 
 
@@ -22,9 +21,8 @@ def reflexivity(manager: ProofManager) -> None:
     metavars = manager.current_state.metavars
     env = manager.env
 
-    eq_args = split_eq_app(
+    eq_args = parse_eq_app(
         whnf(current_goal.statement, metavars, env),
-        EqualityDeclaration.EQ_DECLARATION.declaration.name
     )
 
     if eq_args is None:
@@ -56,9 +54,8 @@ def symmetry(manager: ProofManager) -> None:
     metavars = manager.current_state.metavars
     env = manager.env
 
-    eq_args = split_eq_app(
+    eq_args = parse_eq_app(
         whnf(target, metavars, env),
-        EqualityDeclaration.EQ_DECLARATION.declaration.name
     )
 
     if eq_args is None:
@@ -74,12 +71,12 @@ def symmetry(manager: ProofManager) -> None:
     )
 
     new_goal = Goal(
-        statement=build_app(eq_const, type_a, rhs, lhs),
+        statement=build_app_chain(eq_const, type_a, rhs, lhs),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
     manager.refine_goal(
-        build_app(eq_symm_const, type_a, rhs, lhs, EMetaVar(new_goal.id)),
+        build_app_chain(eq_symm_const, type_a, rhs, lhs, EMetaVar(new_goal.id)),
         [new_goal]
     )
 
@@ -92,13 +89,12 @@ def transitivity(manager: ProofManager, expr: Expr) -> None:
     """Split an equality goal into two subgoals using a middle term."""
     current_goal = require_current_goal(manager, tactic_name="transitivity")
 
-    eq_args = split_eq_app(
+    eq_args = parse_eq_app(
         whnf(
             current_goal.statement,
             manager.current_state.metavars,
             manager.env
         ),
-        EqualityDeclaration.EQ_DECLARATION.declaration.name,
     )
 
     if eq_args is None:
@@ -114,18 +110,18 @@ def transitivity(manager: ProofManager, expr: Expr) -> None:
     )
 
     goal1 = Goal(
-        statement=build_app(eq_const, type_a, lhs, expr),
+        statement=build_app_chain(eq_const, type_a, lhs, expr),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
     goal2 = Goal(
-        statement=build_app(eq_const, type_a, expr, rhs),
+        statement=build_app_chain(eq_const, type_a, expr, rhs),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
-    proof = build_app(
+    proof = build_app_chain(
         eq_trans_const,
         type_a,
         lhs,

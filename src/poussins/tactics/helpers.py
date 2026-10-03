@@ -3,16 +3,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import Concatenate
 
-from ..ast import EApp, EConst, ELam, Expr, UnivLevelParam
+from ..ast import EConst, Expr, UnivLevelParam, flatten_app_chain
 from ..environment import Declaration
+from ..environment.library import EQ_APP_ARITY, EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
-
-_EQ_APP_ARITY = 3
-_P = ParamSpec("_P")
-_R = TypeVar("_R")
 
 
 def require_current_goal(
@@ -60,35 +57,6 @@ def fresh_binder_name(
     return candidate
 
 
-def build_app(fn: Expr, *args: Expr) -> Expr:
-    """Build a left-associated application chain."""
-    result = fn
-    for arg in args:
-        result = EApp(result, arg)
-    return result
-
-
-def build_lambda_chain(
-    binders: list[tuple[str, Expr]],
-    body: Expr,
-) -> Expr:
-    """Build nested lambdas from binders, ending in body."""
-    result = body
-    for var_name, domain in reversed(binders):
-        result = ELam(var_name, domain, result)
-    return result
-
-
-def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
-    """Return the function head and its left-associated arguments."""
-    head = expr
-    args: list[Expr] = []
-    while isinstance(head, EApp):
-        args.append(head.arg)
-        head = head.fn
-    return head, tuple(reversed(args))
-
-
 def const_head_name(expr: Expr) -> str | None:
     """Return the head constant name of an application chain, if any."""
     head, _ = flatten_app_chain(expr)
@@ -97,20 +65,15 @@ def const_head_name(expr: Expr) -> str | None:
     return head.name
 
 
-def match_const_app(expr: Expr, const_name: str, arity: int) -> tuple[Expr, ...] | None:
-    """Match a fully applied constant with a known arity."""
+def parse_eq_app(expr: Expr) -> tuple[Expr, Expr, Expr] | None:
+    """Decode `Eq A lhs rhs` when the expression has that shape."""
     head, args = flatten_app_chain(expr)
     if not isinstance(head, EConst):
         return None
-    if head.name != const_name or len(args) != arity:
-        return None
-    return args
-
-
-def split_eq_app(expr: Expr, eq_name: str = "Eq") -> tuple[Expr, Expr, Expr] | None:
-    """Decode `Eq A lhs rhs` when the expression has that shape."""
-    args = match_const_app(expr, eq_name, _EQ_APP_ARITY)
-    if args is None:
+    if (
+        head.name != EqualityDeclaration.EQ_DECLARATION.declaration.name
+        or len(args) != EQ_APP_ARITY
+    ):
         return None
     return args[0], args[1], args[2]
 

@@ -9,10 +9,10 @@ from typing import ClassVar
 
 from ..ast import EApp, EConst, Expr
 from ..environment.library import NatDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class Nat(InductiveType):
+class Nat(DeclaredType):
     """Immutable wrapper for natural number expressions."""
 
     TYPE_NAME: ClassVar[str] = NatDeclaration.NAT_DECLARATION.declaration.name

@@ -14,6 +14,35 @@ from .expr import (
 )
 
 
+def build_app_chain(fn: Expr, *args: Expr) -> Expr:
+    """Build a left-associated application chain from a head and arguments."""
+    result = fn
+    for arg in args:
+        result = EApp(result, arg)
+    return result
+
+
+def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
+    """Return the application head and ordered arguments."""
+    head = expr
+    args: list[Expr] = []
+    while isinstance(head, EApp):
+        args.append(head.arg)
+        head = head.fn
+    return head, tuple(reversed(args))
+
+
+def build_lambda_chain(
+    binders: list[tuple[str, Expr]],
+    body: Expr,
+) -> Expr:
+    """Build nested lambdas from binders, ending in body."""
+    result = body
+    for var_name, domain in reversed(binders):
+        result = ELam(var_name, domain, result)
+    return result
+
+
 def has_metavar(expr: Expr) -> bool:
     """Check if the expression contains any meta-variables (holes)."""
     match expr:

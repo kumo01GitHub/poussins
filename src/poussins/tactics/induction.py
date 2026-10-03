@@ -11,13 +11,13 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
+    build_lambda_chain,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
-    build_lambda_chain,
     const_head_name,
     fresh_binder_name,
     require_current_goal,
@@ -26,7 +26,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def induction(manager: ProofManager, hyp_name: str) -> None:
+def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
     """Perform structural induction on an inductive hypothesis in the current goal.
 
     The tactic creates one subgoal per constructor of the inductive type.
@@ -78,14 +78,25 @@ def induction(manager: ProofManager, hyp_name: str) -> None:
         branch_binders: list[tuple[str, Expr]] = []
         branch_expr: Expr = constructor
         current_type = constructor_type
+        renaming: dict[str, Expr] = {}
         while isinstance(current_type, EPi):
+            domain = current_type.domain
+            body = current_type.body
+            for old_name, new_expr in renaming.items():
+                domain = substitute_expr_var(domain, old_name, new_expr)
+                body = substitute_expr_var(body, old_name, new_expr)
+
             var_name = fresh_binder_name(
                 current_type.var,
                 current_goal.context, used_names=set()
             )
-            branch_binders.append((var_name, current_type.domain))
+            if var_name != current_type.var:
+                body = substitute_expr_var(body, current_type.var, EVar(var_name))
+
+            branch_binders.append((var_name, domain))
             branch_expr = EApp(branch_expr, EVar(var_name))
-            current_type = current_type.body
+            renaming[current_type.var] = EVar(var_name)
+            current_type = body
 
         branch_statement = substitute_expr_var(
             current_goal.statement,
@@ -104,7 +115,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:
 
         induction_hypotheses: list[tuple[str, Expr]] = []
         for var_name, var_type in branch_binders:
-            if isinstance(var_type, EConst) and var_type.name == head_name:
+            if const_head_name(var_type) == head_name:
                 ih_name = fresh_binder_name(
                     "ih",
                     current_goal.global_context | branch_local_context,

@@ -5,10 +5,10 @@ from typing import ClassVar
 
 from ..ast import EApp, EConst, Expr
 from ..environment.library import VectorDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class Vector(InductiveType):
+class Vector(DeclaredType):
     """Immutable wrapper for vector expressions."""
 
     TYPE_NAME: ClassVar[str] = VectorDeclaration.VECTOR_DECLARATION.declaration.name
@@ -16,12 +16,20 @@ class Vector(InductiveType):
     CONS_NAME: ClassVar[str] = (
         VectorDeclaration.VECTOR_CONS_DECLARATION.declaration.name
     )
+    TYPE_ARITY: ClassVar[int] = 2
+    EQ_ARITY: ClassVar[int] = 4
 
     @classmethod
-    def type(cls, elem_type: Expr, length: InductiveType | Expr) -> Expr:
+    def type(cls, *args: DeclaredType | Expr) -> Expr:
         """Return `Vector elem_type length`."""
+        if len(args) != cls.TYPE_ARITY:
+            raise TypeError(
+                f"Vector.type expects {cls.TYPE_ARITY} arguments, got {len(args)}"
+            )
+        elem_type, length = args
+        elem_type_expr = cls.to_expr(elem_type)
         length_expr = cls.to_expr(length)
-        return EApp(EApp(EConst(cls.TYPE_NAME, ()), elem_type), length_expr)
+        return EApp(EApp(EConst(cls.TYPE_NAME, ()), elem_type_expr), length_expr)
 
     @classmethod
     def nil(cls, elem_type: Expr) -> Vector:
@@ -32,8 +40,8 @@ class Vector(InductiveType):
     def cons(
         cls,
         elem_type: Expr,
-        length: InductiveType | Expr,
-        head: InductiveType | Expr,
+        length: DeclaredType | Expr,
+        head: DeclaredType | Expr,
         tail: Vector | Expr,
     ) -> Vector:
         """Construct `Vector.cons head tail` over `elem_type` and `length`."""
@@ -51,14 +59,13 @@ class Vector(InductiveType):
         )
 
     @classmethod
-    def eq(
-        cls,
-        elem_type: Expr,
-        length: InductiveType | Expr,
-        left: InductiveType | Expr,
-        right: InductiveType | Expr,
-    ) -> Expr:
+    def eq(cls, *args: DeclaredType | Expr) -> Expr:
         """Construct `left = right` over `Vector elem_type length`."""
+        if len(args) != cls.EQ_ARITY:
+            raise TypeError(
+                f"Vector.eq expects {cls.EQ_ARITY} arguments, got {len(args)}"
+            )
+        elem_type, length, left, right = args
         left_expr = cls.to_expr(left)
         right_expr = cls.to_expr(right)
         return EApp(

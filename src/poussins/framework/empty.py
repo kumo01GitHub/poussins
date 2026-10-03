@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import ClassVar
 
 from ..environment.library import EmptyDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class Empty(InductiveType):
+class Empty(DeclaredType):
     """Immutable wrapper for empty-type expressions."""
 
     TYPE_NAME: ClassVar[str] = EmptyDeclaration.EMPTY_DECLARATION.declaration.name

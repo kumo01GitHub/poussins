@@ -13,6 +13,8 @@ from .library import (
     NatDeclaration,
     OptionDeclaration,
     ProdDeclaration,
+    QuotLibraryDeclaration,
+    SigmaDeclaration,
     SumDeclaration,
     UnitDeclaration,
     VectorDeclaration,
@@ -82,6 +84,9 @@ class Environment:
         for item in ProdDeclaration:
             env.add(item.declaration)
 
+        for item in SigmaDeclaration:
+            env.add(item.declaration)
+
         for item in OptionDeclaration:
             env.add(item.declaration)
 
@@ -101,6 +106,9 @@ class Environment:
             env.add(item.declaration)
 
         for item in VectorDeclaration:
+            env.add(item.declaration)
+
+        for item in QuotLibraryDeclaration:
             env.add(item.declaration)
 
         return env

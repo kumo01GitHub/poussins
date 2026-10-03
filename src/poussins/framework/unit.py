@@ -5,10 +5,10 @@ from typing import ClassVar
 
 from ..ast import EConst
 from ..environment.library import UnitDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class Unit(InductiveType):
+class Unit(DeclaredType):
     """Immutable wrapper for unit expressions."""
 
     TYPE_NAME: ClassVar[str] = UnitDeclaration.UNIT_DECLARATION.declaration.name

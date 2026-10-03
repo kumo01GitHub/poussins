@@ -1,13 +1,11 @@
 """Tactic for specializing a hypothesis with an argument (specialize h a)."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, EPi, EVar, Expr
+from ..ast import EMetaVar, EPi, EVar, Expr, build_app_chain, build_lambda_chain
 from ..ast.ops import substitute_expr_var
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 from .helpers import (
-    build_app,
-    build_lambda_chain,
     require_current_goal,
     requires_active_goal,
 )
@@ -52,6 +50,6 @@ def specialize(manager: ProofManager, hyp_name: str, arg: Expr) -> None:
         [(hyp_name, specialized_type)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app(cut_lambda, build_app(EVar(hyp_name), arg))
+    assignment_expr = build_app_chain(cut_lambda, build_app_chain(EVar(hyp_name), arg))
 
     manager.refine_goal(assignment_expr, [new_goal])

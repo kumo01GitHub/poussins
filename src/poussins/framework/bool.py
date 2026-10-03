@@ -9,10 +9,10 @@ from typing import ClassVar
 
 from ..ast import EConst
 from ..environment.library import BoolDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class Bool(InductiveType):
+class Bool(DeclaredType):
     """Immutable wrapper for boolean expressions."""
 
     TYPE_NAME: ClassVar[str] = BoolDeclaration.BOOL_DECLARATION.declaration.name

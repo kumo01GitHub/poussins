@@ -11,10 +11,11 @@ from ..ast import (
     ESort,
     EVar,
     Expr,
+    flatten_app_chain,
     substitute_expr_var,
     substitute_metavar,
 )
-from ..environment import DefinitionDeclaration, Environment
+from ..environment import DefinitionDeclaration, Environment, InductiveDeclaration
 from .proof_state import MetaVar
 
 
@@ -62,12 +63,54 @@ def whnf(
                 new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
+        case EMatch(inductive_name, discriminee, motive, cases):
+            discriminee_whnf = whnf(discriminee, metavars, env, unfolding)
+
+            if env is not None:
+                decl = env.get(inductive_name)
+                if isinstance(decl, InductiveDeclaration):
+                    discriminee_head, discriminee_args = flatten_app_chain(
+                        discriminee_whnf
+                    )
+                    if isinstance(discriminee_head, EConst):
+                        constructor_names = decl.constructor_names
+                        if (
+                            discriminee_head.name in constructor_names
+                            and len(cases) == len(constructor_names)
+                        ):
+                            branch_index = constructor_names.index(
+                                discriminee_head.name
+                            )
+                            branch_expr = cases[branch_index]
+                            reduced_branch: Expr = branch_expr
+
+                            for constructor_arg in discriminee_args:
+                                reduced_head = whnf(
+                                    reduced_branch,
+                                    metavars,
+                                    env,
+                                    unfolding,
+                                )
+                                if isinstance(reduced_head, ELam):
+                                    reduced_branch = substitute_expr_var(
+                                        reduced_head.body,
+                                        reduced_head.var,
+                                        constructor_arg,
+                                    )
+                                else:
+                                    reduced_branch = EApp(
+                                        reduced_branch,
+                                        constructor_arg,
+                                    )
+
+                            return whnf(reduced_branch, metavars, env, unfolding)
+
+            return EMatch(inductive_name, discriminee_whnf, motive, cases)
         case (
             ESort(_)
             | EVar(_)
             | ELam(_, _, _)
             | EPi(_, _, _)
-            | EMatch(_, _, _, _)
             | EMetaVar(_)
         ):
             return expr

@@ -319,3 +319,6 @@ class EqualityDeclaration(Enum):
     def declaration(self) -> Declaration:
         """Return the underlying declaration."""
         return self.value
+
+
+EQ_APP_ARITY = 3

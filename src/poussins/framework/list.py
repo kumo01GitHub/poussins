@@ -5,10 +5,10 @@ from typing import ClassVar
 
 from ..ast import EApp, EConst, Expr
 from ..environment.library import ListDeclaration
-from .inductive_type import InductiveType
+from .declared_type import DeclaredType
 
 
-class List(InductiveType):
+class List(DeclaredType):
     """Immutable wrapper for list expressions."""
 
     TYPE_NAME: ClassVar[str] = ListDeclaration.LIST_DECLARATION.declaration.name
@@ -16,11 +16,18 @@ class List(InductiveType):
     CONS_NAME: ClassVar[str] = (
         ListDeclaration.LIST_CONS_DECLARATION.declaration.name
     )
+    TYPE_ARITY: ClassVar[int] = 1
+    EQ_ARITY: ClassVar[int] = 3
 
     @classmethod
-    def type(cls, elem_type: Expr) -> Expr:
+    def type(cls, *args: DeclaredType | Expr) -> Expr:
         """Return `List elem_type`."""
-        return EApp(EConst(cls.TYPE_NAME, ()), elem_type)
+        if len(args) != cls.TYPE_ARITY:
+            raise TypeError(
+                f"List.type expects {cls.TYPE_ARITY} argument, got {len(args)}"
+            )
+        (elem_type,) = args
+        return EApp(EConst(cls.TYPE_NAME, ()), cls.to_expr(elem_type))
 
     @classmethod
     def nil(cls, elem_type: Expr) -> List:
@@ -31,7 +38,7 @@ class List(InductiveType):
     def cons(
         cls,
         elem_type: Expr,
-        head: InductiveType | Expr,
+        head: DeclaredType | Expr,
         tail: List | Expr,
     ) -> List:
         """Construct `head :: tail` over `elem_type`."""
@@ -45,10 +52,13 @@ class List(InductiveType):
         )
 
     @classmethod
-    def eq(
-        cls, elem_type: Expr, left: InductiveType | Expr, right: InductiveType | Expr
-    ) -> Expr:
+    def eq(cls, *args: DeclaredType | Expr) -> Expr:
         """Construct `left = right` over `List elem_type`."""
+        if len(args) != cls.EQ_ARITY:
+            raise TypeError(
+                f"List.eq expects {cls.EQ_ARITY} arguments, got {len(args)}"
+            )
+        elem_type, left, right = args
         left_expr = cls.to_expr(left)
         right_expr = cls.to_expr(right)
         return EApp(
