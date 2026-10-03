@@ -11,6 +11,7 @@ from ..ast import EVar, Expr
 from ..environment import Environment, TheoremDeclaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
+    CasesPatterns,
     RCasesPattern,
     apply,
     assumption,
@@ -177,7 +178,7 @@ class ProofScript(ABC):
     def cases(
         self,
         hyp_name: str,
-        patterns: tuple[tuple[str, ...], ...] | None = None,
+        patterns: CasesPatterns = None,
     ) -> None:
         """Case-split on an inductive hypothesis."""
         cases(self.manager, hyp_name, patterns)

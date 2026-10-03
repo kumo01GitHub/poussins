@@ -84,7 +84,7 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 | `induction(hypothesis_name)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals. |
 | `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Standard for reflexive equalities. |
 | `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
-| `transitivity(middle)` / `trans(middle)` | Split an equality goal with an intermediate term | Useful for chaining equalities. |
+| `transitivity(expr)` / `trans(expr)` | Split an equality goal with an intermediate term | Useful for chaining equalities. |
 | `rewrite(hyp_name)` / `rw(hyp_name)` | Rewrite using a local equality hypothesis | Replaces occurrences of the LHS with the RHS. |
 | `have(hyp_name, expr)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement. |
 | `specialize(hyp_name, arg)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of the local assumption. |
