@@ -68,6 +68,7 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 | `intro(name)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. |
 | `intros([names...])` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. |
 | `revert(hyp_names)` | Move hypotheses back into the goal as Pi binders | Useful when preparing a proof by generalization. |
+| `clear(hyp_name)` | Remove an unused local hypothesis from the context | Fails if the target or another hypothesis still depends on it. |
 | `exact(expr_or_name)` | Close the current goal with a term or local hypothesis | Equivalent to a direct proof term. |
 | `assumption()` | Solve the goal from a matching local hypothesis | Common finishing step for simple goals. |
 | `apply(expr_or_name)` | Apply a theorem or hypothesis to the goal | Produces subgoals for remaining premises. |

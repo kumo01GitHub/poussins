@@ -131,9 +131,6 @@ This section explains how proof construction flows through the system and how th
   - read current goal
   - construct proof term skeletons
   - call `ProofManager` for verified state transitions
-- `constructor` resolves inductive constructors from the environment and delegates to `apply`.
-- `cases` performs a structural split over an inductive hypothesis and produces branch subgoals, which are then verified through the existing kernel refinement flow.
-- `change` rewrites the current goal or a named local hypothesis type to a definitionally equal expression via manager-level `change_*` transitions.
 
 ### Framework (`framework/`)
 

@@ -17,6 +17,7 @@ from ..tactics import (
     assumption,
     cases,
     change,
+    clear,
     constructor,
     contradiction,
     dsimp,
@@ -153,6 +154,11 @@ class ProofScript(ABC):
     def assumption(self) -> None:
         """Solve the current goal using a matching hypothesis."""
         assumption(self.manager)
+
+    @log_tactic
+    def clear(self, hyp_name: str) -> None:
+        """Remove a local hypothesis from the current goal context."""
+        clear(self.manager, hyp_name)
 
     @log_tactic
     def constructor(self, index: int | None = None) -> None:

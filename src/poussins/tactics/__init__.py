@@ -2,6 +2,7 @@
 from .apply import apply
 from .cases import CasesPatterns, RCasesPattern, cases, obtain, rcases
 from .change import change
+from .clear import clear
 from .constructor import constructor, left, right, split
 from .equality import reflexivity, rfl, symm, symmetry, trans, transitivity
 from .exact import assumption, exact
@@ -24,6 +25,7 @@ __all__ = [
     "assumption",
     "cases",
     "change",
+    "clear",
     "constructor",
     "contradiction",
     "dsimp",
