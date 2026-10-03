@@ -1,7 +1,16 @@
 """Mathematical soundness tests for `poussins.kernel.eval`."""
 from typing import Final
 
-from poussins.ast import EApp, EConst, ELam, EMetaVar, ESort, EVar, UnivLevelZero
+from poussins.ast import (
+    EApp,
+    EConst,
+    ELam,
+    EMatch,
+    EMetaVar,
+    ESort,
+    EVar,
+    UnivLevelZero,
+)
 from poussins.environment import DefinitionDeclaration, Environment
 from poussins.kernel.eval import instantiate, instantiate_metavar, whnf
 from poussins.kernel.proof_state import MetaVar
@@ -77,3 +86,36 @@ class TestWhnfConversionSoundness:
             )
         )
         assert whnf(EConst("loop", ()), {}, env) == EConst("loop", ())
+
+    def test_match_reduces_constructor_discriminee(self):
+        """Match on a constructor discriminee reduces to the matching branch."""
+        env = Environment.standard()
+        nat = EConst("Nat", ())
+        motive = ELam("_n", nat, nat)
+        expr = EMatch(
+            "Nat",
+            EConst("Nat.zero", ()),
+            motive,
+            (
+                EConst("Nat.zero", ()),
+                ELam("k", nat, EVar("k")),
+            ),
+        )
+        assert whnf(expr, {}, env) == EConst("Nat.zero", ())
+
+    def test_match_reduces_and_substitutes_constructor_arguments(self):
+        """Match branch lambdas are instantiated with constructor arguments."""
+        env = Environment.standard()
+        nat = EConst("Nat", ())
+        discriminee = EApp(EConst("Nat.succ", ()), EConst("Nat.zero", ()))
+        motive = ELam("_n", nat, nat)
+        expr = EMatch(
+            "Nat",
+            discriminee,
+            motive,
+            (
+                EConst("Nat.zero", ()),
+                ELam("k", nat, EVar("k")),
+            ),
+        )
+        assert whnf(expr, {}, env) == EConst("Nat.zero", ())

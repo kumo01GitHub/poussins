@@ -5,7 +5,7 @@ import functools
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from logging import Logger
-from typing import Concatenate, Final, ParamSpec
+from typing import Concatenate, Final
 
 from ..ast import EVar, Expr
 from ..environment import Environment, TheoremDeclaration
@@ -48,7 +48,6 @@ from ..tactics import (
     use,
 )
 
-_TacticParams = ParamSpec('_TacticParams')
 
 def log_tactic[**TacticParams](
     func: Callable[Concatenate[ProofScript, TacticParams], None]

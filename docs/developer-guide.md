@@ -113,8 +113,8 @@ This section explains how proof construction flows through the system and how th
 ### Environment (`environment/`)
 
 - Stores declarations (`ConstantDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, `RecursorDeclaration`, ...).
-- Uses Enum-based library modules (e.g., `LogicDeclaration`, `DatatypeDeclaration`) under `src/poussins/environment/library/` to define primitives and recursors cleanly.
-- `Environment.default()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`).
+- Uses Enum-based library modules (e.g., `LogicDeclaration`, `NatDeclaration`, `BoolDeclaration`) under `src/poussins/environment/library/` to define primitives and recursors cleanly.
+- `Environment.default()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`, `Prod`, `Sigma`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`) plus quotient primitives (`Quot`, `Quot.mk`, `Quot.lift`).
 
 ### Kernel (`kernel/`)
 
@@ -180,7 +180,7 @@ Keep the root `poussins` package small and user-oriented.
   - DSL wrappers such as `Prop`, `Nat`, and `Bool`
   - proof-script entry points such as `Example`, `Theorem`, and theorem-style aliases
 2. Extension and implementation APIs should be imported from subpackages.
-  - Use `poussins.framework` for extension bases such as `InductiveType` and `ProofScript`.
+  - Use `poussins.framework` for extension bases such as `DeclaredType` and `ProofScript`.
   - Use `poussins.tactics` for tactic functions.
   - Use `poussins.environment` for declaration classes.
   - Use `poussins.ast` and `poussins.kernel` for low-level expression and kernel APIs.
@@ -191,13 +191,14 @@ Keep the root `poussins` package small and user-oriented.
 When adding a new user-facing inductive type such as `Bool` or `List`, split the work between `environment/` and `framework/`.
 
 1. Add declarations using the Enum-based structure under `src/poussins/environment/library/`.
-  - Define members in the corresponding declaration Enum (e.g., `DatatypeDeclaration`, `LogicDeclaration`, or a dedicated module).
+  - Define members in the corresponding declaration Enum (e.g., `ListDeclaration`, `LogicDeclaration`, or a dedicated module).
   - Add one `InductiveDeclaration` for the type itself, `ConstructorDeclaration` members for each constructor, and any necessary `RecursorDeclaration` members (such as `.rec` with universe parameters).
   - Register the new Enum or its items in `Environment.standard()`.
 2. Keep `InductiveDeclaration.type` as the full type former of the inductive name.
   - Nullary inductives use a sort directly, for example `Nat : Type`.
   - Parameterized inductives use a Pi-shaped expression, for example `Eq : Π A : Type, A -> A -> Prop`.
-3. If the type should be part of the public DSL, add a wrapper class in `src/poussins/framework/` by extending `InductiveType`.
+3. If the type should be part of the public DSL, add a wrapper class in `src/poussins/framework/`.
+  - Use `DeclaredType` as the shared base for declaration-backed wrappers, including inductive and quotient-like declarations.
   - Use `Environment` declaration names as the source of truth for the inductive name and constructor names.
   - Build `Expr` values in the wrapper, but do not make the wrapper depend on an `Environment` instance at runtime.
   - Keep the wrapper focused on ergonomic construction helpers such as `zero()`, `succ(...)`, `true()`, or `false()`.

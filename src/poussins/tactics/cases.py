@@ -14,6 +14,7 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
+    build_lambda_chain,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
@@ -22,7 +23,6 @@ from ..kernel import Goal, ProofManager, infer_type, whnf
 from .exact import exact
 from .have import have
 from .helpers import (
-    build_lambda_chain,
     const_head_name,
     fresh_binder_name,
     require_current_goal,
@@ -41,13 +41,24 @@ def _build_constructor_pattern(
     branch_binders: list[tuple[str, Expr]] = []
     current_context = dict(context)
     current_type = constructor_type
+    renaming: dict[str, Expr] = {}
 
     while isinstance(current_type, EPi):
+        domain = current_type.domain
+        body = current_type.body
+        for old_name, new_expr in renaming.items():
+            domain = substitute_expr_var(domain, old_name, new_expr)
+            body = substitute_expr_var(body, old_name, new_expr)
+
         var_name = fresh_binder_name(current_type.var, current_context, used_names)
-        current_context[var_name] = current_type.domain
-        branch_binders.append((var_name, current_type.domain))
+        if var_name != current_type.var:
+            body = substitute_expr_var(body, current_type.var, EVar(var_name))
+
+        current_context[var_name] = domain
+        branch_binders.append((var_name, domain))
         pattern = EApp(pattern, EVar(var_name))
-        current_type = current_type.body
+        renaming[current_type.var] = EVar(var_name)
+        current_type = body
 
     return pattern, branch_binders
 
@@ -69,12 +80,22 @@ def _normalize_patterns(
     if patterns is None:
         return tuple((name, ()) for name in constructor_names)
 
-    normalized_patterns: list[tuple[str, tuple[str, ...]]] = []
+    by_constructor: dict[str, tuple[str, ...]] = {}
     for pattern in patterns:
         if not pattern:
             raise TacticError("empty patterns are not supported.")
-        normalized_patterns.append((pattern[0], tuple(pattern[1:])))
-    return tuple(normalized_patterns)
+        constructor_name = pattern[0]
+        if constructor_name not in constructor_names:
+            raise TacticError(
+                f"unknown constructor '{constructor_name}' in patterns."
+            )
+        if constructor_name in by_constructor:
+            raise TacticError(
+                f"duplicate constructor pattern '{constructor_name}'."
+            )
+        by_constructor[constructor_name] = tuple(pattern[1:])
+
+    return tuple((name, by_constructor.get(name, ())) for name in constructor_names)
 
 
 def _infer_inductive_parameter_substitutions(
@@ -95,7 +116,7 @@ def _infer_inductive_parameter_substitutions(
 
         if isinstance(expr, EConst) and isinstance(value, EConst):
             if expr.name != value.name or expr.levels != value.levels:
-                raise TacticError("could not infer constructor argument types.")
+                return
             return
 
         if isinstance(expr, ESort) and isinstance(value, ESort):
@@ -103,7 +124,7 @@ def _infer_inductive_parameter_substitutions(
 
         if isinstance(expr, EMetaVar) and isinstance(value, EMetaVar):
             if expr.goal_id != value.goal_id:
-                raise TacticError("could not infer constructor argument types.")
+                return
             return
 
         if isinstance(expr, EPi) and isinstance(value, EPi):
@@ -114,7 +135,7 @@ def _infer_inductive_parameter_substitutions(
         if type(expr) is type(value):
             return
 
-        raise TacticError("could not infer constructor argument types.")
+        return
 
     visit(target_expr, actual_expr)
     return substitutions
@@ -242,6 +263,16 @@ def cases(
             actual_expr=hypothesis_type,
         )
         constructor_arg_binders = branch_binders[len(inductive_parameters):]
+        specialized_constructor_arg_binders = [
+            (
+                binder_name,
+                _specialize_with_parameter_substitutions(
+                    binder_type,
+                    parameter_substitutions,
+                ),
+            )
+            for binder_name, binder_type in constructor_arg_binders
+        ]
 
         branch_goal_statement = substitute_expr_var(
             current_goal.statement,
@@ -254,7 +285,7 @@ def cases(
             constructor_pattern=constructor_pattern,
             branch_binders=branch_binders,
             branch_alias_spec=(
-                constructor_arg_binders,
+                specialized_constructor_arg_binders,
                 names_for_branch,
                 parameter_substitutions,
             ),
@@ -267,7 +298,10 @@ def cases(
         )
         subgoals.append(branch_goal)
         branch_terms.append(
-            build_lambda_chain(constructor_arg_binders, EMetaVar(branch_goal.id))
+            build_lambda_chain(
+                branch_binders,
+                EMetaVar(branch_goal.id),
+            )
         )
 
     motive = ELam(

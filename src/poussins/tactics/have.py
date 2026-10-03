@@ -1,11 +1,16 @@
 """Tactic for introducing intermediate assertions (have h : P)."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, EPi, EVar, Expr
+from ..ast import (
+    EMetaVar,
+    EPi,
+    EVar,
+    Expr,
+    build_app_chain,
+    build_lambda_chain,
+)
 from ..kernel import Goal, ProofManager
 from .helpers import (
-    build_app,
-    build_lambda_chain,
     fresh_binder_name,
     require_current_goal,
     requires_active_goal,
@@ -53,12 +58,12 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
     p_to_g = EPi("_", expr, current_goal.statement)
     cut_fn = build_lambda_chain(
         [("f", p_to_g)],
-        build_app(EVar("f"), EMetaVar(proof_goal.id)),
+        build_app_chain(EVar("f"), EMetaVar(proof_goal.id)),
     )
     cut_arg = build_lambda_chain(
         [(bound_name, expr)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app(cut_fn, cut_arg)
+    assignment_expr = build_app_chain(cut_fn, cut_arg)
 
     manager.refine_goal(assignment_expr, [proof_goal, new_goal])

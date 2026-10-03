@@ -5,9 +5,19 @@ from ..ast import Expr
 from .declaration import Declaration
 from .library import (
     BoolDeclaration,
+    EmptyDeclaration,
     EqualityDeclaration,
+    FinDeclaration,
+    ListDeclaration,
     LogicDeclaration,
     NatDeclaration,
+    OptionDeclaration,
+    ProdDeclaration,
+    QuotLibraryDeclaration,
+    SigmaDeclaration,
+    SumDeclaration,
+    UnitDeclaration,
+    VectorDeclaration,
 )
 
 
@@ -69,6 +79,36 @@ class Environment:
         # Natural Number Declarations
         # ------------------------------------------------------------------
         for item in NatDeclaration:
+            env.add(item.declaration)
+
+        for item in ProdDeclaration:
+            env.add(item.declaration)
+
+        for item in SigmaDeclaration:
+            env.add(item.declaration)
+
+        for item in OptionDeclaration:
+            env.add(item.declaration)
+
+        for item in ListDeclaration:
+            env.add(item.declaration)
+
+        for item in UnitDeclaration:
+            env.add(item.declaration)
+
+        for item in SumDeclaration:
+            env.add(item.declaration)
+
+        for item in EmptyDeclaration:
+            env.add(item.declaration)
+
+        for item in FinDeclaration:
+            env.add(item.declaration)
+
+        for item in VectorDeclaration:
+            env.add(item.declaration)
+
+        for item in QuotLibraryDeclaration:
             env.add(item.declaration)
 
         return env
