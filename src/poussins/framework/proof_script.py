@@ -8,9 +8,10 @@ from logging import Logger
 from typing import Concatenate, Final
 
 from ..ast import EVar, Expr
-from ..environment import Environment
+from ..environment import Environment, TheoremDeclaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
+    CasesPatterns,
     RCasesPattern,
     apply,
     assumption,
@@ -112,7 +113,7 @@ class ProofScript(ABC):
         self.manager.undo()
 
     @abstractmethod
-    def qed(self):
+    def qed(self) -> TheoremDeclaration | None:
         """Finalize the proof script."""
         pass
 
@@ -177,7 +178,7 @@ class ProofScript(ABC):
     def cases(
         self,
         hyp_name: str,
-        patterns: tuple[tuple[str, ...], ...] | None = None,
+        patterns: CasesPatterns = None,
     ) -> None:
         """Case-split on an inductive hypothesis."""
         cases(self.manager, hyp_name, patterns)
@@ -273,10 +274,10 @@ class ProofScript(ABC):
         have(self.manager, hyp_name, expr)
 
     @log_tactic
-    def specialize(self, hyp_name: str, arg_or_name: Expr | str) -> None:
+    def specialize(self, hyp_name: str, expr_or_name: Expr | str) -> None:
         """Specialize a hypothesis in the local context with an argument."""
-        arg = arg_or_name if isinstance(arg_or_name, Expr) else EVar(arg_or_name)
-        specialize(self.manager, hyp_name, arg)
+        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
+        specialize(self.manager, hyp_name, expr)
 
     @log_tactic
     def suffices(self, hyp_name: str, expr: Expr) -> None:

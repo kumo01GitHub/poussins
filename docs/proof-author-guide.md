@@ -61,34 +61,36 @@ ex.qed()
 
 ## Tactics You Can Use
 
-You can call tactics as methods on `Example`/`Theorem`:
+You can call tactics as methods on `Example`/`Theorem`. The table below is the quick reference for the core proof steps.
 
-- `intro(name)`: introduce one binder/hypothesis
-- `intros([names...])`: introduce multiple binders
-- `revert(hyp_names)`: revert hypothesis/hypotheses from the local context back into the goal statement as Pi-types
-- `exact(expr_or_name)`: close current goal with a term/hypothesis
-- `assumption()`: close goal from a matching local hypothesis
-- `apply(expr_or_name)`: apply theorem/hypothesis and create subgoals
-- `refine(expr)`: refine the current goal using an expression that may contain metavariables (e.g. `EMetaVar("m")`), creating new subgoals for each unsolved metavariable
-- `constructor(index=None)`: apply a matching constructor (or choose 1-based constructor index)
-- `cases(hypothesis_name)`: split on an inductive hypothesis and create one subgoal per constructor
-- `rcases(hyp_name, pattern)`: recursively destruct an inductive hypothesis using a nested pattern structure (e.g., `("And.intro", "hP", ("Or.inl", "hQ"))`).
-- `obtain(pattern, expr)`: introduce a new witness or proof term into the context and immediately destructure it using a nested pattern.
-- `change(expr_or_name, hypothesis_name=None)`: rewrite the current goal (or a named local hypothesis type) to a definitionally equal expression
-- `simpl(hypothesis_name=None, unfolding=None)` / `dsimp(...)`: simplify the current goal (or a local hypothesis) by fully evaluating terms and reducing expressions to normal form
-- `unfold(name, hypothesis_name=None)`: unfold a specific definition by name in the current goal or hypothesis
-- `exfalso()`: change target to `False` and prove contradiction first
-- `contradiction()`: close current goal if local hypotheses contain a contradiction (e.g. `h : False` or `h1 : P` and `h2 : P -> False`)
-- `induction(hypothesis_name)`: apply structural induction on an inductive hypothesis and create subgoals for each constructor
--　`reflexivity()` / `rfl()`: Solve an equality goal _a = b_ where both sides are definitionally equal (convertible via computation/definition expansion).
--　`symmetry()` / `symm()`: transform an equality goal `a = b` into `b = a`
-- `transitivity(middle)` / `trans(middle)`: split an equality goal `a = c` into two goals `a = b` and `b = c` using an intermediate term `b`
--　`rewrite(hyp_name) / rw(hyp_name)`: Rewrite occurrences of the LHS with the RHS in the current goal using a local equality hypothesis _h : a = b_.
--　`have(hyp_name, expr)`: introduce an intermediate assertion `hyp_name : expr`, creating a subgoal to prove `expr` first before continuing the main goal with the new hypothesis.
--　`specialize(hyp_name, arg)`: specialize hypothesis `hyp_name` with argument `arg` to `hyp_name : B[x := arg]`.
--　`suffices(hyp_name, expr)`: assert `hypothesis hyp_name : expr` to prove the goal, creating subgoals to prove the main goal using `hyp_name` first, then prove `expr`.
--　`use(expr)` / `exists(expr)`: solve an existential goal by providing a witness term, transforming the goal into the predicate applied to that witness.
-- `undo()`: rollback one proof step
+| Tactic | Purpose | Notes |
+| --- | --- | --- |
+| `intro(name)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. |
+| `intros([names...])` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. |
+| `revert(hyp_names)` | Move hypotheses back into the goal as Pi binders | Useful when preparing a proof by generalization. |
+| `exact(expr_or_name)` | Close the current goal with a term or local hypothesis | Equivalent to a direct proof term. |
+| `assumption()` | Solve the goal from a matching local hypothesis | Common finishing step for simple goals. |
+| `apply(expr_or_name)` | Apply a theorem or hypothesis to the goal | Produces subgoals for remaining premises. |
+| `refine(expr)` | Refine the current goal with an expression containing metavariables | Useful when the shape is known but some terms are still placeholders. |
+| `constructor(index=None)` | Apply a matching constructor | Optionally choose a specific constructor by index. |
+| `cases(hypothesis_name)` | Split on an inductive hypothesis | Produces one branch per constructor. |
+| `rcases(hyp_name, pattern)` | Recursively destruct an inductive hypothesis | Works well with nested constructor patterns. |
+| `obtain(pattern, expr)` | Introduce a witness/proof and immediately destructure it | Handy for structured witness extraction. |
+| `change(expr_or_name, hypothesis_name=None)` | Rewrite the current goal or hypothesis to a definitionally equal form | Useful when a proof goal needs to be aligned with a definitional reduction. |
+| `simpl(...)` / `dsimp(...)` | Simplify the goal or hypothesis by reduction | Helps normalize expressions and eliminate definitional clutter. |
+| `unfold(name, hypothesis_name=None)` | Unfold a definition in the goal or a local hypothesis | Good when the target depends on a reducible definition. |
+| `exfalso()` | Change the target to `False` and prove contradiction first | Useful for indirect proofs. |
+| `contradiction()` | Close the goal from contradictory hypotheses | Detects contradiction patterns such as `False` or mutually incompatible assumptions. |
+| `induction(hypothesis_name)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals. |
+| `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Standard for reflexive equalities. |
+| `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
+| `transitivity(expr)` / `trans(expr)` | Split an equality goal with an intermediate term | Useful for chaining equalities. |
+| `rewrite(hyp_name)` / `rw(hyp_name)` | Rewrite using a local equality hypothesis | Replaces occurrences of the LHS with the RHS. |
+| `have(hyp_name, expr)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement. |
+| `specialize(hyp_name, arg)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of the local assumption. |
+| `suffices(hyp_name, expr)` | Assert a sufficient intermediate fact | Creates goals for the main proof using the fact and the fact itself. |
+| `use(expr)` / `exists(expr)` | Provide a witness for an existential goal | Turns the goal into the predicate applied to the witness. |
+| `undo()` | Roll back one proof step | Useful during interactive development and debugging. |
 
 ### Induction and the Nat DSL
 

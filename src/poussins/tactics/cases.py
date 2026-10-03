@@ -29,6 +29,9 @@ from .helpers import (
     requires_active_goal,
 )
 
+type CasesPatterns = tuple[tuple[str, ...], ...] | None
+type RCasesPattern = str | tuple[str | RCasesPattern, ...]
+
 
 def _build_constructor_pattern(
     constructor: EConst,
@@ -201,7 +204,7 @@ def _build_branch_local_context(
 def cases(
     manager: ProofManager,
     hyp_name: str,
-    patterns: tuple[tuple[str, ...], ...] | None = None,
+    patterns: CasesPatterns = None,
 ) -> None:
     """Case-split on an inductive hypothesis."""
     state = manager.current_state
@@ -313,8 +316,6 @@ def cases(
 
     manager.refine_goal(assignment, subgoals)
 
-
-type RCasesPattern = str | tuple[str | RCasesPattern, ...]
 
 def _apply_rcases_pattern(
     manager: ProofManager,
