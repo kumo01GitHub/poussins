@@ -114,7 +114,7 @@ This section explains how proof construction flows through the system and how th
 
 - Stores declarations (`ConstantDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, `RecursorDeclaration`, ...).
 - Uses Enum-based library modules (e.g., `LogicDeclaration`, `NatDeclaration`, `BoolDeclaration`) under `src/poussins/environment/library/` to define primitives and recursors cleanly.
-- `Environment.default()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`, `Prod`, `Sigma`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`) plus quotient primitives (`Quot`, `Quot.mk`, `Quot.lift`).
+- `Environment.standard()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`, `Prod`, `Sigma`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`) plus quotient primitives (`Quot`, `Quot.mk`, `Quot.lift`).
 
 ### Kernel (`kernel/`)
 

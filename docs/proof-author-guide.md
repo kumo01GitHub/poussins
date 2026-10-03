@@ -39,7 +39,7 @@ Prefer importing from the subpackage that owns the API.
 
 The framework layer gives you a friendly interface:
 
-- `Environment.default()`: creates a default logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`)
+- `Environment.standard()`: creates the standard logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`)
 - `Prop`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`)
 - `Example(statement, env)`: anonymous proof (useful for exploration)
 - `Theorem(name, statement, env)`: named proof; `qed()` registers it into the environment
@@ -50,7 +50,7 @@ The framework layer gives you a friendly interface:
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 
-env = Environment.default()
+env = Environment.standard()
 p = Prop("P", env)
 
 ex = Example(p >> p, env)
@@ -102,7 +102,7 @@ from poussins.framework import Example, Nat
 from poussins.ast import EConst, EMetaVar
 from poussins.kernel.goal import Goal
 
-env = Environment.default()
+env = Environment.standard()
 
 example = Example(EConst("True", ()), env)
 subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("Nat", ())})
@@ -131,7 +131,7 @@ Goal: prove $P \to Q \to P \land Q$.
 from poussins.environment import Environment
 from poussins.framework import Prop, Theorem
 
-env = Environment.default()
+env = Environment.standard()
 p, q = Prop("P", env), Prop("Q", env)
 
 th = Theorem("and_intro", p >> q >> (p & q), env)
@@ -152,7 +152,7 @@ Goal: prove `True -> True` by splitting on the hypothesis.
 from poussins.environment import Environment
 from poussins.framework import Example, Prop
 
-env = Environment.default()
+env = Environment.standard()
 
 ex = Example(Prop.top() >> Prop.top(), env)
 ex.intro("hTrue")
@@ -169,7 +169,7 @@ Goal: prove $(P \to Q) \to P \to Q$.
 from poussins.environment import Environment
 from poussins.framework import Prop, Theorem
 
-env = Environment.default()
+env = Environment.standard()
 p, q = Prop("P", env), Prop("Q", env)
 
 mp = Theorem("mp", (p >> q) >> p >> q, env)
