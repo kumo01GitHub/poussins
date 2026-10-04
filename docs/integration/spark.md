@@ -22,7 +22,7 @@ Relevant files in the repository:
 - `example/spark/example*.py`: host-side Spark execution script
 - `example/spark/compose.yaml`: local Spark cluster definition
 - `example/spark/Dockerfile`: container image for the Spark workers
-- `src/poussins/integration/spark/`: integration implementation for orchestrator, runner, registry, serializer, and task wrappers
+- `src/poussins/integration/spark/`: integration implementation for orchestrator, runner, registry, and task wrappers
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ If you are using `uv`, the equivalent command is `uv run python example/spark/ex
 
 The distributed path follows the same proof model as the core library, but wraps proof tasks in a Spark-friendly execution layer:
 
-1. The environment is prepared and serialized for distribution.
+1. The environment is prepared for distribution.
 2. Proof tasks are registered in the task registry.
 3. The orchestrator broadcasts the environment and partitions the task list.
 4. Spark workers execute each task independently.

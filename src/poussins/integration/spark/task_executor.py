@@ -6,7 +6,6 @@ from typing import TypedDict
 from ...environment import Environment, TheoremDeclaration
 from ...utils.logging import get_logger
 from .proof_script import SparkProofScript
-from .serializer import ProofTaskSerializer
 from .task import ProofTaskNode
 
 
@@ -28,17 +27,16 @@ class ProofTaskExecutor:
 
     def execute_task(
         self,
-        task: str,
+        task: ProofTaskNode,
         env: Environment,
     ) -> TaskExecutionResult:
         """Task execution entry point for PySpark worker nodes."""
         task_name = "<unknown>"
         try:
-            node: ProofTaskNode = ProofTaskSerializer.deserialize(task)
-            task_name = node.name
+            task_name = task.name
             self.logger.info(f"Starting proof task execution on Worker: '{task_name}'")
 
-            script = SparkProofScript(node=node, env=env)
+            script = SparkProofScript(node=task, env=env)
             script.execute_plan()
             declaration = script.qed()
 

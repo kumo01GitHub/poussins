@@ -9,7 +9,6 @@ from pyspark.sql import SparkSession
 from ...environment import Environment
 from ...errors import SparkIntegrationError
 from ...utils.logging import get_logger
-from .serializer import ProofTaskSerializer
 from .task import ProofTaskDAG
 from .task_executor import ProofTaskExecutor, TaskExecutionResult
 
@@ -54,10 +53,7 @@ class ProofOrchestrator:
 
             broadcast_env = self.spark.sparkContext.broadcast(self.env)
             try:
-                serialized_tasks = [
-                    ProofTaskSerializer.serialize(node) for node in stage
-                ]
-                rdd = self.spark.sparkContext.parallelize(serialized_tasks)
+                rdd = self.spark.sparkContext.parallelize(stage)
                 results: list[TaskExecutionResult] = rdd.map(
                     lambda task, benv=broadcast_env: ProofTaskExecutor().execute_task(
                         task, benv.value
