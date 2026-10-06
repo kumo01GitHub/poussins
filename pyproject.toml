@@ -16,7 +16,10 @@ Changelog = "https://github.com/kumo01GitHub/poussins/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 spark = [
-    "pyspark>=4",
+    "pyspark>=4.0.0",
+]
+pytorch = [
+    "torch>=2.0.0",
 ]
 
 [tool.setuptools]

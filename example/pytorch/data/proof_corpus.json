@@ -1,0 +1,125 @@
+[
+  {
+    "goal_statement": "(Π hP : P, P)",
+    "hypotheses": [],
+    "tactic_name": "intro",
+    "tactic_args": {
+      "name": "hP"
+    }
+  },
+  {
+    "goal_statement": "P",
+    "hypotheses": [
+      ["hP", "P"]
+    ],
+    "tactic_name": "exact",
+    "tactic_args": {
+      "expr_or_name": "hP"
+    }
+  },
+  {
+    "goal_statement": "(Π hP : P, (Π hQ : Q, (And P Q)))",
+    "hypotheses": [],
+    "tactic_name": "intros",
+    "tactic_args": {
+      "names": ["hP", "hQ"]
+    }
+  },
+  {
+    "goal_statement": "(And P Q)",
+    "hypotheses": [
+      ["hP", "P"],
+      ["hQ", "Q"]
+    ],
+    "tactic_name": "constructor",
+    "tactic_args": {}
+  },
+  {
+    "goal_statement": "P",
+    "hypotheses": [
+      ["hP", "P"],
+      ["hQ", "Q"]
+    ],
+    "tactic_name": "exact",
+    "tactic_args": {
+      "expr_or_name": "hP"
+    }
+  },
+  {
+    "goal_statement": "Q",
+    "hypotheses": [
+      ["hP", "P"],
+      ["hQ", "Q"]
+    ],
+    "tactic_name": "exact",
+    "tactic_args": {
+      "expr_or_name": "hQ"
+    }
+  },
+  {
+    "goal_statement": "(= Nat (Nat.add Nat.zero Nat.zero) Nat.zero)",
+    "hypotheses": [],
+    "tactic_name": "rfl",
+    "tactic_args": {}
+  },
+  {
+    "goal_statement": "(= Nat (Nat.add Nat.zero (Nat.succ Nat.zero)) (Nat.succ Nat.zero))",
+    "hypotheses": [],
+    "tactic_name": "rfl",
+    "tactic_args": {}
+  },
+  {
+    "goal_statement": "(= Nat Nat.zero Nat.zero)",
+    "hypotheses": [],
+    "tactic_name": "rfl",
+    "tactic_args": {}
+  },
+  {
+    "goal_statement": "(Π hA : A, (Π hB : B, A))",
+    "hypotheses": [],
+    "tactic_name": "intros",
+    "tactic_args": {
+      "names": ["hA", "hB"]
+    }
+  },
+  {
+    "goal_statement": "A",
+    "hypotheses": [
+      ["hA", "A"],
+      ["hB", "B"]
+    ],
+    "tactic_name": "exact",
+    "tactic_args": {
+      "expr_or_name": "hA"
+    }
+  },
+  {
+    "goal_statement": "(And Q P)",
+    "hypotheses": [
+      ["hP", "P"],
+      ["hQ", "Q"]
+    ],
+    "tactic_name": "constructor",
+    "tactic_args": {}
+  },
+  {
+    "goal_statement": "(Π hA : A, (Π hB : B, (Π hC : C, B)))",
+    "hypotheses": [],
+    "tactic_name": "intros",
+    "tactic_args": {
+      "names": ["hA", "hB", "hC"]
+    }
+  },
+  {
+    "goal_statement": "B",
+    "hypotheses": [
+      ["hA", "A"],
+      ["hB", "B"],
+      ["hC", "C"]
+    ],
+    "tactic_name": "exact",
+    "tactic_args": {
+      "expr_or_name": "hB"
+    }
+  }
+]

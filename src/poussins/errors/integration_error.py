@@ -12,3 +12,9 @@ class SparkIntegrationError(IntegrationError):
     """Raised when a Spark integration construct is used incorrectly."""
 
     pass
+
+
+class PyTorchIntegrationError(IntegrationError):
+    """Raised when a PyTorch integration construct is used incorrectly."""
+
+    pass

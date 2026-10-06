@@ -13,8 +13,9 @@ A Python proof assistant with a small kernel and ergonomic proof DSL.
 
 - Proof authors: [Proof Author Guide](docs/proof-author-guide.md)
 - Contributors and maintainers: [Developer Guide](docs/developer-guide.md)
-- Distributed execution users: [Integration Docs](docs/integration/README.md)
+- Integration users: [Integration Docs](docs/integration/README.md)
 - Spark users: [Spark Integration Guide](docs/integration/spark.md)
+- PyTorch AI users: [PyTorch Integration Guide](docs/integration/pytorch.md)
 
 ## Quick Start
 
@@ -25,6 +26,15 @@ Install `poussins` from PyPI:
 ```bash
 pip install poussins
 poussins --help
+```
+
+To install with optional integration support:
+```bash
+# Distributed proof verification with Apache Spark
+pip install 'poussins[spark]'
+
+# AI-driven tactic synthesis with PyTorch
+pip install 'poussins[pytorch]'
 ```
 
 Run a proof file:
