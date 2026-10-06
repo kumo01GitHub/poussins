@@ -275,8 +275,9 @@ class ProofScript(ABC):
         rw(self.manager, hyp_name)
 
     @log_tactic
-    def have(self, hyp_name: str, expr: Expr) -> None:
+    def have(self, hyp_name: str, expr_or_name: Expr | str) -> None:
         """Introduce an intermediate assertion (have h : P)."""
+        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         have(self.manager, hyp_name, expr)
 
     @log_tactic
@@ -286,8 +287,9 @@ class ProofScript(ABC):
         specialize(self.manager, hyp_name, expr)
 
     @log_tactic
-    def suffices(self, hyp_name: str, expr: Expr) -> None:
+    def suffices(self, hyp_name: str, expr_or_name: Expr | str) -> None:
         """Assert hypothesis hyp_name : expr to prove the goal."""
+        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
         suffices(self.manager, hyp_name, expr)
 
     @log_tactic
