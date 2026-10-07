@@ -329,28 +329,20 @@ class ProofScript(ABC):
         self,
         *,
         at: str | None = None,
-        unfolding: frozenset[str] | set[str] | None = None
+        unfolding: set[str] | None = None
     ) -> None:
         """Simplify the current goal using definitional unfolding."""
-        simpl(
-            self.manager,
-            at,
-            frozenset(unfolding) if unfolding is not None else None,
-        )
+        simpl(self.manager, at, unfolding)
 
     @log_tactic
     def dsimp(
         self,
         *,
         at: str | None = None,
-        unfolding: frozenset[str] | set[str] | None = None
+        unfolding: set[str] | None = None
     ) -> None:
         """Definitional simplify without expanding unnecessary definitions."""
-        dsimp(
-            self.manager,
-            at,
-            frozenset(unfolding) if unfolding is not None else None,
-        )
+        dsimp(self.manager, at, unfolding)
 
     @log_tactic
     def change(self, via: ExprLike, *, at: str | None = None) -> None:
