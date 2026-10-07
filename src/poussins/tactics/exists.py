@@ -11,7 +11,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def use(manager: ProofManager, expr: Expr) -> None:
+def use(manager: ProofManager, term: Expr) -> None:
     """Refine the current goal of the form `Exists A P` by providing a witness."""
     current_goal = require_current_goal(manager, tactic_name="use")
 
@@ -29,7 +29,7 @@ def use(manager: ProofManager, expr: Expr) -> None:
         raise TacticError("Goal is not an existential statement (Exists).")
 
     new_goal = Goal(
-        statement=EApp(head.arg, expr),
+        statement=EApp(head.arg, term),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
@@ -42,7 +42,7 @@ def use(manager: ProofManager, expr: Expr) -> None:
             ),
             head.fn.arg,
             head.arg,
-            expr,
+            term,
             EMetaVar(new_goal.id),
         ),
         [new_goal]

@@ -12,7 +12,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def specialize(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
+def specialize(manager: ProofManager, hyp_name: str, term: Expr) -> None:
     """Specialize hypothesis h with argument a to h : B[x := a].
 
     Transform context:
@@ -36,7 +36,7 @@ def specialize(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
     specialized_type = (
         hyp_type.body
         if hyp_type.var == "_"
-        else substitute_expr_var(hyp_type.body, hyp_type.var, expr)
+        else substitute_expr_var(hyp_type.body, hyp_type.var, term)
     )
 
     new_context = current_goal.context | {hyp_name: specialized_type}
@@ -50,6 +50,6 @@ def specialize(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         [(hyp_name, specialized_type)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app_chain(cut_lambda, build_app_chain(EVar(hyp_name), expr))
+    assignment_expr = build_app_chain(cut_lambda, build_app_chain(EVar(hyp_name), term))
 
     manager.refine_goal(assignment_expr, [new_goal])

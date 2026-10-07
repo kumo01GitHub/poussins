@@ -46,7 +46,7 @@ def intro(manager: ProofManager, name: str) -> None:
     manager.refine_goal(assignment, [new_subgoal])
 
 
-def intros(manager: ProofManager, var_names: list[str]) -> None:
+def intros(manager: ProofManager, names: list[str]) -> None:
     """Introduce multiple variables from a dependent product goal."""
-    for var_name in var_names:
-        intro(manager, var_name)
+    for name in names:
+        intro(manager, name)

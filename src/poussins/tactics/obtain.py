@@ -17,11 +17,11 @@ from .helpers import (
 def obtain(
     manager: ProofManager,
     pattern: RCasesPattern,
-    expr: Expr,
+    term: Expr,
 ) -> None:
     """Introduce a hypothesis by destructing a proof term according to a pattern."""
-    if isinstance(expr, EVar):
-        rcases(manager, hyp_name=expr.name, pattern=pattern)
+    if isinstance(term, EVar):
+        rcases(manager, hyp_name=term.name, pattern=pattern)
         return
 
     current_goal = require_current_goal(manager)
@@ -32,12 +32,12 @@ def obtain(
         set(current_goal.local_context.keys()),
     )
     inferred_type = infer_type(
-        expr,
+        term,
         context=current_goal.context,
         metavars=manager.current_state.metavars,
         env=manager.env,
     )
 
-    have(manager, name=name, expr=inferred_type)
-    exact(manager, expr)
+    have(manager, name=name, term=inferred_type)
+    exact(manager, term)
     rcases(manager, hyp_name=name, pattern=pattern)
