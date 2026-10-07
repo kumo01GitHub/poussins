@@ -93,7 +93,7 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 | `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
 | `transitivity(via)` / `trans(via)` | Split an equality goal with an intermediate term | Converts `a = c` into `a = b` and `b = c` using middle term `via`. |
 | `rewrite(via, *, at=None, on=None, symm=False)` / `rw(...)` | Rewrite using an equality hypothesis or theorem | Replaces LHS with RHS using `via`. Can target hypothesis `at` or subexpression `on`. |
-| `unfold(target, *, at=None)` | Unfold a definition in the goal or a local hypothesis | Good when goal or hypothesis `at` depends on reducible definition `target`. |
+| `unfold(def_name, *, at=None)` | Unfold a definition in the goal or a local hypothesis | Good when goal or hypothesis `at` depends on reducible definition `def_name`. |
 | `simpl(*, at=None, unfolding=None)` | Simplify the goal or hypothesis by reduction | Helps normalize expressions. Can specify allowed `unfolding` definitions. |
 | `dsimp(*, at=None, unfolding=None)` | Definitional simplify without unnecessary expansions | Strict definitional reduction on goal or hypothesis `at`. |
 | `change(via, *, at=None)` | Rewrite the current goal or hypothesis to a definitionally equal form | Aligns a proof target or hypothesis `at` with a definitional reduction `via`. |
