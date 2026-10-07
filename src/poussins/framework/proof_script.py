@@ -320,9 +320,9 @@ class ProofScript(ABC):
         )
 
     @log_tactic
-    def unfold(self, decl: str, *, at: str | None = None) -> None:
+    def unfold(self, def_name: str, *, at: str | None = None) -> None:
         """Unfold a specific definition in the current goal or hypothesis."""
-        unfold(self.manager, decl, at)
+        unfold(self.manager, def_name, at)
 
     @log_tactic
     def simpl(

@@ -48,17 +48,17 @@ def dsimp(
 @requires_active_goal
 def unfold(
     manager: ProofManager,
-    name: str,
+    def_name: str,
     hyp_name: str | None = None,
 ) -> None:
     """Unfold a specific definition without evaluation."""
     current_goal = require_current_goal(manager, tactic_name="unfold")
 
-    decl = manager.env.get(name) if manager.env is not None else None
+    decl = manager.env.get(def_name) if manager.env is not None else None
     if not isinstance(decl, DefinitionDeclaration):
-        raise TacticError(f"'{name}' is not a valid definition in the environment.")
+        raise TacticError(f"'{def_name}' is not a valid definition in the environment.")
 
-    target_const = EConst(name, tuple(UnivLevelParam(p) for p in decl.level_params))
+    target_const = EConst(def_name, tuple(UnivLevelParam(p) for p in decl.level_params))
     replacement_value = decl.value
 
     if hyp_name is None:
@@ -70,7 +70,7 @@ def unfold(
 
     new_expr = substitute_expr(target_expr, target_const, replacement_value)
     if new_expr == target_expr:
-        raise TacticError(f"Did not find occurrences of definition '{name}'.")
+        raise TacticError(f"Did not find occurrences of definition '{def_name}'.")
 
     if hyp_name is None:
         manager.change_goal(new_expr)
