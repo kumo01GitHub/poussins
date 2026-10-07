@@ -49,6 +49,10 @@ from ..tactics import (
     unfold,
     use,
 )
+from .declared_type import DeclaredType
+from .prop import Prop
+
+type ExprLike = Expr | Prop | DeclaredType | str
 
 
 def log_tactic[**TacticParams](
@@ -118,6 +122,16 @@ class ProofScript(ABC):
         """Finalize the proof script."""
         pass
 
+    def _to_expr(self, term: ExprLike) -> Expr:
+        if isinstance(term, Expr):
+            return term
+        elif isinstance(term, Prop):
+            return Prop.to_expr(term)
+        elif isinstance(term, DeclaredType):
+            return DeclaredType.to_expr(term)
+        elif isinstance(term, str):
+            return EVar(term)
+
     @log_tactic
     def intro(self, name: str) -> None:
         """Introduce a hypothesis with the given name into the local context."""
@@ -129,26 +143,19 @@ class ProofScript(ABC):
         intros(self.manager, names)
 
     @log_tactic
-    def apply(self, expr_or_name: Expr | str) -> None:
+    def apply(self, term: ExprLike) -> None:
         """Apply a theorem, hypothesis, or expression to the current goal."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        apply(self.manager, expr)
+        apply(self.manager, self._to_expr(term))
 
     @log_tactic
-    def exact(self, expr_or_name: Expr | str) -> None:
+    def exact(self, term: ExprLike) -> None:
         """Close the current goal with the given expression."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        exact(self.manager, expr)
+        exact(self.manager, self._to_expr(term))
 
     @log_tactic
-    def change(
-        self,
-        expr_or_name: Expr | str,
-        hypothesis_name: str | None = None
-    ) -> None:
+    def change(self, term: ExprLike, hyp_name: str | None = None) -> None:
         """Replace the current goal with a definitionally equal expression."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        change(self.manager, expr, hypothesis_name)
+        change(self.manager, self._to_expr(term), hyp_name)
 
     @log_tactic
     def assumption(self) -> None:
@@ -181,23 +188,19 @@ class ProofScript(ABC):
         split(self.manager)
 
     @log_tactic
-    def cases(
-        self,
-        hyp_name: str,
-        patterns: CasesPatterns = None,
-    ) -> None:
+    def cases(self, hyp_name: str, patterns: CasesPatterns = None ) -> None:
         """Case-split on an inductive hypothesis."""
         cases(self.manager, hyp_name, patterns)
 
     @log_tactic
-    def rcases(self, hyp_name, pattern: RCasesPattern):
+    def rcases(self, hyp_name, pattern: RCasesPattern) -> None:
         """Destruct a hypothesis recursively using a nested pattern structure."""
         rcases(self.manager, hyp_name, pattern)
 
     @log_tactic
-    def obtain(self, pattern: RCasesPattern, expr: Expr):
+    def obtain(self, pattern: RCasesPattern, term: ExprLike) -> None:
         """Introduce a new witness and immediately destructure it using rcases."""
-        obtain(self.manager, pattern, expr)
+        obtain(self.manager, pattern, self._to_expr(term))
 
     @log_tactic
     def exfalso(self) -> None:
@@ -245,24 +248,14 @@ class ProofScript(ABC):
         symm(self.manager)
 
     @log_tactic
-    def transitivity(self, expr_or_name: Expr | str) -> None:
+    def transitivity(self, term: ExprLike) -> None:
         """Split an equality goal into two subgoals using a middle term."""
-        middle = (
-            expr_or_name
-            if isinstance(expr_or_name, Expr)
-            else EVar(expr_or_name)
-        )
-        transitivity(self.manager, middle)
+        transitivity(self.manager, self._to_expr(term))
 
     @log_tactic
-    def trans(self, expr_or_name: Expr | str) -> None:
+    def trans(self, term: ExprLike) -> None:
         """Split an equality goal into two subgoals using a middle term."""
-        middle = (
-            expr_or_name
-            if isinstance(expr_or_name, Expr)
-            else EVar(expr_or_name)
-        )
-        trans(self.manager, middle)
+        trans(self.manager, self._to_expr(term))
 
     @log_tactic
     def rewrite(self, hyp_name: str) -> None:
@@ -275,32 +268,29 @@ class ProofScript(ABC):
         rw(self.manager, hyp_name)
 
     @log_tactic
-    def have(self, hyp_name: str, expr_or_name: Expr | str) -> None:
+    def have(self, hyp_name: str, term: ExprLike) -> None:
         """Introduce an intermediate assertion (have h : P)."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        have(self.manager, hyp_name, expr)
+        have(self.manager, hyp_name, self._to_expr(term))
 
     @log_tactic
-    def specialize(self, hyp_name: str, expr_or_name: Expr | str) -> None:
+    def specialize(self, hyp_name: str, term: ExprLike) -> None:
         """Specialize a hypothesis in the local context with an argument."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        specialize(self.manager, hyp_name, expr)
+        specialize(self.manager, hyp_name, self._to_expr(term))
 
     @log_tactic
-    def suffices(self, hyp_name: str, expr_or_name: Expr | str) -> None:
+    def suffices(self, hyp_name: str, term: ExprLike) -> None:
         """Assert hypothesis hyp_name : expr to prove the goal."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        suffices(self.manager, hyp_name, expr)
+        suffices(self.manager, hyp_name, self._to_expr(term))
 
     @log_tactic
-    def use(self, expr: Expr) -> None:
+    def use(self, term: ExprLike) -> None:
         """Refine the current goal of the form `Exists A P` by providing a witness."""
-        use(self.manager, expr)
+        use(self.manager, self._to_expr(term))
 
     @log_tactic
-    def exists(self, expr: Expr) -> None:
+    def exists(self, term: ExprLike) -> None:
         """Refine the current goal of the form `Exists A P` by providing a witness."""
-        exists(self.manager, expr)
+        exists(self.manager, self._to_expr(term))
 
     @log_tactic
     def simpl(

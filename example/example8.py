@@ -13,9 +13,9 @@ statement1 = Prop.exists(
     (("n", Nat.type()),),
     Prop(Nat.eq(Nat.add(Nat("n"), Nat.zero()), Nat.zero()))
 )
-example1 = Example(statement1.expr, env)
+example1 = Example(statement1, env)
 
-example1.use(Nat.zero().expr)
+example1.use(Nat.zero())
 example1.rfl()
 
 example1.qed()
@@ -29,7 +29,7 @@ statement2 = Prop.forall(
     (("n", Nat.type()),),
     Prop(Nat.eq(Nat.add(Nat.zero(), Nat("n")), Nat("n"))),
 )
-example2 = Example(statement2.expr, env)
+example2 = Example(statement2, env)
 example2.intro("n")
 example2.simpl()
 example2.rfl()
