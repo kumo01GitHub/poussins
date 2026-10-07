@@ -10,10 +10,10 @@ from .helpers import requires_active_goal
 def change(
     manager: ProofManager,
     expr: Expr,
-    hypothesis_name: str | None = None
+    hyp_name: str | None = None
 ) -> None:
     """Replace the current goal with a definitionally equal expression."""
-    if hypothesis_name is None:
+    if hyp_name is None:
         manager.change_goal(expr)
     else:
-        manager.change_hypothesis(hypothesis_name, expr)
+        manager.change_hypothesis(hyp_name, expr)

@@ -11,7 +11,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def suffices(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
+def suffices(manager: ProofManager, name: str, expr: Expr) -> None:
     """Assert that hypothesis h : P is sufficient to prove current goal G.
 
     Splits the current goal into:
@@ -26,7 +26,7 @@ def suffices(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         else set()
     )
     bound_name = fresh_binder_name(
-        hyp_name,
+        name,
         current_goal.local_context,
         used_hypothesis_names,
     )

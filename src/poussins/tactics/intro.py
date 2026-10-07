@@ -8,7 +8,7 @@ from .helpers import require_current_goal, requires_active_goal
 
 
 @requires_active_goal
-def intro(manager: ProofManager, var_name: str) -> None:
+def intro(manager: ProofManager, name: str) -> None:
     """Introduce one variable from a dependent product goal."""
     state = manager.current_state
     current_goal = require_current_goal(manager)
@@ -19,18 +19,18 @@ def intro(manager: ProofManager, var_name: str) -> None:
             f"Current goal is not a product type (EPi). Found: {goal_expr}"
         )
 
-    if current_goal.has_local_hypothesis(var_name):
+    if current_goal.has_local_hypothesis(name):
         raise TacticError(
-            f"Identifier '{var_name}' already exists in the local context."
+            f"Identifier '{name}' already exists in the local context."
         )
 
     new_subgoal_statement = substitute_expr_var(
         expr=goal_expr.body,
         var_name=goal_expr.var,
-        replacement=EVar(var_name)
+        replacement=EVar(name)
     )
 
-    extended_local_context = current_goal.local_context | {var_name: goal_expr.domain}
+    extended_local_context = current_goal.local_context | {name: goal_expr.domain}
     new_subgoal = Goal(
         statement=new_subgoal_statement,
         context=current_goal.global_context | extended_local_context,
@@ -38,7 +38,7 @@ def intro(manager: ProofManager, var_name: str) -> None:
     )
 
     assignment = ELam(
-        var=var_name,
+        var=name,
         domain=goal_expr.domain,
         body=EMetaVar(new_subgoal.id)
     )

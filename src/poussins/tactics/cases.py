@@ -19,9 +19,7 @@ from ..ast import (
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
-from ..kernel import Goal, ProofManager, infer_type, whnf
-from .exact import exact
-from .have import have
+from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
     const_head_name,
     fresh_binder_name,
@@ -371,33 +369,3 @@ def rcases(
 ) -> None:
     """Destruct a hypothesis recursively using a nested pattern structure."""
     _apply_rcases_pattern(manager, hyp_name, pattern)
-
-
-@requires_active_goal
-def obtain(
-    manager: ProofManager,
-    pattern: RCasesPattern,
-    expr: Expr,
-) -> None:
-    """Introduce a hypothesis by destructing a proof term according to a pattern."""
-    if isinstance(expr, EVar):
-        rcases(manager, hyp_name=expr.name, pattern=pattern)
-        return
-
-    current_goal = require_current_goal(manager)
-
-    hyp_name = fresh_binder_name(
-        "_obtain",
-        current_goal.context,
-        set(current_goal.local_context.keys()),
-    )
-    inferred_type = infer_type(
-        expr,
-        context=current_goal.context,
-        metavars=manager.current_state.metavars,
-        env=manager.env,
-    )
-
-    have(manager, hyp_name=hyp_name, expr=inferred_type)
-    exact(manager, expr)
-    rcases(manager, hyp_name=hyp_name, pattern=pattern)

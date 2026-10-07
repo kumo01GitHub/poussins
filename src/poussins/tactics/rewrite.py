@@ -1,10 +1,10 @@
-"""Advanced Rewrite tactic for equality substitution."""
+"""Advanced Rewrite tactic for equality substitution (Lean 4 style)."""
 from __future__ import annotations
 
-from ..ast import EApp, ELam, EMetaVar, EPi, EVar, Expr, build_app_chain
+from ..ast import ELam, EMetaVar, EVar, Expr, build_app_chain, substitute_expr
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
-from ..kernel import ProofManager, whnf
+from ..kernel import ProofManager, infer_type, whnf
 from ..kernel.goal import Goal
 from .helpers import (
     const_from_decl,
@@ -14,72 +14,48 @@ from .helpers import (
 )
 
 
-def _replace_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
-    """Recursively replace occurrences of `target` with `replacement` in `expr`."""
-    if expr == target:
-        return replacement
-
-    match expr:
-        case EApp(fn, arg):
-            return EApp(
-                _replace_expr(fn, target, replacement),
-                _replace_expr(arg, target, replacement),
-            )
-        case ELam(var_name, var_type, body):
-            return ELam(
-                var_name,
-                _replace_expr(var_type, target, replacement),
-                _replace_expr(body, target, replacement),
-            )
-        case EPi(var_name, var_type, body):
-            return EPi(
-                var_name,
-                _replace_expr(var_type, target, replacement),
-                _replace_expr(body, target, replacement),
-            )
-        case _:
-            return expr
-
-
 @requires_active_goal
 def rewrite(
     manager: ProofManager,
-    hyp_name: str,
+    term: Expr,
     *,
     symm: bool = False,
-    at: str | None = None,
+    hyp_name: str | None = None,
 ) -> None:
-    """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
+    """Rewrite using an equality proof term (hypothesis, theorem application, etc.)."""
     state = manager.current_state
     current_goal = require_current_goal(manager)
 
-    if not current_goal.has_local_hypothesis(hyp_name):
-        raise TacticError(f"Hypothesis '{hyp_name}' not found in local context.")
-
-    eq_args = parse_eq_app(
-        whnf(current_goal.local_context[hyp_name], state.metavars, manager.env),
+    term_type = infer_type(
+        term,
+        current_goal.context,
+        state.metavars,
+        manager.env,
     )
+
+    eq_args = parse_eq_app(whnf(term_type, state.metavars, manager.env))
     if eq_args is None:
-        raise TacticError(f"Hypothesis '{hyp_name}' is not an equality.")
+        raise TacticError("The provided term is not an equality.")
 
     eq_type, lhs, rhs = eq_args
     from_expr, to_expr = (rhs, lhs) if symm else (lhs, rhs)
 
-    if at is not None:
-        if not current_goal.has_local_hypothesis(at):
-            raise TacticError(f"Target hypothesis '{at}' for 'at' modifier not found.")
-        target_expr = current_goal.local_context[at]
+    if hyp_name is not None:
+        if not current_goal.has_local_hypothesis(hyp_name):
+            raise TacticError(
+                f"Target hypothesis '{hyp_name}' for 'hyp_name' modifier not found."
+            )
+        target_expr = current_goal.local_context[hyp_name]
     else:
         target_expr = current_goal.statement
 
-    new_target_expr = _replace_expr(target_expr, from_expr, to_expr)
-
-    if target_expr == new_target_expr:
+    new_target_expr = substitute_expr(target_expr, from_expr, to_expr)
+    if new_target_expr == target_expr:
         raise TacticError("Did not find occurrences of the target expression.")
 
-    if at is not None:
+    if hyp_name is not None:
         new_context = dict(current_goal.context)
-        new_context[at] = new_target_expr
+        new_context[hyp_name] = new_target_expr
         new_goal = Goal(
             statement=current_goal.statement,
             context=new_context,
@@ -94,28 +70,22 @@ def rewrite(
 
     y_var = "_y"
     h_var = "_h"
-    body_with_y = _replace_expr(target_expr, from_expr, EVar(y_var))
+    body_with_y = substitute_expr(target_expr, from_expr, EVar(y_var))
     eq_lhs_y = build_app_chain(
-        const_from_decl(
-            EqualityDeclaration.EQ_DECLARATION.declaration,
-            manager
-        ),
+        const_from_decl(EqualityDeclaration.EQ_DECLARATION.declaration, manager),
         eq_type,
         from_expr,
-        EVar(y_var)
+        EVar(y_var),
     )
 
     assignment = build_app_chain(
-        const_from_decl(
-            EqualityDeclaration.EQ_REC_DECLARATION.declaration,
-            manager
-        ),
+        const_from_decl(EqualityDeclaration.EQ_REC_DECLARATION.declaration, manager),
         eq_type,
         from_expr,
         ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
         EMetaVar(new_goal.id),
         to_expr,
-        EVar(hyp_name),
+        term,
     )
 
     manager.refine_goal(assignment, [new_goal])

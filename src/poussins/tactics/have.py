@@ -18,7 +18,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
+def have(manager: ProofManager, name: str, expr: Expr) -> None:
     """Introduce an intermediate assertion (have h : P).
 
     Splits the current goal into:
@@ -33,7 +33,7 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         else set()
     )
     bound_name = fresh_binder_name(
-        hyp_name,
+        name,
         current_goal.local_context,
         used_hypothesis_names,
     )

@@ -65,33 +65,41 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 
 | Tactic | Purpose | Notes |
 | --- | --- | --- |
-| `intro(name)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. |
-| `intros([names...])` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. |
-| `revert(hyp_names)` | Move hypotheses back into the goal as Pi binders | Useful when preparing a proof by generalization. |
-| `clear(hyp_name)` | Remove an unused local hypothesis from the context | Fails if the target or another hypothesis still depends on it. |
-| `exact(expr_or_name)` | Close the current goal with a term or local hypothesis | Equivalent to a direct proof term. |
+| **1. Forward Reasoning & Context** | | |
+| `intro(as_=None)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. `as_` specifies the hypothesis name. |
+| `intros(as_=None)` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. Accepts a list of names for `as_`. |
+| `have(as_, type)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement and introduces it as `as_`. |
+| `obtain(pattern, via)` | Introduce a witness/proof and immediately destructure it | Handy for structured witness extraction from proof term `via`. |
+| `specialize(at, via)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of local hypothesis `at` using argument `via`. |
+| `revert(at)` | Move hypotheses back into the goal as Pi binders | Useful when preparing a proof by generalization. Accepts name or list of names. |
+| `clear(at)` | Remove an unused local hypothesis from the context | Fails if the target or another hypothesis still depends on `at`. |
+| **2. Backward Reasoning & Goal Reduction** | | |
+| `apply(via)` | Apply a theorem or hypothesis to the goal | Produces subgoals for remaining premises. Accepts `Expr` or theorem/hypothesis name string. |
+| `exact(via)` | Close the current goal with a term or local hypothesis | Equivalent to a direct proof term. |
+| `refine(via)` | Refine the current goal with an expression containing metavariables | Useful when the shape is known but some terms are still placeholders. |
 | `assumption()` | Solve the goal from a matching local hypothesis | Common finishing step for simple goals. |
-| `apply(expr_or_name)` | Apply a theorem or hypothesis to the goal | Produces subgoals for remaining premises. |
-| `refine(expr)` | Refine the current goal with an expression containing metavariables | Useful when the shape is known but some terms are still placeholders. |
+| `suffices(as_, type)` | Assert a sufficient intermediate fact | Creates goals for the main proof using the fact and the fact itself. |
 | `constructor(index=None)` | Apply a matching constructor | Optionally choose a specific constructor by index. |
-| `cases(hypothesis_name)` | Split on an inductive hypothesis | Produces one branch per constructor. |
-| `rcases(hyp_name, pattern)` | Recursively destruct an inductive hypothesis | Works well with nested constructor patterns. |
-| `obtain(pattern, expr)` | Introduce a witness/proof and immediately destructure it | Handy for structured witness extraction. |
-| `change(expr_or_name, hypothesis_name=None)` | Rewrite the current goal or hypothesis to a definitionally equal form | Useful when a proof goal needs to be aligned with a definitional reduction. |
-| `simpl(...)` / `dsimp(...)` | Simplify the goal or hypothesis by reduction | Helps normalize expressions and eliminate definitional clutter. |
-| `unfold(name, hypothesis_name=None)` | Unfold a definition in the goal or a local hypothesis | Good when the target depends on a reducible definition. |
+| `left()` | Select the left branch of a disjunction goal | Target goal must be a disjunction (`A ∨ B`). |
+| `right()` | Select the right branch of a disjunction goal | Target goal must be a disjunction (`A ∨ B`). |
+| `split()` | Split a conjunction goal into two subgoals | Target goal must be a conjunction (`A ∧ B`). |
+| `use(via)` / `exists(via)` | Provide a witness for an existential goal | Turns the goal into the predicate applied to witness `via`. |
+| **3. Destructuring & Case Analysis** | | |
+| `cases(at, patterns=None)` | Split on an inductive hypothesis | Produces one branch per constructor for hypothesis `at`. |
+| `rcases(at, with_)` | Recursively destruct an inductive hypothesis | Works well with nested constructor patterns `with_` on hypothesis `at`. |
+| `induction(at)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals for hypothesis `at`. |
+| **4. Equality, Reduction & Unfolding** | | |
+| `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Standard for reflexive equalities (`a = a`). |
+| `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
+| `transitivity(via)` / `trans(via)` | Split an equality goal with an intermediate term | Converts `a = c` into `a = b` and `b = c` using middle term `via`. |
+| `rewrite(via, *, at=None, on=None, symm=False)` / `rw(...)` | Rewrite using an equality hypothesis or theorem | Replaces LHS with RHS using `via`. Can target hypothesis `at` or subexpression `on`. |
+| `unfold(target, *, at=None)` | Unfold a definition in the goal or a local hypothesis | Good when goal or hypothesis `at` depends on reducible definition `target`. |
+| `simpl(*, at=None, unfolding=None)` | Simplify the goal or hypothesis by reduction | Helps normalize expressions. Can specify allowed `unfolding` definitions. |
+| `dsimp(*, at=None, unfolding=None)` | Definitional simplify without unnecessary expansions | Strict definitional reduction on goal or hypothesis `at`. |
+| `change(via, *, at=None)` | Rewrite the current goal or hypothesis to a definitionally equal form | Aligns a proof target or hypothesis `at` with a definitional reduction `via`. |
+| **5. Automation, Contradiction & Decision** | | |
 | `exfalso()` | Change the target to `False` and prove contradiction first | Useful for indirect proofs. |
 | `contradiction()` | Close the goal from contradictory hypotheses | Detects contradiction patterns such as `False` or mutually incompatible assumptions. |
-| `induction(hypothesis_name)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals. |
-| `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Standard for reflexive equalities. |
-| `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
-| `transitivity(expr)` / `trans(expr)` | Split an equality goal with an intermediate term | Useful for chaining equalities. |
-| `rewrite(hyp_name)` / `rw(hyp_name)` | Rewrite using a local equality hypothesis | Replaces occurrences of the LHS with the RHS. |
-| `have(hyp_name, expr)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement. |
-| `specialize(hyp_name, arg)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of the local assumption. |
-| `suffices(hyp_name, expr)` | Assert a sufficient intermediate fact | Creates goals for the main proof using the fact and the fact itself. |
-| `use(expr)` / `exists(expr)` | Provide a witness for an existential goal | Turns the goal into the predicate applied to the witness. |
-| `undo()` | Roll back one proof step | Useful during interactive development and debugging. |
 
 ### Induction and the Nat DSL
 

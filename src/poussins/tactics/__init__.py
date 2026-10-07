@@ -1,6 +1,6 @@
 """Public tactic API."""
 from .apply import apply
-from .cases import CasesPatterns, RCasesPattern, cases, obtain, rcases
+from .cases import CasesPatterns, RCasesPattern, cases, rcases
 from .change import change
 from .clear import clear
 from .constructor import constructor, left, right, split
@@ -11,6 +11,7 @@ from .have import have
 from .induction import induction
 from .intro import intro, intros
 from .logic import contradiction, exfalso
+from .obtain import obtain
 from .refine import refine
 from .revert import revert
 from .rewrite import rewrite, rw
