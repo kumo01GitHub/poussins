@@ -66,8 +66,8 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 | Tactic | Purpose | Notes |
 | --- | --- | --- |
 | **1. Forward Reasoning & Context** | | |
-| `intro(as_=None)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. `as_` specifies the hypothesis name. |
-| `intros(as_=None)` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. Accepts a list of names for `as_`. |
+| `intro(as_)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. `as_` specifies the hypothesis name. |
+| `intros(as_)` | Introduce multiple binders/hypotheses | Convenient for chained implication goals. Accepts a list of names for `as_`. |
 | `have(as_, type)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement and introduces it as `as_`. |
 | `obtain(pattern, via)` | Introduce a witness/proof and immediately destructure it | Handy for structured witness extraction from proof term `via`. |
 | `specialize(at, via)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of local hypothesis `at` using argument `via`. |
@@ -85,7 +85,7 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 | `split()` | Split a conjunction goal into two subgoals | Target goal must be a conjunction (`A ∧ B`). |
 | `use(via)` / `exists(via)` | Provide a witness for an existential goal | Turns the goal into the predicate applied to witness `via`. |
 | **3. Destructuring & Case Analysis** | | |
-| `cases(at, patterns=None)` | Split on an inductive hypothesis | Produces one branch per constructor for hypothesis `at`. |
+| `cases(at, with_=None)` | Split on an inductive hypothesis | Produces one branch per constructor for hypothesis `at`. |
 | `rcases(at, with_)` | Recursively destruct an inductive hypothesis | Works well with nested constructor patterns `with_` on hypothesis `at`. |
 | `induction(at)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals for hypothesis `at`. |
 | **4. Equality, Reduction & Unfolding** | | |

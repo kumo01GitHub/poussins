@@ -1,4 +1,5 @@
 """Advanced Rewrite tactic for equality substitution (Lean 4 style)."""
+
 from __future__ import annotations
 
 from ..ast import ELam, EMetaVar, EVar, Expr, build_app_chain, substitute_expr
@@ -18,9 +19,9 @@ from .helpers import (
 def rewrite(
     manager: ProofManager,
     term: Expr,
-    *,
     symm: bool = False,
     hyp_name: str | None = None,
+    subexpr: Expr | None = None,
 ) -> None:
     """Rewrite using an equality proof term (hypothesis, theorem application, etc.)."""
     state = manager.current_state
@@ -49,7 +50,16 @@ def rewrite(
     else:
         target_expr = current_goal.statement
 
-    new_target_expr = substitute_expr(target_expr, from_expr, to_expr)
+    if subexpr is not None:
+        new_subexpr = substitute_expr(subexpr, from_expr, to_expr)
+        if new_subexpr == subexpr:
+            raise TacticError(
+                "Did not find occurrences of the target expression within 'subexpr'."
+            )
+        new_target_expr = substitute_expr(target_expr, subexpr, new_subexpr)
+    else:
+        new_target_expr = substitute_expr(target_expr, from_expr, to_expr)
+
     if new_target_expr == target_expr:
         raise TacticError("Did not find occurrences of the target expression.")
 
@@ -70,7 +80,17 @@ def rewrite(
 
     y_var = "_y"
     h_var = "_h"
-    body_with_y = substitute_expr(target_expr, from_expr, EVar(y_var))
+
+    body_with_y = (
+        substitute_expr(
+            target_expr,
+            subexpr,
+            substitute_expr(subexpr, from_expr, EVar(y_var))
+        )
+        if subexpr is not None
+        else substitute_expr(target_expr, from_expr, EVar(y_var))
+    )
+
     eq_lhs_y = build_app_chain(
         const_from_decl(EqualityDeclaration.EQ_DECLARATION.declaration, manager),
         eq_type,

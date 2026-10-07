@@ -142,14 +142,14 @@ class ProofScript(ABC):
         intro(self.manager, as_)
 
     @log_tactic
-    def intros(self, names: list[str]) -> None:
+    def intros(self, as_: list[str]) -> None:
         """Introduce multiple hypotheses into the local context."""
-        intros(self.manager, names)
+        intros(self.manager, as_)
 
     @log_tactic
-    def have(self, as_: str, via: ExprLike) -> None:
+    def have(self, as_: str, type: ExprLike) -> None:
         """Introduce an intermediate assertion (have h : P)."""
-        have(self.manager, as_, self._to_expr(via))
+        have(self.manager, as_, self._to_expr(type))
 
     @log_tactic
     def obtain(self, pattern: RCasesPattern, via: ExprLike) -> None:
@@ -196,9 +196,9 @@ class ProofScript(ABC):
         assumption(self.manager)
 
     @log_tactic
-    def suffices(self, as_: str, via: ExprLike) -> None:
+    def suffices(self, as_: str, type: ExprLike) -> None:
         """Introduce an intermediate assertion (suffices h : P)."""
-        suffices(self.manager, as_, self._to_expr(via))
+        suffices(self.manager, as_, self._to_expr(type))
 
     @log_tactic
     def constructor(self, index: int | None = None) -> None:
@@ -235,14 +235,14 @@ class ProofScript(ABC):
     # ------------------------------------------------------------------
 
     @log_tactic
-    def cases(self, at: str, patterns: CasesPatterns = None ) -> None:
+    def cases(self, at: str, with_: CasesPatterns = None ) -> None:
         """Case-split on an inductive hypothesis."""
-        cases(self.manager, at, patterns)
+        cases(self.manager, at, with_)
 
     @log_tactic
-    def rcases(self, at, pattern: RCasesPattern) -> None:
+    def rcases(self, at, with_: RCasesPattern) -> None:
         """Destruct a hypothesis recursively using a nested pattern structure."""
-        rcases(self.manager, at, pattern)
+        rcases(self.manager, at, with_)
 
     @log_tactic
     def induction(self, at: str) -> None:
@@ -289,10 +289,17 @@ class ProofScript(ABC):
         via: ExprLike,
         *,
         symm: bool = False,
-        at: str | None = None
+        at: str | None = None,
+        on: ExprLike | None = None,
     ) -> None:
         """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
-        rewrite(self.manager, self._to_expr(via), symm=symm, hyp_name=at)
+        rewrite(
+            self.manager,
+            self._to_expr(via),
+            symm,
+            at,
+            self._to_expr(on) if on is not None else None,
+        )
 
     @log_tactic
     def rw(
@@ -300,36 +307,55 @@ class ProofScript(ABC):
         via: ExprLike,
         *,
         symm: bool = False,
-        at: str | None = None
+        at: str | None = None,
+        on: ExprLike | None = None,
     ) -> None:
         """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
-        rw(self.manager, self._to_expr(via), symm=symm, hyp_name=at)
+        rw(
+            self.manager,
+            self._to_expr(via),
+            symm,
+            at,
+            self._to_expr(on) if on is not None else None,
+        )
 
     @log_tactic
-    def unfold(self, name: str, at: str | None = None) -> None:
+    def unfold(self, target: str, *, at: str | None = None) -> None:
         """Unfold a specific definition in the current goal or hypothesis."""
-        unfold(self.manager, name, at)
+        unfold(self.manager, target, at)
 
     @log_tactic
     def simpl(
         self,
+        *,
         at: str | None = None,
-        unfolding: frozenset[str] | None = None
+        unfolding: frozenset[str] | set[str] | None = None
     ) -> None:
         """Simplify the current goal using definitional unfolding."""
-        simpl(self.manager, at, unfolding)
+        simpl(
+            self.manager,
+            at,
+            unfolding
+            if isinstance(unfolding, frozenset | None) else frozenset(unfolding)
+        )
 
     @log_tactic
     def dsimp(
         self,
+        *,
         at: str | None = None,
-        unfolding: frozenset[str] | None = None
+        unfolding: frozenset[str] | set[str] | None = None
     ) -> None:
         """Definitional simplify without expanding unnecessary definitions."""
-        dsimp(self.manager, at, unfolding)
+        dsimp(
+            self.manager,
+            at,
+            unfolding
+            if isinstance(unfolding, frozenset | None) else frozenset(unfolding)
+        )
 
     @log_tactic
-    def change(self, via: ExprLike, at: str | None = None) -> None:
+    def change(self, via: ExprLike, *, at: str | None = None) -> None:
         """Replace the current goal with a definitionally equal expression."""
         change(self.manager, self._to_expr(via), at)
 
