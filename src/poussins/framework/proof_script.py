@@ -320,9 +320,9 @@ class ProofScript(ABC):
         )
 
     @log_tactic
-    def unfold(self, target: str, *, at: str | None = None) -> None:
+    def unfold(self, decl: str, *, at: str | None = None) -> None:
         """Unfold a specific definition in the current goal or hypothesis."""
-        unfold(self.manager, target, at)
+        unfold(self.manager, decl, at)
 
     @log_tactic
     def simpl(
@@ -335,8 +335,7 @@ class ProofScript(ABC):
         simpl(
             self.manager,
             at,
-            unfolding
-            if isinstance(unfolding, frozenset | None) else frozenset(unfolding)
+            frozenset(unfolding) if unfolding is not None else None,
         )
 
     @log_tactic
@@ -350,8 +349,7 @@ class ProofScript(ABC):
         dsimp(
             self.manager,
             at,
-            unfolding
-            if isinstance(unfolding, frozenset | None) else frozenset(unfolding)
+            frozenset(unfolding) if unfolding is not None else None,
         )
 
     @log_tactic
