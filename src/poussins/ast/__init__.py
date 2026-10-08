@@ -7,6 +7,7 @@ from .ops import (
     collect_metavar_ids,
     flatten_app_chain,
     has_metavar,
+    substitute_expr,
     substitute_expr_var,
     substitute_metavar,
 )
@@ -46,4 +47,5 @@ __all__ = [
     "collect_metavar_ids",
     "substitute_expr_var",
     "collect_free_vars",
+    "substitute_expr",
 ]

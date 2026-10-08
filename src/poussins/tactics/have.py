@@ -18,7 +18,7 @@ from .helpers import (
 
 
 @requires_active_goal
-def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
+def have(manager: ProofManager, name: str, term: Expr) -> None:
     """Introduce an intermediate assertion (have h : P).
 
     Splits the current goal into:
@@ -33,18 +33,18 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         else set()
     )
     bound_name = fresh_binder_name(
-        hyp_name,
+        name,
         current_goal.local_context,
         used_hypothesis_names,
     )
 
     proof_goal = Goal(
-        statement=expr,
+        statement=term,
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
-    new_context = current_goal.context | {bound_name: expr}
+    new_context = current_goal.context | {bound_name: term}
     new_local_hypothesis_names = (
         current_goal.local_hypothesis_names or frozenset()
     ) | {bound_name}
@@ -55,13 +55,13 @@ def have(manager: ProofManager, hyp_name: str, expr: Expr) -> None:
         local_hypothesis_names=new_local_hypothesis_names,
     )
 
-    p_to_g = EPi("_", expr, current_goal.statement)
+    p_to_g = EPi("_", term, current_goal.statement)
     cut_fn = build_lambda_chain(
         [("f", p_to_g)],
         build_app_chain(EVar("f"), EMetaVar(proof_goal.id)),
     )
     cut_arg = build_lambda_chain(
-        [(bound_name, expr)],
+        [(bound_name, term)],
         EMetaVar(new_goal.id),
     )
     assignment_expr = build_app_chain(cut_fn, cut_arg)

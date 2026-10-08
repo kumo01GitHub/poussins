@@ -40,6 +40,10 @@ class Environment:
         """Return the declaration with the given name, if it exists."""
         return self.declarations.get(name)
 
+    def has(self, name: str) -> bool:
+        """Check if a declaration with the given name exists in the environment."""
+        return name in self.declarations
+
     def update(self, other: Environment):
         """Merge declarations from another environment into this one."""
         self.declarations.update(other.declarations)

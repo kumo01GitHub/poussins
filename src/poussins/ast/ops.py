@@ -203,3 +203,37 @@ def collect_free_vars(expr: Expr) -> set[str]:
             for c in cases:
                 fvs |= collect_free_vars(c)
             return fvs
+
+
+def substitute_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
+    """Recursively replace all occurrences of `target` with `replacement` in `expr`."""
+    if expr == target:
+        return replacement
+
+    match expr:
+        case EApp(fn, arg):
+            return EApp(
+                substitute_expr(fn, target, replacement),
+                substitute_expr(arg, target, replacement),
+            )
+        case ELam(var_name, var_type, body):
+            return ELam(
+                var_name,
+                substitute_expr(var_type, target, replacement),
+                substitute_expr(body, target, replacement),
+            )
+        case EPi(var_name, var_type, body):
+            return EPi(
+                var_name,
+                substitute_expr(var_type, target, replacement),
+                substitute_expr(body, target, replacement),
+            )
+        case EMatch(inductive_name, discriminee, motive, cases):
+            return EMatch(
+                inductive_name,
+                substitute_expr(discriminee, target, replacement),
+                substitute_expr(motive, target, replacement),
+                tuple(substitute_expr(c, target, replacement) for c in cases),
+            )
+        case _:
+            return expr

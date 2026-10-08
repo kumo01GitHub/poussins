@@ -49,6 +49,10 @@ from ..tactics import (
     unfold,
     use,
 )
+from .declared_type import DeclaredType
+from .prop import Prop
+
+type ExprLike = Expr | Prop | DeclaredType | str
 
 
 def log_tactic[**TacticParams](
@@ -118,37 +122,73 @@ class ProofScript(ABC):
         """Finalize the proof script."""
         pass
 
+    def _to_expr(self, term: ExprLike) -> Expr:
+        if isinstance(term, Expr):
+            return term
+        elif isinstance(term, Prop):
+            return Prop.to_expr(term)
+        elif isinstance(term, DeclaredType):
+            return DeclaredType.to_expr(term)
+        elif isinstance(term, str):
+            return EVar(term)
+
+    # ------------------------------------------------------------------
+    #  1. Forward Reasoning & Context
+    # ------------------------------------------------------------------
+
     @log_tactic
-    def intro(self, name: str) -> None:
+    def intro(self, as_: str) -> None:
         """Introduce a hypothesis with the given name into the local context."""
-        intro(self.manager, name)
+        intro(self.manager, as_)
 
     @log_tactic
-    def intros(self, names: list[str]) -> None:
+    def intros(self, as_: list[str]) -> None:
         """Introduce multiple hypotheses into the local context."""
-        intros(self.manager, names)
+        intros(self.manager, as_)
 
     @log_tactic
-    def apply(self, expr_or_name: Expr | str) -> None:
+    def have(self, as_: str, type: ExprLike) -> None:
+        """Introduce an intermediate assertion (have h : P)."""
+        have(self.manager, as_, self._to_expr(type))
+
+    @log_tactic
+    def obtain(self, pattern: RCasesPattern, via: ExprLike) -> None:
+        """Introduce a new witness and immediately destructure it using rcases."""
+        obtain(self.manager, pattern, self._to_expr(via))
+
+    @log_tactic
+    def specialize(self, at: str, via: ExprLike) -> None:
+        """Specialize a hypothesis in the local context with an argument."""
+        specialize(self.manager, at, self._to_expr(via))
+
+    @log_tactic
+    def revert(self, at: str | list[str]) -> None:
+        """Revert one or more hypotheses from the local context back into the goal."""
+        revert(self.manager, at)
+
+    @log_tactic
+    def clear(self, at: str) -> None:
+        """Remove a local hypothesis from the current goal context."""
+        clear(self.manager, at)
+
+    # ------------------------------------------------------------------
+    # 2. Backward Reasoning & Goal Reduction
+    # ------------------------------------------------------------------
+
+    @log_tactic
+    def apply(self, via: ExprLike) -> None:
         """Apply a theorem, hypothesis, or expression to the current goal."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        apply(self.manager, expr)
+        apply(self.manager, self._to_expr(via))
 
     @log_tactic
-    def exact(self, expr_or_name: Expr | str) -> None:
+    def exact(self, via: ExprLike) -> None:
         """Close the current goal with the given expression."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        exact(self.manager, expr)
+        exact(self.manager, self._to_expr(via))
 
     @log_tactic
-    def change(
-        self,
-        expr_or_name: Expr | str,
-        hypothesis_name: str | None = None
-    ) -> None:
-        """Replace the current goal with a definitionally equal expression."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        change(self.manager, expr, hypothesis_name)
+    def refine(self, expr: Expr) -> None:
+        """Refine current goal using an expression that may contain metavariables."""
+        refine(self.manager, expr)
 
     @log_tactic
     def assumption(self) -> None:
@@ -156,9 +196,9 @@ class ProofScript(ABC):
         assumption(self.manager)
 
     @log_tactic
-    def clear(self, hyp_name: str) -> None:
-        """Remove a local hypothesis from the current goal context."""
-        clear(self.manager, hyp_name)
+    def suffices(self, as_: str, type: ExprLike) -> None:
+        """Introduce an intermediate assertion (suffices h : P)."""
+        suffices(self.manager, as_, self._to_expr(type))
 
     @log_tactic
     def constructor(self, index: int | None = None) -> None:
@@ -181,48 +221,37 @@ class ProofScript(ABC):
         split(self.manager)
 
     @log_tactic
-    def cases(
-        self,
-        hyp_name: str,
-        patterns: CasesPatterns = None,
-    ) -> None:
+    def use(self, via: ExprLike) -> None:
+        """Refine the current goal of the form `Exists A P` by providing a witness."""
+        use(self.manager, self._to_expr(via))
+
+    @log_tactic
+    def exists(self, via: ExprLike) -> None:
+        """Refine the current goal of the form `Exists A P` by providing a witness."""
+        exists(self.manager, self._to_expr(via))
+
+    # ------------------------------------------------------------------
+    # 3. Destructuring & Case Analysis
+    # ------------------------------------------------------------------
+
+    @log_tactic
+    def cases(self, at: str, with_: CasesPatterns = None ) -> None:
         """Case-split on an inductive hypothesis."""
-        cases(self.manager, hyp_name, patterns)
+        cases(self.manager, at, with_)
 
     @log_tactic
-    def rcases(self, hyp_name, pattern: RCasesPattern):
+    def rcases(self, at, with_: RCasesPattern) -> None:
         """Destruct a hypothesis recursively using a nested pattern structure."""
-        rcases(self.manager, hyp_name, pattern)
+        rcases(self.manager, at, with_)
 
     @log_tactic
-    def obtain(self, pattern: RCasesPattern, expr: Expr):
-        """Introduce a new witness and immediately destructure it using rcases."""
-        obtain(self.manager, pattern, expr)
+    def induction(self, at: str) -> None:
+        """Perform induction on a hypothesis in the local context."""
+        induction(self.manager, at)
 
-    @log_tactic
-    def exfalso(self) -> None:
-        """Switch the current goal to False."""
-        exfalso(self.manager)
-
-    @log_tactic
-    def contradiction(self) -> None:
-        """Close the current goal if local hypotheses contain a contradiction."""
-        contradiction(self.manager)
-
-    @log_tactic
-    def induction(self, hyp_name: str) -> None:
-        """Perform induction on a Nat-valued hypothesis."""
-        induction(self.manager, hyp_name)
-
-    @log_tactic
-    def refine(self, expr: Expr) -> None:
-        """Refine current goal using an expression that may contain metavariables."""
-        refine(self.manager, expr)
-
-    @log_tactic
-    def revert(self, hyp_names: str | list[str]) -> None:
-        """Revert one or more hypotheses from the local context back into the goal."""
-        revert(self.manager, hyp_names)
+    # ------------------------------------------------------------------
+    # 4. Equality, Reduction & Unfolding
+    # ------------------------------------------------------------------
 
     @log_tactic
     def reflexivity(self) -> None:
@@ -245,82 +274,91 @@ class ProofScript(ABC):
         symm(self.manager)
 
     @log_tactic
-    def transitivity(self, expr_or_name: Expr | str) -> None:
+    def transitivity(self, via: ExprLike) -> None:
         """Split an equality goal into two subgoals using a middle term."""
-        middle = (
-            expr_or_name
-            if isinstance(expr_or_name, Expr)
-            else EVar(expr_or_name)
-        )
-        transitivity(self.manager, middle)
+        transitivity(self.manager, self._to_expr(via))
 
     @log_tactic
-    def trans(self, expr_or_name: Expr | str) -> None:
+    def trans(self, via: ExprLike) -> None:
         """Split an equality goal into two subgoals using a middle term."""
-        middle = (
-            expr_or_name
-            if isinstance(expr_or_name, Expr)
-            else EVar(expr_or_name)
+        trans(self.manager, self._to_expr(via))
+
+    @log_tactic
+    def rewrite(
+        self,
+        via: ExprLike,
+        *,
+        symm: bool = False,
+        at: str | None = None,
+        on: ExprLike | None = None,
+    ) -> None:
+        """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
+        rewrite(
+            self.manager,
+            self._to_expr(via),
+            symm,
+            at,
+            self._to_expr(on) if on is not None else None,
         )
-        trans(self.manager, middle)
 
     @log_tactic
-    def rewrite(self, hyp_name: str) -> None:
+    def rw(
+        self,
+        via: ExprLike,
+        *,
+        symm: bool = False,
+        at: str | None = None,
+        on: ExprLike | None = None,
+    ) -> None:
         """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
-        rewrite(self.manager, hyp_name)
+        rw(
+            self.manager,
+            self._to_expr(via),
+            symm,
+            at,
+            self._to_expr(on) if on is not None else None,
+        )
 
     @log_tactic
-    def rw(self, hyp_name: str) -> None:
-        """Rewrite occurrences of LHS with RHS in current goal using hypothesis."""
-        rw(self.manager, hyp_name)
-
-    @log_tactic
-    def have(self, hyp_name: str, expr_or_name: Expr | str) -> None:
-        """Introduce an intermediate assertion (have h : P)."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        have(self.manager, hyp_name, expr)
-
-    @log_tactic
-    def specialize(self, hyp_name: str, expr_or_name: Expr | str) -> None:
-        """Specialize a hypothesis in the local context with an argument."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        specialize(self.manager, hyp_name, expr)
-
-    @log_tactic
-    def suffices(self, hyp_name: str, expr_or_name: Expr | str) -> None:
-        """Assert hypothesis hyp_name : expr to prove the goal."""
-        expr = expr_or_name if isinstance(expr_or_name, Expr) else EVar(expr_or_name)
-        suffices(self.manager, hyp_name, expr)
-
-    @log_tactic
-    def use(self, expr: Expr) -> None:
-        """Refine the current goal of the form `Exists A P` by providing a witness."""
-        use(self.manager, expr)
-
-    @log_tactic
-    def exists(self, expr: Expr) -> None:
-        """Refine the current goal of the form `Exists A P` by providing a witness."""
-        exists(self.manager, expr)
+    def unfold(self, def_name: str, *, at: str | None = None) -> None:
+        """Unfold a specific definition in the current goal or hypothesis."""
+        unfold(self.manager, def_name, at)
 
     @log_tactic
     def simpl(
         self,
-        hyp_name: str | None = None,
-        unfolding: frozenset[str] | None = None
+        *,
+        at: str | None = None,
+        unfolding: set[str] | None = None
     ) -> None:
         """Simplify the current goal using definitional unfolding."""
-        simpl(self.manager, hyp_name, unfolding)
+        simpl(self.manager, at, unfolding)
 
     @log_tactic
     def dsimp(
         self,
-        hyp_name: str | None = None,
-        unfolding: frozenset[str] | None = None
+        *,
+        at: str | None = None,
+        unfolding: set[str] | None = None
     ) -> None:
         """Definitional simplify without expanding unnecessary definitions."""
-        dsimp(self.manager, hyp_name, unfolding)
+        dsimp(self.manager, at, unfolding)
 
     @log_tactic
-    def unfold(self, name: str, hyp_name: str | None = None) -> None:
-        """Unfold a specific definition in the current goal or hypothesis."""
-        unfold(self.manager, name, hyp_name)
+    def change(self, via: ExprLike, *, at: str | None = None) -> None:
+        """Replace the current goal with a definitionally equal expression."""
+        change(self.manager, self._to_expr(via), at)
+
+    # ------------------------------------------------------------------
+    # 5. Automation, Contradiction & Decision
+    # -----------------------------------------------------------------
+
+    @log_tactic
+    def exfalso(self) -> None:
+        """Switch the current goal to False."""
+        exfalso(self.manager)
+
+    @log_tactic
+    def contradiction(self) -> None:
+        """Close the current goal if local hypotheses contain a contradiction."""
+        contradiction(self.manager)

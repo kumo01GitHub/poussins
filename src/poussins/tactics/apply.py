@@ -7,15 +7,15 @@ from .helpers import require_current_goal, requires_active_goal
 
 
 @requires_active_goal
-def apply(manager: ProofManager, expr: Expr) -> None:
+def apply(manager: ProofManager, term: Expr) -> None:
     """Apply an expression to the current goal."""
     state = manager.current_state
     current_goal = require_current_goal(manager)
 
     implicit_subgoals: list[Goal] = []
-    assignment = expr
+    assignment = term
     current_type = whnf(
-        infer_type(expr, current_goal.context, state.metavars, manager.env),
+        infer_type(term, current_goal.context, state.metavars, manager.env),
         state.metavars,
         manager.env,
     )

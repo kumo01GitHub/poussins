@@ -6,9 +6,9 @@ from .helpers import require_current_goal, requires_active_goal
 
 
 @requires_active_goal
-def exact(manager: ProofManager, expr: Expr) -> None:
+def exact(manager: ProofManager, term: Expr) -> None:
     """Close the current goal with the given expression."""
-    manager.close_goal(expr)
+    manager.close_goal(term)
 
 
 @requires_active_goal

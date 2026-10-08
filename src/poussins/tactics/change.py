@@ -9,11 +9,11 @@ from .helpers import requires_active_goal
 @requires_active_goal
 def change(
     manager: ProofManager,
-    expr: Expr,
-    hypothesis_name: str | None = None
+    term: Expr,
+    hyp_name: str | None = None
 ) -> None:
     """Replace the current goal with a definitionally equal expression."""
-    if hypothesis_name is None:
-        manager.change_goal(expr)
+    if hyp_name is None:
+        manager.change_goal(term)
     else:
-        manager.change_hypothesis(hypothesis_name, expr)
+        manager.change_hypothesis(hyp_name, term)

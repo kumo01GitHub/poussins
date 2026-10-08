@@ -15,8 +15,8 @@ p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
 example1 = Example((p & (q | r)) >> p, env)
 
 example1.intro("hAnd")
-example1.cases("hAnd", patterns=(("And.intro", "hP", "hOr"),))
-example1.cases("hOr", patterns=(("Or.inl", "hQ"), ("Or.inr", "hR")))
+example1.cases("hAnd", with_=(("And.intro", "hP", "hOr"),))
+example1.cases("hOr", with_=(("Or.inl", "hQ"), ("Or.inr", "hR")))
 example1.exact("hP")
 example1.exact("hP")
 
