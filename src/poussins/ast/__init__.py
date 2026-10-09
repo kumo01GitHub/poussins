@@ -11,6 +11,7 @@ from .ops import (
     substitute_expr_var,
     substitute_metavar,
 )
+from .serializer import ExprSerializer, UnivLevelSerializer
 from .universe import (
     UnivLevel,
     UnivLevelIMax,
@@ -48,4 +49,7 @@ __all__ = [
     "substitute_expr_var",
     "collect_free_vars",
     "substitute_expr",
+    # Serializers
+    "UnivLevelSerializer",
+    "ExprSerializer",
 ]
