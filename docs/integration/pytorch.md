@@ -14,7 +14,7 @@ The Poussins PyTorch integration provides an AI-driven synthesis and automation 
 
 - **Neural Tactic Prediction**: Evaluates active goals and ranks viable tactics (`intros`, `constructor`, `exact`, `rfl`, etc.) and hypothesis bindings using dual-headed policy networks.
 - **Automated TacticPlan Synthesis**: Explores proof states via backtracking depth-first search (`AITacticPlanner`), automatically generating complete `list[TacticPlan]` objects.
-- **Universal Serialization**: Leverages canonical AST and tactic plan serializers (`TacticPlanSerializer` & `ExprSerializer`) to seamlessly preserve and decode arbitrary tactic arguments (expressions, tuples, frozensets).
+- **Universal Serialization**: Leverages canonical AST and tactic plan serializers (`TacticPlanSerializer` & `ExprSerializer`) to seamlessly preserve and decode arbitrary tactic arguments (expressions, tuples, sets).
 - **Strict Kernel Soundness**: Tactics proposed by neural models are validated by the trusted Poussins kernel. Invalid candidates or ill-typed arguments trigger immediate backtracking with zero risk of unsound proofs.
 - **Spark Interoperability**: Synthesized `TacticPlan` objects strictly adhere to the schema shared with the Spark integration, allowing AI-generated proofs to be dispatched across worker clusters.
 - **Zero-Footprint Optionality**: Implemented under `[project.optional-dependencies]`. When PyTorch is not installed, core logic, DSL scripts, and Spark workflows run unaffected without runtime dependencies.
@@ -197,7 +197,7 @@ The core integration code resides under `src/poussins/integration/` and `src/pou
 - **Location**: [`src/poussins/integration/serializer.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/serializer.py)
 - **Role**: Provides lossless JSON serialization and deserialization for proof ASTs and tactic plans, ensuring compatibility across training corpora, network models, and execution backends.
 - **Key Methods**:
-  - `TacticPlanSerializer.encode_arg(val) / decode_arg(val)`: Safely encodes/decodes `Expr`, `tuple`, `frozenset`, and `list` tactic arguments.
+  - `TacticPlanSerializer.encode_arg(val) / decode_arg(val)`: Safely encodes/decodes `Expr`, `tuple`, `set`, and `list` tactic arguments.
   - `TacticPlanSerializer.serialize(plan) / deserialize(json_str)`: String JSON round-trip for `TacticPlan`.
   - `ExprSerializer.to_dict(expr) / from_dict(data)`: Converts AST expressions to and from normalized dictionary trees.
 

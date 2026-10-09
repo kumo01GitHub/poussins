@@ -69,7 +69,7 @@ def test_tactic_plan_round_trip_with_patterns_and_frozenset() -> None:
     )
     simpl_plan: TacticPlan = (
         "simpl",
-        {"hyp_name": None, "unfolding": frozenset({"Nat.add", "Nat.zero"})},
+        {"hyp_name": None, "unfolding": {"Nat.add", "Nat.zero"}},
     )
 
     for plan in (cases_plan, simpl_plan):

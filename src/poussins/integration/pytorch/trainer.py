@@ -4,34 +4,27 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import torch
+from torch import nn
+from torch.optim import AdamW
+from torch.utils.data import DataLoader
+
 from ...errors import PyTorchIntegrationError
 from .dataset import ProofDataset
 from .model import SUPPORTED_TACTICS, TacticPredictor, TacticVocabulary
-
-try:
-    import torch
-    from torch import nn
-    from torch.optim import AdamW
-    from torch.utils.data import DataLoader
-except ImportError as err:
-    msg = (
-        "PyTorch is required for this module. "
-        "Install with: pip install 'poussins[pytorch]'"
-    )
-    raise PyTorchIntegrationError(msg) from err
 
 
 class TacticTrainer:
     """Trains a TacticPredictor model and manages checkpoint persistence."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         model: TacticPredictor,
         vocabulary: TacticVocabulary,
         lr: float = 1e-3,
         weight_decay: float = 1e-4,
         device: str = "cpu",
-    ) -> None:
+    ):
         """Initialize trainer with neural model, vocabulary, and training device."""
         self.model = model.to(device)
         self.vocabulary = vocabulary

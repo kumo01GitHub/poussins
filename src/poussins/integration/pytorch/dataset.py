@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ...errors import PyTorchIntegrationError
-from ..serializer import TacticPlanSerializer
+from ..tactic import TacticPlanSerializer
 from .model import TacticVocabulary
 
 try:

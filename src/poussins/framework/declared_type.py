@@ -13,7 +13,7 @@ from ..environment.library import EqualityDeclaration
 class DeclaredType(ABC):
     """Shared immutable wrapper for expressions backed by declarations."""
 
-    TYPE_NAME: ClassVar[str] = ""
+    TYPE_NAME: ClassVar[str] = "<unknown>"
     EQ_NAME: ClassVar[str] = EqualityDeclaration.EQ_DECLARATION.declaration.name
     EQ_ARITY: ClassVar[int] = 2
 
