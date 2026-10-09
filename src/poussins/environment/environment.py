@@ -14,14 +14,19 @@ from ..ast import (
     UnivLevelParam,
     UnivLevelSucc,
     UnivLevelZero,
+    build_pi_chain,
+    flatten_app_chain,
 )
-from ..kernel import infer_type
+from ..kernel import check_type, infer_type
 from ..utils.serializer import JsonValue
 from .declaration import (
+    AxiomDeclaration,
     ConstructorDeclaration,
     Declaration,
+    DefinitionDeclaration,
     InductiveDeclaration,
     RecursorDeclaration,
+    TheoremDeclaration,
 )
 from .library import (
     BoolDeclaration,
@@ -136,7 +141,7 @@ class Environment:
 
         # 2. Automatically build type, num_params, and num_indices if not specified
         if type is None or num_params is None or num_indices is None:
-            built_type, b_p, b_i = self._build_inductive_type_and_counts(
+            built_type, b_p, b_i = self._build_inductive_type(
                 name, constructors, level_params
             )
             type = type if type is not None else built_type
@@ -216,7 +221,260 @@ class Environment:
 
         return ind_decl, ctor_decls, rec_decl
 
-    def _build_inductive_type_and_counts(
+    def declare_axiom(
+        self,
+        name: str,
+        type: Expr | dict[str, JsonValue],
+        *,
+        level_params: tuple[str, ...] = (),
+    ) -> AxiomDeclaration:
+        """Declare a new axiom in the environment after type checking.
+
+        Example:
+            ```python
+            # Declare an axiom: p_axiom : Prop
+            axiom_decl = env.declare_axiom(
+                name="p_axiom",
+                type=ESort(UnivLevelZero()),
+            )
+            ```
+
+        """
+        # 1. Convert dict representation to AST if necessary
+        type_expr = ExprSerializer.from_dict(type) if isinstance(type, dict) else type
+
+        # 2. Kernel check: verify that the axiom's type itself is well-typed
+        type_sort = infer_type(type_expr, context={}, metavars={}, env=self)
+        if not isinstance(type_sort, ESort):
+            raise ValueError(
+                f"Axiom '{name}' type must be a Sort, but got: {type_sort}"
+            )
+
+        # 3. Instantiate and register the declaration
+        axiom_decl = AxiomDeclaration(
+            name=name,
+            level_params=level_params,
+            type=type_expr,
+        )
+        self.add(axiom_decl)
+
+        return axiom_decl
+
+    def declare_theorem(
+        self,
+        name: str,
+        type: Expr | dict[str, JsonValue],
+        value: Expr | dict[str, JsonValue],
+        *,
+        level_params: tuple[str, ...] = (),
+    ) -> TheoremDeclaration:
+        """Declare a theorem after type checking both type and value proof.
+
+        Example:
+            ```python
+            # Declare a theorem: id_proof : A -> A
+            theorem_decl = env.declare_theorem(
+                name="id_proof",
+                type=EPi("x", EVar("A"), EVar("A")),
+                value=ELam("x", EVar("A"), EVar("x")),
+            )
+            ```
+
+        """
+        # 1. Convert dict representations to AST if necessary
+        type_expr = (
+            ExprSerializer.from_dict(type)
+            if isinstance(type, dict) else type
+        )
+        value_expr = (
+            ExprSerializer.from_dict(value)
+            if isinstance(value, dict) else value
+        )
+
+        # 2. Kernel check: verify that the type statement is well-typed
+        type_sort = infer_type(type_expr, context={}, metavars={}, env=self)
+        if not isinstance(type_sort, ESort):
+            raise ValueError(
+                f"Theorem '{name}' type statement must be a Sort, but got: {type_sort}"
+            )
+
+        # 3. Kernel check: verify that the proof value matches the declared theorem type
+        if not check_type(value_expr, type_expr, context={}, metavars={}, env=self):
+            inferred_val_type = infer_type(
+                value_expr,
+                context={},
+                metavars={},
+                env=self
+            )
+            raise ValueError(
+                f"Type mismatch for theorem '{name}'. "
+                + f"Declared type: {type_expr}, "
+                + f"but proof value has type: {inferred_val_type}"
+            )
+
+        # 4. Instantiate and register the declaration
+        theorem_decl = TheoremDeclaration(
+            name=name,
+            level_params=level_params,
+            type=type_expr,
+            value=value_expr,
+        )
+        self.add(theorem_decl)
+
+        return theorem_decl
+
+    def declare_definition(
+        self,
+        name: str,
+        value: Expr | dict[str, JsonValue],
+        type: Expr | dict[str, JsonValue] | None = None,
+        *,
+        level_params: tuple[str, ...] = (),
+    ) -> DefinitionDeclaration:
+        """Declare a new definition in the environment.
+
+        If `type` is omitted, its type is automatically inferred.
+
+        Example:
+            ```python
+            # Declare a definition: my_id := λ x : A, x
+            def_decl = env.declare_definition(
+                name="my_id",
+                value=ELam("x", EVar("A"), EVar("x")),
+            )
+            ```
+
+        """
+        # 1. Convert dict representations to AST if necessary
+        value_expr = (
+            ExprSerializer.from_dict(value)
+            if isinstance(value, dict) else value
+        )
+        type_expr = (
+            ExprSerializer.from_dict(type)
+            if isinstance(type, dict) else type
+        )
+
+        # 2. If type is not explicitly provided, infer it automatically from value
+        if type_expr is None:
+            type_expr = infer_type(value_expr, context={}, metavars={}, env=self)
+        else:
+            # Check that explicit type is a valid Sort
+            type_sort = infer_type(type_expr, context={}, metavars={}, env=self)
+            if not isinstance(type_sort, ESort):
+                raise ValueError(
+                    f"Definition '{name}' type must be a Sort, but got: {type_sort}"
+                )
+
+            # Kernel check: verify that value matches the specified type
+            if not check_type(value_expr, type_expr, context={}, metavars={}, env=self):
+                inferred_val_type = infer_type(
+                    value_expr, context={}, metavars={}, env=self
+                )
+                raise ValueError(
+                    f"Type mismatch for definition '{name}'. "
+                    + f"Specified type: {type_expr}, "
+                    + f"but value has type: {inferred_val_type}"
+                )
+
+        # 3. Instantiate and register the declaration
+        def_decl = DefinitionDeclaration(
+            name=name,
+            level_params=level_params,
+            type=type_expr,
+            value=value_expr,
+        )
+        self.add(def_decl)
+
+        return def_decl
+
+    def declare_quot(
+        self,
+    ) -> tuple[
+        AxiomDeclaration, AxiomDeclaration, AxiomDeclaration, AxiomDeclaration
+    ]:
+        """Declare Quotient primitives (Quot, Quot.mk, Quot.lift, Quot.ind).
+
+        Example:
+            ```python
+            env = Environment()
+            quot_decl, mk_decl, lift_decl, ind_decl = env.declare_quot()
+            ```
+
+        """
+        u, v = UnivLevelParam("u"), UnivLevelParam("v")
+        sort_u, sort_v, prop = ESort(u), ESort(v), ESort(UnivLevelZero())
+        alpha, r_var, beta_var = EVar("α"), EVar("r"), EVar("β")
+
+        # Common relation type: r : α -> α -> Prop
+        rel_type = build_pi_chain([("_", alpha), ("_", alpha)], prop)
+        quot_app = EApp(EApp(EConst("Quot", (u,)), alpha), r_var)
+
+        # 1. Quot : Π (α : Sort u) (r : α -> α -> Prop), Sort u
+        quot_decl = AxiomDeclaration(
+            name="Quot",
+            level_params=("u",),
+            type=build_pi_chain([("α", sort_u), ("r", rel_type)], sort_u),
+        )
+
+        # 2. Quot.mk : Π (α : Sort u) (r : α -> α -> Prop) (a : α), Quot α r
+        quot_mk_decl = AxiomDeclaration(
+            name="Quot.mk",
+            level_params=("u",),
+            type=build_pi_chain(
+                [("α", sort_u), ("r", rel_type), ("a", alpha)],
+                quot_app
+            ),
+        )
+
+        # 3. Quot.lift : Π (α : Sort u) (r : α -> α -> Prop) (β : Sort v)
+        #                (f : α -> β) (h : proof) (q : Quot α r), β
+        f_type = EPi("a", alpha, beta_var)
+        quot_lift_decl = AxiomDeclaration(
+            name="Quot.lift",
+            level_params=("u", "v"),
+            type=build_pi_chain(
+                [
+                    ("α", sort_u),
+                    ("r", rel_type),
+                    ("β", sort_v),
+                    ("f", f_type),
+                    ("proof", prop),
+                    ("q", quot_app),
+                ],
+                beta_var,
+            ),
+        )
+
+        # 4. Quot.ind : Π (α : Sort u) (r : α -> α -> Prop) (β : Quot α r -> Prop)
+        #               (h : Π a : α, β (Quot.mk r a)) (q : Quot α r), β q
+        beta_motive = EPi("q", quot_app, prop)
+        mk_app = EApp(EApp(EConst("Quot.mk", (u,)), alpha), r_var)
+        ind_minor = EPi("a", alpha, EApp(beta_var, EApp(mk_app, EVar("a"))))
+        ind_major = EApp(beta_var, EVar("q"))
+
+        quot_ind_decl = AxiomDeclaration(
+            name="Quot.ind",
+            level_params=("u",),
+            type=build_pi_chain(
+                [
+                    ("α", sort_u),
+                    ("r", rel_type),
+                    ("β", beta_motive),
+                    ("h", ind_minor),
+                    ("q", quot_app),
+                ],
+                ind_major,
+            ),
+        )
+
+        decls = (quot_decl, quot_mk_decl, quot_lift_decl, quot_ind_decl)
+        for d in decls:
+            self.add(d)
+
+        return decls
+
+    def _build_inductive_type(
         self,
         name: str,
         constructors: list[dict[str, JsonValue | Expr]],
@@ -228,26 +486,43 @@ class Environment:
             if level_params
             else UnivLevelSucc(UnivLevelZero())
         )
-        base_type: Expr = ESort(level=univ)
-        num_params = 0
+        base_sort: Expr = ESort(level=univ)
+
+        if not constructors:
+            return base_sort, 0, 0
+
+        # Extract parameter and index domain structures from the first constructor
+        raw_ctor_type = constructors[0]["type"]
+        first_ctor_type = cast(
+            Expr,
+            ExprSerializer.from_dict(raw_ctor_type)
+            if isinstance(raw_ctor_type, dict)
+            else raw_ctor_type
+        )
+
+        binders: list[tuple[str, Expr]] = []
+        curr = first_ctor_type
+
+        # Collect binders leading up to the target inductive type
+        while isinstance(curr, EPi):
+            binders.append((curr.var, curr.domain))
+            curr = curr.body
+
+        # Verify that the constructor target actually constructs `name`
+        head, _ = flatten_app_chain(curr)
+        if isinstance(head, EConst) and head.name != name:
+            raise ValueError(
+                f"Constructor target name '{head.name}' "
+                + f"does not match inductive type '{name}'"
+            )
+
+        num_params = len(binders)
         num_indices = 0
 
-        if constructors:
-            raw_ctor_type = constructors[0]["type"]
-            first_ctor_type = (
-                ExprSerializer.from_dict(raw_ctor_type)
-                if isinstance(raw_ctor_type, dict)
-                else raw_ctor_type
-            )
-            curr = first_ctor_type
-            while isinstance(curr, EPi):
-                if isinstance(curr.body, EPi):
-                    num_params += 1
-                    curr = curr.body
-                else:
-                    break
+        # Build proper inductive type: Π (p1 : A1) ... (pn : An), Sort u
+        ind_type = build_pi_chain(binders, base_sort)
 
-        return base_type, num_params, num_indices
+        return ind_type, num_params, num_indices
 
     def _build_recursor_type(  # noqa: PLR0913
         self,

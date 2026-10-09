@@ -3,6 +3,7 @@ from .expr import EApp, EConst, ELam, EMatch, EMetaVar, EPi, ESort, EVar, Expr
 from .ops import (
     build_app_chain,
     build_lambda_chain,
+    build_pi_chain,
     collect_free_vars,
     collect_metavar_ids,
     flatten_app_chain,
@@ -43,6 +44,7 @@ __all__ = [
     "has_metavar",
     "build_app_chain",
     "build_lambda_chain",
+    "build_pi_chain",
     "flatten_app_chain",
     "substitute_metavar",
     "collect_metavar_ids",

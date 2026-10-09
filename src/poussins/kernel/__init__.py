@@ -6,7 +6,7 @@ from .proof_engine import ProofEngine
 from .proof_manager import ProofManager
 from .proof_session import ProofSession
 from .proof_state import ProofState
-from .typecheck import infer_metavar_types, infer_type
+from .typecheck import check_type, infer_metavar_types, infer_type
 from .unification import unify
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "ProofManager",
     "ProofSession",
     "ProofState",
+    "check_type",
     "infer_metavar_types",
     "infer_type",
     "instantiate",
