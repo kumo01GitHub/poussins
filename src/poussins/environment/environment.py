@@ -85,33 +85,63 @@ class Environment:
         for item in NatDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Product Declarations
+        # ------------------------------------------------------------------
         for item in ProdDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Sigma Declarations
+        # ------------------------------------------------------------------
         for item in SigmaDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Option Declarations
+        # ------------------------------------------------------------------
         for item in OptionDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # List Declarations
+        # ------------------------------------------------------------------
         for item in ListDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Unit Declarations
+        # ------------------------------------------------------------------
         for item in UnitDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Sum Declarations
+        # ------------------------------------------------------------------
         for item in SumDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Empty Declarations
+        # ------------------------------------------------------------------
         for item in EmptyDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Finite Declarations
+        # ------------------------------------------------------------------
         for item in FinDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Vector Declarations
+        # ------------------------------------------------------------------
         for item in VectorDeclaration:
             env.add(item.declaration)
 
+        # ------------------------------------------------------------------
+        # Quotient Declarations
+        # ------------------------------------------------------------------
         for item in QuotLibraryDeclaration:
             env.add(item.declaration)
 
