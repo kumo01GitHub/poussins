@@ -92,7 +92,7 @@ class Environment:
             self.add(decl)
             return decl
 
-    def declare_inductive(  # noqa: PLR0913
+    def declare_inductive(
         self,
         name: str,
         constructors: list[dict[str, JsonValue | Expr]],
@@ -524,7 +524,7 @@ class Environment:
 
         return ind_type, num_params, num_indices
 
-    def _build_recursor_type(  # noqa: PLR0913
+    def _build_recursor_type(
         self,
         name: str,
         ind_type: Expr | dict[str, JsonValue],
