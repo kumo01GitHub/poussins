@@ -8,7 +8,7 @@ from .logic import LogicDeclaration
 from .nat import NatDeclaration
 from .option import OptionDeclaration
 from .prod import ProdDeclaration
-from .quot import QuotLibraryDeclaration
+from .quot import QuotDeclaration
 from .sigma import SigmaDeclaration
 from .sort import Sort
 from .sum import SumDeclaration
@@ -25,7 +25,7 @@ __all__ = [
     "NatDeclaration",
     "OptionDeclaration",
     "ProdDeclaration",
-    "QuotLibraryDeclaration",
+    "QuotDeclaration",
     "SigmaDeclaration",
     "Sort",
     "SumDeclaration",

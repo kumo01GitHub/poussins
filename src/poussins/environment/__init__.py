@@ -5,7 +5,7 @@ from .declaration import (
     Declaration,
     DefinitionDeclaration,
     InductiveDeclaration,
-    QuotDeclaration,
+    QuotientDeclaration,
     RecursorDeclaration,
     TheoremDeclaration,
 )
@@ -18,7 +18,7 @@ __all__ = [
     "DefinitionDeclaration",
     "Environment",
     "InductiveDeclaration",
-    "QuotDeclaration",
+    "QuotientDeclaration",
     "RecursorDeclaration",
     "TheoremDeclaration",
 ]

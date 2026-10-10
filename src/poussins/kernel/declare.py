@@ -22,7 +22,7 @@ from ..environment import (
     DefinitionDeclaration,
     Environment,
     InductiveDeclaration,
-    QuotDeclaration,
+    QuotientDeclaration,
     RecursorDeclaration,
     TheoremDeclaration,
 )
@@ -328,12 +328,12 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
 # Quotient Declaration
 # ------------------------------------------------------------------
 
-def declare_quot(
+def declare_quotient(
     env: Environment,
-    quot_decl: QuotDeclaration,
-    mk_decl: QuotDeclaration,
-    lift_decl: QuotDeclaration,
-    ind_decl: QuotDeclaration,
+    quot_decl: QuotientDeclaration,
+    mk_decl: QuotientDeclaration,
+    lift_decl: QuotientDeclaration,
+    ind_decl: QuotientDeclaration,
 ) -> None:
     """Validate and declare the complete set of quotient primitives.
 
@@ -348,7 +348,7 @@ def declare_quot(
         KernelTypeError: If variant kinds are invalid or any type check fails.
 
     """
-    check_quot(env, quot_decl, mk_decl, lift_decl, ind_decl)
+    check_quotient(env, quot_decl, mk_decl, lift_decl, ind_decl)
 
     declare(env, quot_decl)
     declare(env, mk_decl)
@@ -356,12 +356,12 @@ def declare_quot(
     declare(env, ind_decl)
 
 
-def check_quot(
+def check_quotient(
     env: Environment,
-    quot_decl: QuotDeclaration,
-    mk_decl: QuotDeclaration,
-    lift_decl: QuotDeclaration,
-    ind_decl: QuotDeclaration,
+    quot_decl: QuotientDeclaration,
+    mk_decl: QuotientDeclaration,
+    lift_decl: QuotientDeclaration,
+    ind_decl: QuotientDeclaration,
 ) -> None:
     """Validate that all 4 quotient declarations are valid and form a matching set."""
     decls = [

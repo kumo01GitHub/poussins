@@ -108,7 +108,7 @@ class RecursorDeclaration(Declaration):
 
 
 @dataclass(frozen=True)
-class QuotDeclaration(Declaration):
+class QuotientDeclaration(Declaration):
     """Quotient type information."""
 
     variant: str

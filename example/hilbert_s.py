@@ -1,8 +1,7 @@
 """Example of a proof of the Hilbert S axiom in Poussins."""
-from poussins.environment import Environment
-from poussins.framework import Lemma, Prop
+from poussins.framework import Lemma, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
 

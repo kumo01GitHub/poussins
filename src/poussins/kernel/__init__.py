@@ -3,7 +3,7 @@ from .declare import (
     declare_axiom,
     declare_definition,
     declare_inductive,
-    declare_quot,
+    declare_quotient,
     declare_theorem,
 )
 from .equality import is_alpha_eq, is_def_eq
@@ -34,5 +34,5 @@ __all__ = [
     "declare_definition",
     "declare_theorem",
     "declare_inductive",
-    "declare_quot",
+    "declare_quotient",
 ]

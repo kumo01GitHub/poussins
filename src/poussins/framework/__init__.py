@@ -3,6 +3,7 @@ from .axiom import Axiom
 from .bool import Bool
 from .declared_type import DeclaredType
 from .empty import Empty
+from .environment import create_environment, create_standard_environment
 from .fin import Fin
 from .list import List
 from .nat import Nat
@@ -51,4 +52,6 @@ __all__ = [
     "Theorem",
     "Unit",
     "Vector",
+    "create_environment",
+    "create_standard_environment",
 ]

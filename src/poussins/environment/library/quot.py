@@ -4,14 +4,14 @@ from __future__ import annotations
 from enum import Enum
 
 from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
-from ..declaration import AxiomDeclaration, Declaration, QuotDeclaration
+from ..declaration import Declaration, QuotientDeclaration
 from .sort import Sort
 
 
-class QuotLibraryDeclaration(Enum):
-    """Quotient type former and core axioms."""
+class QuotDeclaration(Enum):
+    """Quotient type former and core primitives."""
 
-    QUOT_DECLARATION = QuotDeclaration(
+    QUOT_DECLARATION = QuotientDeclaration(
         name="Quot",
         level_params=("u",),
         type=EPi(
@@ -26,7 +26,7 @@ class QuotLibraryDeclaration(Enum):
         variant="type",
     )
 
-    QUOT_MK_DECLARATION = AxiomDeclaration(
+    QUOT_MK_DECLARATION = QuotientDeclaration(
         name="Quot.mk",
         level_params=("u",),
         type=EPi(
@@ -39,15 +39,19 @@ class QuotLibraryDeclaration(Enum):
                     "x",
                     EVar("A"),
                     EApp(
-                        EApp(EConst("Quot", (UnivLevelParam("u"),)), EVar("A")),
+                        EApp(
+                            EConst("Quot", (UnivLevelParam("u"),)),
+                            EVar("A"),
+                        ),
                         EVar("r"),
                     ),
                 ),
             ),
         ),
+        variant="mk",
     )
 
-    QUOT_LIFT_DECLARATION = AxiomDeclaration(
+    QUOT_LIFT_DECLARATION = QuotientDeclaration(
         name="Quot.lift",
         level_params=("u", "v"),
         type=EPi(
@@ -72,7 +76,10 @@ class QuotLibraryDeclaration(Enum):
                                     EVar("A"),
                                     EPi(
                                         "hr",
-                                        EApp(EApp(EVar("r"), EVar("x")), EVar("y")),
+                                        EApp(
+                                            EApp(EVar("r"), EVar("x")),
+                                            EVar("y"),
+                                        ),
                                         EApp(
                                             EApp(
                                                 EApp(EConst("Eq", ()), EVar("B")),
@@ -87,7 +94,9 @@ class QuotLibraryDeclaration(Enum):
                                 "q",
                                 EApp(
                                     EApp(
-                                        EConst("Quot", (UnivLevelParam("u"),)),
+                                        EConst(
+                                            "Quot", (UnivLevelParam("u"),)
+                                        ),
                                         EVar("A"),
                                     ),
                                     EVar("r"),
@@ -99,6 +108,71 @@ class QuotLibraryDeclaration(Enum):
                 ),
             ),
         ),
+        variant="lift",
+    )
+
+    QUOT_IND_DECLARATION = QuotientDeclaration(
+        name="Quot.ind",
+        level_params=("u", "v"),
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "r",
+                EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort)),
+                EPi(
+                    "p",
+                    EPi(
+                        "q",
+                        EApp(
+                            EApp(
+                                EConst("Quot", (UnivLevelParam("u"),)),
+                                EVar("A"),
+                            ),
+                            EVar("r"),
+                        ),
+                        ESort(UnivLevelParam("v")),
+                    ),
+                    EPi(
+                        "h",
+                        EPi(
+                            "a",
+                            EVar("A"),
+                            EApp(
+                                EVar("p"),
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EConst(
+                                                "Quot.mk",
+                                                (UnivLevelParam("u"),),
+                                            ),
+                                            EVar("A"),
+                                        ),
+                                        EVar("r"),
+                                    ),
+                                    EVar("a"),
+                                ),
+                            ),
+                        ),
+                        EPi(
+                            "q",
+                            EApp(
+                                EApp(
+                                    EConst(
+                                        "Quot", (UnivLevelParam("u"),)
+                                    ),
+                                    EVar("A"),
+                                ),
+                                EVar("r"),
+                            ),
+                            EApp(EVar("p"), EVar("q")),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        variant="ind",
     )
 
     @property
