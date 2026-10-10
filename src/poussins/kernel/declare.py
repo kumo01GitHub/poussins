@@ -40,6 +40,7 @@ def declare(env: Environment, declaration: Declaration) -> None:
 # Axiom Declaration
 # ------------------------------------------------------------------
 
+
 def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate and declare an axiom in the environment.
 
@@ -54,12 +55,13 @@ def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     check_axiom(env, decl)
     declare(env, decl)
 
+
 def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate that an axiom's statement evaluates to a Sort.
 
     Raises:
-        KernelTypeError: If the statement expression is invalid or does
-            not evaluate to a Sort.
+        KernelTypeError: If the statement expression is invalid or
+            does not evaluate to a Sort.
 
     """
     stmt_type_inferred = infer_type(decl.type, {}, {}, env)
@@ -75,6 +77,7 @@ def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
 # Definition Declaration
 # ------------------------------------------------------------------
 
+
 def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate and declare a definition in the environment.
 
@@ -83,18 +86,20 @@ def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
         decl: Definition declaration containing its type and value.
 
     Raises:
-        KernelTypeError: If the value does not type-check or match the declared type.
+        KernelTypeError: If the value does not type-check or
+            match the declared type.
 
     """
     check_definition(env, decl)
     declare(env, decl)
 
+
 def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate that a definition's value matches its declared type.
 
     Raises:
-        KernelTypeError: If the value expression is invalid or its type does
-            not definitionally equal the declared type.
+        KernelTypeError: If the value expression is invalid or its type
+            does not definitionally equal the declared type.
 
     """
     # 1. Ensure the declared type is well-formed and resolves to a Sort.
@@ -102,8 +107,8 @@ def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     type_sort = whnf(type_inferred, {}, env)
     if not isinstance(type_sort, ESort):
         raise KernelTypeError(
-            f"Type of definition '{decl.name}' must evaluate to a Sort, got: "
-            f"{type_sort}"
+            f"Type of definition '{decl.name}' must evaluate to a "
+            f"Sort, got: {type_sort}"
         )
 
     # 2. Infer the type of the value expression.
@@ -122,6 +127,7 @@ def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
 # Theorem Declaration
 # ------------------------------------------------------------------
 
+
 def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate and declare a theorem in the environment.
 
@@ -136,12 +142,13 @@ def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     check_theorem(env, decl)
     declare(env, decl)
 
+
 def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate that a theorem's proof term matches its declared proposition.
 
     Raises:
-        KernelTypeError: If the proof expression is invalid or its type does
-            not definitionally equal the declared theorem type.
+        KernelTypeError: If the proof expression is invalid or its type
+            does not definitionally equal the declared theorem type.
 
     """
     # 1. Ensure the declared theorem statement (type) is well-formed.
@@ -169,6 +176,7 @@ def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
 # Inductive Declaration
 # ------------------------------------------------------------------
 
+
 def declare_inductive(
     env: Environment,
     decl: InductiveDeclaration,
@@ -187,13 +195,21 @@ def declare_inductive(
         KernelTypeError: If type checking, positivity check, or recursor rules fail.
 
     """
-    check_inductive(env, decl, ctors, rec)
-
-    declare(env, decl)
-    for ctor in ctors:
-        declare(env, ctor)
+    staged_decls: list[Declaration] = [decl]
+    staged_decls.extend(ctors)
     if rec is not None:
-        declare(env, rec)
+        staged_decls.append(rec)
+
+    stage_id = env.stage(declarations=staged_decls)
+    check_env = env.get_staging(stage_id)
+
+    try:
+        check_inductive(check_env, decl, ctors, rec)
+        env.commit(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
+
 
 def check_inductive(
     env: Environment,
@@ -218,14 +234,17 @@ def check_inductive(
     if rec is not None:
         _check_recursor(env, decl, rec)
 
+
 def _check_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
     """Check that the inductive declaration's type evaluates to a Sort."""
     sort_expr = infer_type(decl.type, {}, {}, env)
 
     if not isinstance(whnf(sort_expr, {}, env), ESort):
         raise KernelTypeError(
-            f"Type of inductive '{decl.name}' must be a Sort, got: {sort_expr}"
+            f"Type of inductive '{decl.name}' must be a Sort, got: "
+            f"{sort_expr}"
         )
+
 
 def _check_constructor(
     env: Environment,
@@ -251,9 +270,11 @@ def _check_constructor(
     head, _ = flatten_app_chain(curr)
     if not isinstance(head, EConst) or head.name != decl.name:
         raise KernelTypeError(
-            f"Constructor '{ctor.name}' target type must be '{decl.name}', "
-            f"got: {head.name if isinstance(head, EConst) else head}"
+            f"Constructor '{ctor.name}' target type must be "
+            f"'{decl.name}', got: "
+            f"{head.name if isinstance(head, EConst) else head}"
         )
+
 
 def _check_strict_positivity(
     env: Environment, ind_name: str, domain: Expr
@@ -268,10 +289,12 @@ def _check_strict_positivity(
         # Inductive type MUST NOT appear in domain of argument (left of Pi).
         if _occurs_in(ind_name, curr.domain):
             raise KernelTypeError(
-                f"Strict positivity rule violated: Inductive type '{ind_name}' "
-                f"occurs on left-hand side of domain type: {curr.domain}"
+                f"Strict positivity rule violated: Inductive type "
+                f"'{ind_name}' occurs on left-hand side of domain "
+                f"type: {curr.domain}"
             )
         curr = whnf(curr.body, {}, env)
+
 
 def _check_recursor(
     env: Environment,
@@ -301,6 +324,7 @@ def _check_recursor(
             f"inductive name '{decl.name}.'"
         )
 
+
 def _occurs_in(target_name: str, expr: Expr) -> bool:
     """Recursively check if `target_name` (as EConst) occurs in `expr`."""
     match expr:
@@ -328,6 +352,7 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
 # Quotient Declaration
 # ------------------------------------------------------------------
 
+
 def declare_quotient(
     env: Environment,
     quot_decl: QuotientDeclaration,
@@ -348,12 +373,21 @@ def declare_quotient(
         KernelTypeError: If variant kinds are invalid or any type check fails.
 
     """
-    check_quotient(env, quot_decl, mk_decl, lift_decl, ind_decl)
+    staged_decls: list[Declaration] = [
+        quot_decl,
+        mk_decl,
+        lift_decl,
+        ind_decl,
+    ]
+    stage_id = env.stage(declarations=staged_decls)
+    check_env = env.get_staging(stage_id)
 
-    declare(env, quot_decl)
-    declare(env, mk_decl)
-    declare(env, lift_decl)
-    declare(env, ind_decl)
+    try:
+        check_quotient(check_env, quot_decl, mk_decl, lift_decl, ind_decl)
+        env.commit(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 
 def check_quotient(
@@ -375,14 +409,14 @@ def check_quotient(
     for expected_variant, decl in decls:
         if decl.variant != expected_variant:
             raise KernelTypeError(
-                f"Expected quotient variant '{expected_variant}', got '{decl.variant}' "
-                f"for declaration '{decl.name}'"
+                f"Expected quotient variant '{expected_variant}', "
+                f"got '{decl.variant}' for declaration '{decl.name}'"
             )
 
         type_inferred = infer_type(decl.type, {}, {}, env)
         type_sort = whnf(type_inferred, {}, env)
         if not isinstance(type_sort, ESort):
             raise KernelTypeError(
-                f"Quotient declaration '{decl.name}' must evaluate to a Sort, got: "
-                f"{type_sort}"
+                f"Quotient declaration '{decl.name}' must evaluate to a "
+                f"Sort, got: {type_sort}"
             )

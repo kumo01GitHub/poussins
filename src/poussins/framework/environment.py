@@ -207,7 +207,7 @@ def create_standard_environment() -> Environment:
         env,
         UnitDeclaration.UNIT_DECLARATION.value,
         (
-            UnitDeclaration.UNIT_STAR_DECLARATION.value,
+            UnitDeclaration.UNIT_UNIT_DECLARATION.value,
         ),
         None,
     )
