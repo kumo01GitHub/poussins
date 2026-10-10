@@ -1,4 +1,11 @@
 """Kernel-level components of the proof system."""
+from .declare import (
+    declare_axiom,
+    declare_definition,
+    declare_inductive,
+    declare_quot,
+    declare_theorem,
+)
 from .equality import is_alpha_eq, is_def_eq
 from .eval import instantiate, normalize, whnf
 from .goal import Goal
@@ -23,4 +30,9 @@ __all__ = [
     "normalize",
     "unify",
     "whnf",
+    "declare_axiom",
+    "declare_definition",
+    "declare_theorem",
+    "declare_inductive",
+    "declare_quot",
 ]

@@ -43,6 +43,17 @@ def build_lambda_chain(
     return result
 
 
+def build_pi_chain(
+    binders: list[tuple[str, Expr]],
+    body: Expr,
+) -> Expr:
+    """Build nested Pi types from binders, ending in body."""
+    result = body
+    for var_name, domain in reversed(binders):
+        result = EPi(var_name, domain, result)
+    return result
+
+
 def has_metavar(expr: Expr) -> bool:
     """Check if the expression contains any meta-variables (holes)."""
     match expr:
