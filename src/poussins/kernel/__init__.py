@@ -1,15 +1,15 @@
 """Kernel-level components of the proof system."""
 from .declare import (
-    check_axiom,
-    check_definition,
-    check_inductive,
-    check_quotient,
-    check_theorem,
     declare_axiom,
     declare_definition,
     declare_inductive,
     declare_quotient,
     declare_theorem,
+    validate_axiom,
+    validate_definition,
+    validate_inductive,
+    validate_quotient,
+    validate_theorem,
 )
 from .equality import is_alpha_eq, is_def_eq
 from .eval import instantiate, normalize, whnf
@@ -36,13 +36,13 @@ __all__ = [
     "unify",
     "whnf",
     "declare_axiom",
-    "check_axiom",
+    "validate_axiom",
     "declare_definition",
-    "check_definition",
+    "validate_definition",
     "declare_theorem",
-    "check_theorem",
+    "validate_theorem",
     "declare_inductive",
-    "check_inductive",
+    "validate_inductive",
     "declare_quotient",
-    "check_quotient",
+    "validate_quotient",
 ]

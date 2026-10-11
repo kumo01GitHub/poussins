@@ -45,19 +45,9 @@ def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
         KernelTypeError: If the statement does not evaluate to a Sort.
 
     """
-    staged_decls: list[Declaration] = [decl]
+    _declare_axiom_on_staging(env, decl, with_commit=True)
 
-    stage_id = env.stage(declarations=staged_decls)
-    staging_env = env.get_staging(stage_id)
-
-    try:
-        check_axiom(staging_env, decl)
-        env.commit(stage_id)
-    except Exception:
-        env.rollback(stage_id)
-        raise
-
-def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
+def validate_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate that an axiom's statement evaluates to a Sort.
 
     Raises:
@@ -65,13 +55,37 @@ def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
             does not evaluate to a Sort.
 
     """
-    stmt_type_inferred = infer_type(decl.type, {}, {}, env)
-    stmt_sort = whnf(stmt_type_inferred, {}, env)
-    if not isinstance(stmt_sort, ESort):
-        raise KernelTypeError(
-            f"Axiom statement '{decl.name}' must evaluate to a Sort, got: "
-            f"{stmt_sort}"
-        )
+    _declare_axiom_on_staging(env, decl, with_commit=False)
+
+
+def _declare_axiom_on_staging(
+    env: Environment,
+    decl: AxiomDeclaration,
+    *,
+    with_commit: bool
+) -> None:
+    """Validate an axiom declaration and optionally commit to the environment."""
+    staged_decls: list[Declaration] = [decl]
+
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        stmt_type_inferred = infer_type(decl.type, {}, {}, staging_env)
+        stmt_sort = whnf(stmt_type_inferred, {}, staging_env)
+        if not isinstance(stmt_sort, ESort):
+            raise KernelTypeError(
+                f"Axiom statement '{decl.name}' must evaluate to a Sort, got: "
+                f"{stmt_sort}"
+            )
+
+        if with_commit:
+            env.commit(stage_id)
+        else:
+            env.rollback(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 
 # ------------------------------------------------------------------
@@ -89,19 +103,9 @@ def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
             match the declared type.
 
     """
-    staged_decls: list[Declaration] = [decl]
+    _declare_definition_on_staging(env, decl, with_commit=True)
 
-    stage_id = env.stage(declarations=staged_decls)
-    staging_env = env.get_staging(stage_id)
-
-    try:
-        check_definition(staging_env, decl)
-        env.commit(stage_id)
-    except Exception:
-        env.rollback(stage_id)
-        raise
-
-def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
+def validate_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate that a definition's value matches its declared type.
 
     Raises:
@@ -109,25 +113,48 @@ def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
             does not definitionally equal the declared type.
 
     """
-    # 1. Ensure the declared type is well-formed and resolves to a Sort.
-    type_inferred = infer_type(decl.type, {}, {}, env)
-    type_sort = whnf(type_inferred, {}, env)
-    if not isinstance(type_sort, ESort):
-        raise KernelTypeError(
-            f"Type of definition '{decl.name}' must evaluate to a "
-            f"Sort, got: {type_sort}"
-        )
+    _declare_definition_on_staging(env, decl, with_commit=False)
 
-    # 2. Infer the type of the value expression.
-    val_type = infer_type(decl.value, {}, {}, env)
+def _declare_definition_on_staging(
+    env: Environment,
+    decl: DefinitionDeclaration,
+    *,
+    with_commit: bool
+) -> None:
+    """Validate a definition declaration, optionally committing to the environment."""
+    staged_decls: list[Declaration] = [decl]
 
-    # 3. Check if inferred value type is definitionally equal to declared type.
-    if not is_def_eq(val_type, decl.type, {}, {}, env):
-        raise KernelTypeError(
-            f"Type mismatch in definition '{decl.name}':\n"
-            f"  Expected type : {decl.type}\n"
-            f"  Actual type   : {val_type}"
-        )
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        # 1. Ensure the declared type is well-formed and resolves to a Sort.
+        type_inferred = infer_type(decl.type, {}, {}, staging_env)
+        type_sort = whnf(type_inferred, {}, staging_env)
+        if not isinstance(type_sort, ESort):
+            raise KernelTypeError(
+                f"Type of definition '{decl.name}' must evaluate to a "
+                f"Sort, got: {type_sort}"
+            )
+
+        # 2. Infer the type of the value expression.
+        val_type = infer_type(decl.value, {}, {}, staging_env)
+
+        # 3. Check if inferred value type is definitionally equal to declared type.
+        if not is_def_eq(val_type, decl.type, {}, {}, staging_env):
+            raise KernelTypeError(
+                f"Type mismatch in definition '{decl.name}':\n"
+                f"  Expected type : {decl.type}\n"
+                f"  Actual type   : {val_type}"
+            )
+
+        if with_commit:
+            env.commit(stage_id)
+        else:
+            env.rollback(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 
 # ------------------------------------------------------------------
@@ -144,19 +171,9 @@ def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
         KernelTypeError: If the proof does not type-check or match statement.
 
     """
-    staged_decls: list[Declaration] = [decl]
+    _declare_theorem_on_staging(env, decl, with_commit=True)
 
-    stage_id = env.stage(declarations=staged_decls)
-    staging_env = env.get_staging(stage_id)
-
-    try:
-        check_theorem(staging_env, decl)
-        env.commit(stage_id)
-    except Exception:
-        env.rollback(stage_id)
-        raise
-
-def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
+def validate_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate that a theorem's proof term matches its declared proposition.
 
     Raises:
@@ -164,25 +181,48 @@ def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
             does not definitionally equal the declared theorem type.
 
     """
-    # 1. Ensure the declared theorem statement (type) is well-formed.
-    stmt_type_inferred = infer_type(decl.type, {}, {}, env)
-    stmt_sort = whnf(stmt_type_inferred, {}, env)
-    if not isinstance(stmt_sort, ESort):
-        raise KernelTypeError(
-            f"Theorem statement '{decl.name}' must evaluate to a Sort, got: "
-            f"{stmt_sort}"
-        )
+    _declare_theorem_on_staging(env, decl, with_commit=False)
 
-    # 2. Infer the type of the proof term (value).
-    proof_type = infer_type(decl.value, {}, {}, env)
+def _declare_theorem_on_staging(
+    env: Environment,
+    decl: TheoremDeclaration,
+    *,
+    with_commit: bool
+) -> None:
+    """Validate a theorem declaration, optionally committing to the environment."""
+    staged_decls: list[Declaration] = [decl]
 
-    # 3. Check if inferred proof type is definitionally equal to statement.
-    if not is_def_eq(proof_type, decl.type, {}, {}, env):
-        raise KernelTypeError(
-            f"Type mismatch in theorem '{decl.name}':\n"
-            f"  Expected statement : {decl.type}\n"
-            f"  Actual proof type  : {proof_type}"
-        )
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        # 1. Ensure the declared theorem statement (type) is well-formed.
+        stmt_type_inferred = infer_type(decl.type, {}, {}, staging_env)
+        stmt_sort = whnf(stmt_type_inferred, {}, staging_env)
+        if not isinstance(stmt_sort, ESort):
+            raise KernelTypeError(
+                f"Theorem statement '{decl.name}' must evaluate to a Sort, got: "
+                f"{stmt_sort}"
+            )
+
+        # 2. Infer the type of the proof term (value).
+        proof_type = infer_type(decl.value, {}, {}, staging_env)
+
+        # 3. Check if inferred proof type is definitionally equal to statement.
+        if not is_def_eq(proof_type, decl.type, {}, {}, staging_env):
+            raise KernelTypeError(
+                f"Type mismatch in theorem '{decl.name}':\n"
+                f"  Expected statement : {decl.type}\n"
+                f"  Actual proof type  : {proof_type}"
+            )
+
+        if with_commit:
+            env.commit(stage_id)
+        else:
+            env.rollback(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 
 # ------------------------------------------------------------------
@@ -206,22 +246,9 @@ def declare_inductive(
         KernelTypeError: If type checking, positivity check, or recursor rules fail.
 
     """
-    staged_decls: list[Declaration] = [decl]
-    staged_decls.extend(ctors)
-    if rec is not None:
-        staged_decls.append(rec)
+    _declare_inductive_on_staging(env, decl, ctors, rec, with_commit=True)
 
-    stage_id = env.stage(declarations=staged_decls)
-    staging_env = env.get_staging(stage_id)
-
-    try:
-        check_inductive(staging_env, decl, ctors, rec)
-        env.commit(stage_id)
-    except Exception:
-        env.rollback(stage_id)
-        raise
-
-def check_inductive(
+def validate_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
@@ -233,18 +260,46 @@ def check_inductive(
         KernelTypeError: If any kernel verification rule fails.
 
     """
-    # 1. Validate the main inductive declaration head (must evaluate to a Sort).
-    _check_inductive_head(env, decl)
+    _declare_inductive_on_staging(env, decl, ctors, rec, with_commit=False)
 
-    # 2. Validate all associated constructors.
-    for ctor in ctors:
-        _check_constructor(env, decl, ctor)
-
-    # 3. Validate the recursor if provided.
+def _declare_inductive_on_staging(
+    env: Environment,
+    decl: InductiveDeclaration,
+    ctors: Sequence[ConstructorDeclaration],
+    rec: RecursorDeclaration | None = None,
+    *,
+    with_commit: bool
+) -> None:
+    """Validate an inductive declaration, optionally committing to the environment."""
+    staged_decls: list[Declaration] = [decl]
+    staged_decls.extend(ctors)
     if rec is not None:
-        _check_recursor(env, decl, rec)
+        staged_decls.append(rec)
 
-def _check_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        # 1. Validate the main inductive declaration head (must evaluate to a Sort).
+        _validate_inductive_head(staging_env, decl)
+
+        # 2. Validate all associated constructors.
+        for ctor in ctors:
+            _validate_constructor(staging_env, decl, ctor)
+
+        # 3. Validate the recursor if provided.
+        if rec is not None:
+            _validate_recursor(staging_env, decl, rec)
+
+        if with_commit:
+            env.commit(stage_id)
+        else:
+            env.rollback(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
+
+def _validate_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
     """Check that the inductive declaration's type evaluates to a Sort."""
     sort_expr = infer_type(decl.type, {}, {}, env)
 
@@ -254,7 +309,7 @@ def _check_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
             f"{sort_expr}"
         )
 
-def _check_constructor(
+def _validate_constructor(
     env: Environment,
     decl: InductiveDeclaration,
     ctor: ConstructorDeclaration,
@@ -271,7 +326,7 @@ def _check_constructor(
     # B. Inspect Pi binders to validate Strict Positivity for each domain.
     curr = whnf(ctor.type, {}, env)
     while isinstance(curr, EPi):
-        _check_strict_positivity(env, decl.name, curr.domain)
+        _validate_strict_positivity(env, decl.name, curr.domain)
         curr = whnf(curr.body, {}, env)
 
     # C. Check if target head matches the inductive type being defined.
@@ -283,7 +338,7 @@ def _check_constructor(
             f"{head.name if isinstance(head, EConst) else head}"
         )
 
-def _check_strict_positivity(
+def _validate_strict_positivity(
     env: Environment, ind_name: str, domain: Expr
 ) -> None:
     """Check that the inductive type name doesn't appear non-positively.
@@ -302,7 +357,7 @@ def _check_strict_positivity(
             )
         curr = whnf(curr.body, {}, env)
 
-def _check_recursor(
+def _validate_recursor(
     env: Environment,
     decl: InductiveDeclaration,
     rec: RecursorDeclaration,
@@ -376,23 +431,11 @@ def declare_quotient(
         KernelTypeError: If variant kinds are invalid or any type check fails.
 
     """
-    staged_decls: list[Declaration] = [
-        quot_decl,
-        mk_decl,
-        lift_decl,
-        ind_decl,
-    ]
-    stage_id = env.stage(declarations=staged_decls)
-    check_env = env.get_staging(stage_id)
+    _declare_quotient_on_staging(
+        env, quot_decl, mk_decl, lift_decl, ind_decl, with_commit=True
+    )
 
-    try:
-        check_quotient(check_env, quot_decl, mk_decl, lift_decl, ind_decl)
-        env.commit(stage_id)
-    except Exception:
-        env.rollback(stage_id)
-        raise
-
-def check_quotient(
+def validate_quotient(
     env: Environment,
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,
@@ -400,25 +443,58 @@ def check_quotient(
     ind_decl: QuotientDeclaration,
 ) -> None:
     """Validate that all 4 quotient declarations are valid and form a matching set."""
-    decls = [
-        ("quot", quot_decl),
-        ("mk", mk_decl),
-        ("lift", lift_decl),
-        ("ind", ind_decl),
+    _declare_quotient_on_staging(
+        env, quot_decl, mk_decl, lift_decl, ind_decl, with_commit=False
+    )
+
+
+def _declare_quotient_on_staging(
+    env: Environment,
+    quot_decl: QuotientDeclaration,
+    mk_decl: QuotientDeclaration,
+    lift_decl: QuotientDeclaration,
+    ind_decl: QuotientDeclaration,
+    *,
+    with_commit: bool
+) -> None:
+    """Validate a quotient declaration, optionally committing to the environment."""
+    staged_decls: list[Declaration] = [
+        quot_decl,
+        mk_decl,
+        lift_decl,
+        ind_decl,
     ]
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
 
-    # 1. Check variant names and ensure each declaration's type evaluates to a Sort.
-    for expected_variant, decl in decls:
-        if decl.variant != expected_variant:
-            raise KernelTypeError(
-                f"Expected quotient variant '{expected_variant}', "
-                f"got '{decl.variant}' for declaration '{decl.name}'"
-            )
+    try:
+        decls = [
+            ("quot", quot_decl),
+            ("mk", mk_decl),
+            ("lift", lift_decl),
+            ("ind", ind_decl),
+        ]
 
-        type_inferred = infer_type(decl.type, {}, {}, env)
-        type_sort = whnf(type_inferred, {}, env)
-        if not isinstance(type_sort, ESort):
-            raise KernelTypeError(
-                f"Quotient declaration '{decl.name}' must evaluate to a "
-                f"Sort, got: {type_sort}"
-            )
+        # 1. Check variant names and ensure each declaration's type evaluates to a Sort.
+        for expected_variant, decl in decls:
+            if decl.variant != expected_variant:
+                raise KernelTypeError(
+                    f"Expected quotient variant '{expected_variant}', "
+                    f"got '{decl.variant}' for declaration '{decl.name}'"
+                )
+
+            type_inferred = infer_type(decl.type, {}, {}, staging_env)
+            type_sort = whnf(type_inferred, {}, staging_env)
+            if not isinstance(type_sort, ESort):
+                raise KernelTypeError(
+                    f"Quotient declaration '{decl.name}' must evaluate to a "
+                    f"Sort, got: {type_sort}"
+                )
+
+        if with_commit:
+            env.commit(stage_id)
+        else:
+            env.rollback(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise

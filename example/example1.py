@@ -21,8 +21,15 @@ example1.exact("hQ")
 example1.qed()
 
 
-example2 = Example(p >> p, env)
+example2 = Example(
+    Prop.forall(
+        (("P", p.type()),),
+        p >> p
+    ),
+    env,
+)
 
+example2.intro("P")
 example2.intro("hP")
 example2.assumption()
 
