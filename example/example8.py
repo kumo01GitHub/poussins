@@ -1,8 +1,7 @@
 """Example 8: Demonstrates the use of existential and universal quantifiers."""
-from poussins.environment import Environment
-from poussins.framework import Example, Nat, Prop
+from poussins.framework import Example, Nat, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 # ------------------------------------------------------------------
 # Example 1:

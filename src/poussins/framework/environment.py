@@ -69,6 +69,32 @@ def create_standard_environment() -> Environment:
         EqualityDeclaration.EQ_TRANS_DECLARATION.value
     )
 
+    # Natural numbers
+    declare_inductive(
+        env,
+        NatDeclaration.NAT_DECLARATION.value,
+        (
+            NatDeclaration.NAT_ZERO_DECLARATION.value,
+            NatDeclaration.NAT_SUCC_DECLARATION.value,
+        ),
+        NatDeclaration.NAT_REC_DECLARATION.value,
+    )
+    declare_definition(
+        env,
+        NatDeclaration.NAT_ADD_DECLARATION.value
+    )
+
+    # Option
+    declare_inductive(
+        env,
+        OptionDeclaration.OPTION_DECLARATION.value,
+        (
+            OptionDeclaration.OPTION_NONE_DECLARATION.value,
+            OptionDeclaration.OPTION_SOME_DECLARATION.value,
+        ),
+        None,
+    )
+
     # Finite
     declare_inductive(
         env,
@@ -134,32 +160,6 @@ def create_standard_environment() -> Environment:
             LogicDeclaration.EXISTS_INTRO_DECLARATION.value,
         ),
         LogicDeclaration.EXISTS_REC_DECLARATION.value,
-    )
-
-    # Natural numbers
-    declare_inductive(
-        env,
-        NatDeclaration.NAT_DECLARATION.value,
-        (
-            NatDeclaration.NAT_ZERO_DECLARATION.value,
-            NatDeclaration.NAT_SUCC_DECLARATION.value,
-        ),
-        NatDeclaration.NAT_REC_DECLARATION.value,
-    )
-    declare_definition(
-        env,
-        NatDeclaration.NAT_ADD_DECLARATION.value
-    )
-
-    # Option
-    declare_inductive(
-        env,
-        OptionDeclaration.OPTION_DECLARATION.value,
-        (
-            OptionDeclaration.OPTION_NONE_DECLARATION.value,
-            OptionDeclaration.OPTION_SOME_DECLARATION.value,
-        ),
-        None,
     )
 
     # Product

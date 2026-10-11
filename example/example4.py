@@ -1,8 +1,7 @@
 """Example 4: Demonstrates the use of the bottom (false) proposition in Poussins."""
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 
 # ------------------------------------------------------------------

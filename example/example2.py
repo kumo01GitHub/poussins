@@ -1,8 +1,7 @@
 """Example 2: Demonstrates the use of Or introduction rules in propositional logic."""
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 p, q = Prop("P", env), Prop("Q", env)
 
 

@@ -1,8 +1,7 @@
 """Example 1: A simple proof of the proposition P → (Q → (P ∧ Q))."""
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 p, q = Prop("P", env), Prop("Q", env)
 

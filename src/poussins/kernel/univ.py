@@ -28,11 +28,30 @@ def flatten_univ_level_max(level: UnivLevel) -> set[UnivLevel]:
         return {level}
 
 
+def normalize_univ_level(level: UnivLevel) -> UnivLevel:
+    """Return a normalized universe level, reducing rules like imax(u, 0) = 0."""
+    match level:
+        case UnivLevelParam() | UnivLevelZero():
+            return level
+        case UnivLevelSucc(p):
+            return UnivLevelSucc(normalize_univ_level(p))
+        case UnivLevelMax(left, right):
+            return UnivLevelMax(normalize_univ_level(left), normalize_univ_level(right))
+        case UnivLevelIMax(left, right):
+            norm_left = normalize_univ_level(left)
+            norm_right = normalize_univ_level(right)
+            if isinstance(norm_right, UnivLevelZero):
+                return UnivLevelZero()
+            return UnivLevelIMax(norm_left, norm_right)
+
+
 def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
     """Return True when the left universe level is below or equal to the right."""
+    level_left = normalize_univ_level(level_left)
+    level_right = normalize_univ_level(level_right)
+
     if (level_left == level_right) or isinstance(level_left, UnivLevelZero):
         return True
-
     if isinstance(level_left, UnivLevelMax):
         return all(
             is_universe_leq(level, level_right)
@@ -43,19 +62,15 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
             is_universe_leq(level_left, level)
             for level in flatten_univ_level_max(level_right)
         )
-
     match (level_left, level_right):
         case (UnivLevelSucc(pred_left), UnivLevelSucc(pred_right)):
             return is_universe_leq(pred_left, pred_right)
         case (_, UnivLevelSucc(pred_right)):
             return is_universe_leq(level_left, pred_right)
         case (UnivLevelIMax(left, right), _):
-            return (
-                is_universe_leq(right, UnivLevelZero())
-                or (
-                    is_universe_leq(left, level_right)
-                    and is_universe_leq(right, level_right)
-                )
+            return is_universe_leq(right, UnivLevelZero()) or (
+                is_universe_leq(left, level_right)
+                and is_universe_leq(right, level_right)
             )
         case (_, UnivLevelIMax(left, right)):
             return (
@@ -67,18 +82,21 @@ def is_universe_leq(level_left: UnivLevel, level_right: UnivLevel) -> bool:
 
 
 def unify_univ_levels(
-    l1: UnivLevel, l2: UnivLevel,
+    l1: UnivLevel,
+    l2: UnivLevel,
     param_assignment: dict[str, UnivLevel]
 ) -> dict[str, UnivLevel] | None:
     """Attempt to unify two universe levels."""
+    l1 = normalize_univ_level(l1)
+    l2 = normalize_univ_level(l2)
+
     if isinstance(l1, UnivLevelParam) and l1.name in param_assignment:
-        l1 = param_assignment[l1.name]
+        l1 = normalize_univ_level(param_assignment[l1.name])
     if isinstance(l2, UnivLevelParam) and l2.name in param_assignment:
-        l2 = param_assignment[l2.name]
+        l2 = normalize_univ_level(param_assignment[l2.name])
 
     if l1 == l2:
         return param_assignment
-
     if isinstance(l1, UnivLevelParam):
         return param_assignment | {l1.name: l2}
     if isinstance(l2, UnivLevelParam):
@@ -107,11 +125,10 @@ def instantiate_univ_level(
 ) -> UnivLevel:
     """Return a new UnivLevel with parameters replaced according to param_assignment."""
     if not param_assignment:
-        return level
-
+        return normalize_univ_level(level)
     match level:
         case UnivLevelParam():
-            return param_assignment.get(level.name, level)
+            return normalize_univ_level(param_assignment.get(level.name, level))
         case UnivLevelZero():
             return level
         case UnivLevelSucc(p):
@@ -119,12 +136,12 @@ def instantiate_univ_level(
         case UnivLevelMax(left, right):
             return UnivLevelMax(
                 instantiate_univ_level(left, param_assignment),
-                instantiate_univ_level(right, param_assignment)
+                instantiate_univ_level(right, param_assignment),
             )
         case UnivLevelIMax(left, right):
             return UnivLevelIMax(
                 instantiate_univ_level(left, param_assignment),
-                instantiate_univ_level(right, param_assignment)
+                instantiate_univ_level(right, param_assignment),
             )
 
 
@@ -132,7 +149,6 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
     """Traverse an expression and return a new Expr with UnivLevelParam replaced."""
     if not param_assignment:
         return expr
-
     match expr:
         case ESort(level):
             return ESort(instantiate_univ_level(level, param_assignment))

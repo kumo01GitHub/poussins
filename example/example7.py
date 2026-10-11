@@ -1,8 +1,7 @@
 """Example 7: Basic usage examples of 'have', 'specialize', and 'suffices' tactics."""
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
 transitivity = (p >> q) >> ((q >> r) >> (p >> r))
 

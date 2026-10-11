@@ -1,8 +1,7 @@
 """Example 6: Demonstrates the use of equality in Poussins."""
-from poussins.environment import Environment
-from poussins.framework import Example, Nat, Prop
+from poussins.framework import Example, Nat, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 n, m, k = Nat("n"), Nat("m"), Nat("k")
 
 

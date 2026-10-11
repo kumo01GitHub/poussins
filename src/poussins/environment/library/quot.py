@@ -19,11 +19,15 @@ class QuotDeclaration(Enum):
             ESort(UnivLevelParam("u")),
             EPi(
                 "r",
-                EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort)),
+                EPi(
+                    "x",
+                    EVar("A"),
+                    EPi("y", EVar("A"), Sort.PROP.sort),
+                ),
                 ESort(UnivLevelParam("u")),
             ),
         ),
-        variant="type",
+        variant="quot",
     )
 
     QUOT_MK_DECLARATION = QuotientDeclaration(

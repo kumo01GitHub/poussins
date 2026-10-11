@@ -179,22 +179,28 @@ class EqualityDeclaration(Enum):
                         EVar("A"),
                         EPi(
                             "h1",
-                            EApp(EApp(EApp(
-                                EConst("Eq", ()), EVar("A")),
-                                EVar("x")),
-                                EVar("y")
+                            EApp(
+                                EApp(
+                                    EApp(EConst("Eq", ()), EVar("A")),
+                                    EVar("x"),
+                                ),
+                                EVar("y"),
                             ),
                             EPi(
                                 "h2",
-                                EApp(EApp(EApp(
-                                    EConst("Eq", ()), EVar("A")),
-                                    EVar("y")),
-                                    EVar("z")
+                                EApp(
+                                    EApp(
+                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EVar("y"),
+                                    ),
+                                    EVar("z"),
                                 ),
-                                EApp(EApp(EApp(
-                                    EConst("Eq", ()), EVar("A")),
-                                    EVar("x")),
-                                    EVar("z")
+                                EApp(
+                                    EApp(
+                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EVar("x"),
+                                    ),
+                                    EVar("z"),
                                 ),
                             ),
                         ),
@@ -219,18 +225,18 @@ class EqualityDeclaration(Enum):
                             EApp(
                                 EApp(
                                     EApp(EConst("Eq", ()), EVar("A")),
-                                    EVar("x")
+                                    EVar("x"),
                                 ),
-                                EVar("y")
+                                EVar("y"),
                             ),
                             ELam(
                                 "h2",
                                 EApp(
                                     EApp(
                                         EApp(EConst("Eq", ()), EVar("A")),
-                                        EVar("y")
+                                        EVar("y"),
                                     ),
-                                    EVar("z")
+                                    EVar("z"),
                                 ),
                                 EApp(
                                     EApp(
@@ -238,73 +244,58 @@ class EqualityDeclaration(Enum):
                                             EApp(
                                                 EApp(
                                                     EApp(
-                                                        EApp(
-                                                            EConst(
-                                                                "Eq.rec",
-                                                                (UnivLevelZero(),)
+                                                        EConst(
+                                                            "Eq.rec",
+                                                            (
+                                                                UnivLevelZero(),
                                                             ),
-                                                            EVar("A"),
                                                         ),
-                                                        EVar("x"),
-                                                    ),
-                                                    ELam(
-                                                        "y'",
                                                         EVar("A"),
-                                                        ELam(
-                                                            "_",
-                                                            EApp(EApp(
+                                                    ),
+                                                    EVar("y"),
+                                                ),
+                                                # motive: (z' : A) -> Eq y z' -> Prop
+                                                ELam(
+                                                    "z'",
+                                                    EVar("A"),
+                                                    ELam(
+                                                        "_",
+                                                        EApp(
+                                                            EApp(
                                                                 EApp(
-                                                                    EConst("Eq", ()),
-                                                                    EVar("A")
-                                                                ),
-                                                                EVar("x")),
-                                                                EVar("y'")
-                                                            ),
-                                                            EPi(
-                                                                "_",
-                                                                EApp(
-                                                                    EApp(
-                                                                        EApp(
-                                                                            EConst(
-                                                                                "Eq",
-                                                                                ()
-                                                                            ),
-                                                                            EVar("A")
-                                                                        ),
-                                                                        EVar("y'")
+                                                                    EConst(
+                                                                        "Eq",
+                                                                        (),
                                                                     ),
-                                                                    EVar("z")
+                                                                    EVar("A"),
                                                                 ),
-                                                                EApp(
-                                                                    EApp(
-                                                                        EApp(
-                                                                            EConst(
-                                                                                "Eq",
-                                                                                ()
-                                                                            ),
-                                                                            EVar("A")
-                                                                        ),
-                                                                        EVar("x")
-                                                                    ), EVar("z")
-                                                                ),
+                                                                EVar("y"),
                                                             ),
+                                                            EVar("z'"),
+                                                        ),
+                                                        EApp(
+                                                            EApp(
+                                                                EApp(
+                                                                    EConst(
+                                                                        "Eq",
+                                                                        (),
+                                                                    ),
+                                                                    EVar("A"),
+                                                                ),
+                                                                EVar("x"),
+                                                            ),
+                                                            EVar("z'"),
                                                         ),
                                                     ),
-                                                ),
-                                                ELam(
-                                                    "h2",
-                                                    EApp(EApp(EApp(
-                                                        EConst("Eq", ()), EVar("A")),
-                                                        EVar("x")),
-                                                        EVar("z")
-                                                    ),
-                                                    EVar("h2"),
                                                 ),
                                             ),
-                                            EVar("y"),
+                                            # minor: h1
+                                            EVar("h1"),
                                         ),
-                                        EVar("h1"),
+                                        # index: z
+                                        EVar("z"),
                                     ),
+                                    # major proof: h2
                                     EVar("h2"),
                                 ),
                             ),

@@ -1,8 +1,7 @@
 """Example 3: Demonstrating the use of the Environment class in Poussins."""
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 example1 = Example(Prop.top(), env)
 

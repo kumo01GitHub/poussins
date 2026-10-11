@@ -5,6 +5,7 @@ import uuid
 from collections.abc import Sequence
 
 from ..ast import Expr
+from ..utils.logging import get_logger
 from .declaration import Declaration
 
 
@@ -15,6 +16,7 @@ class Environment:
         """Initialize an empty environment."""
         self.declarations: dict[str, Declaration] = {}
         self.stages: dict[str, dict[str, Declaration]] = {}
+        self.logger = get_logger(__name__)
 
     def add(self, declaration: Declaration):
         """Add a declaration to the environment."""
@@ -68,14 +70,15 @@ class Environment:
             for decl in declarations:
                 if decl.name in self.declarations or decl.name in self.stages[stage_id]:
                     raise ValueError(
-                        f"Declaration with name '{decl.name}' already exists in environment or stage."
+                        f"Declaration with name '{decl.name}' already exists"
+                        + " in environment or stage."
                     )
                 self.stages[stage_id][decl.name] = decl
 
         return stage_id
 
     def commit(self, id: str):
-        """Commit a staging area's declarations into the main environment and clean up."""
+        """Commit a staging area's declarations into the main environment."""
         if id not in self.stages:
             raise KeyError(f"Stage ID '{id}' does not exist.")
 
@@ -83,7 +86,8 @@ class Environment:
         for name, decl in staged_decls.items():
             if name in self.declarations:
                 raise ValueError(
-                    f"Declaration with name '{name}' already exists in environment during commit."
+                    f"Declaration with name '{name}' already exists"
+                    + " in environment during commit."
                 )
             self.declarations[name] = decl
 
@@ -92,10 +96,10 @@ class Environment:
         self.stages.pop(id, None)
 
     def get_staging(self, id: str) -> Environment:
-        """Return a new Environment instance containing only the declarations in the specified stage."""
+        """Return a new Environment containing main and staging declarations."""
         if id not in self.stages:
             raise KeyError(f"Stage ID '{id}' does not exist.")
-
         new_env = Environment()
-        new_env.declarations = self.stages[id].copy()
+        new_env.declarations = self.declarations.copy()
+        new_env.declarations.update(self.stages[id])
         return new_env
