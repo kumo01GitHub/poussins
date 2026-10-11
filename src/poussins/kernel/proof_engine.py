@@ -1,7 +1,7 @@
 """Kernel-level proof engine for managing proof states, goals, and metavariables."""
 from __future__ import annotations
 
-from ..ast import Expr, collect_metavar_ids
+from ..ast import EPi, Expr, collect_metavar_ids
 from ..environment import Environment
 from ..errors import KernelStateError, KernelTypeError, KernelValueError
 from .equality import is_def_eq
@@ -16,12 +16,21 @@ class ProofEngine:
 
     def create_initial_state(self, statement: Expr, env: Environment) -> ProofState:
         """Create the initial proof state with a single goal."""
+        current = statement
+        local_context = dict(env.to_context())
+        hypothesis_names: set[str] = set()
+
+        while isinstance(current, EPi):
+            local_context[current.var] = current.domain
+            hypothesis_names.add(current.var)
+            current = current.body
+
         initial_goal = Goal(
-            statement=statement,
-            context=env.to_context(),
-            local_hypothesis_names=frozenset(),
+            statement=current,
+            context=local_context,
+            local_hypothesis_names=frozenset(hypothesis_names),
         )
-        initial_metavars = {initial_goal.id: MetaVar(statement=statement)}
+        initial_metavars = {initial_goal.id: MetaVar(statement=current)}
         return ProofState(goals=(initial_goal,), metavars=initial_metavars)
 
     def close_goal(
