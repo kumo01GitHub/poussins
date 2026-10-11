@@ -32,6 +32,24 @@ def create_standard_environment() -> Environment:
     """Create a standard environment with common declarations."""
     env = Environment()
 
+    # Empty
+    declare_inductive(
+        env,
+        EmptyDeclaration.EMPTY_DECLARATION.value,
+        (),
+        None,
+    )
+
+    # Unit
+    declare_inductive(
+        env,
+        UnitDeclaration.UNIT_DECLARATION.value,
+        (
+            UnitDeclaration.UNIT_UNIT_DECLARATION.value,
+        ),
+        None,
+    )
+
     # Boolean
     declare_inductive(
         env,
@@ -41,14 +59,6 @@ def create_standard_environment() -> Environment:
             BoolDeclaration.BOOL_FALSE_DECLARATION.value,
         ),
         BoolDeclaration.BOOL_REC_DECLARATION.value,
-    )
-
-    # Empty
-    declare_inductive(
-        env,
-        EmptyDeclaration.EMPTY_DECLARATION.value,
-        (),
-        None,
     )
 
     # Equality
@@ -67,54 +77,6 @@ def create_standard_environment() -> Environment:
     declare_definition(
         env,
         EqualityDeclaration.EQ_TRANS_DECLARATION.value
-    )
-
-    # Natural numbers
-    declare_inductive(
-        env,
-        NatDeclaration.NAT_DECLARATION.value,
-        (
-            NatDeclaration.NAT_ZERO_DECLARATION.value,
-            NatDeclaration.NAT_SUCC_DECLARATION.value,
-        ),
-        NatDeclaration.NAT_REC_DECLARATION.value,
-    )
-    declare_definition(
-        env,
-        NatDeclaration.NAT_ADD_DECLARATION.value
-    )
-
-    # Option
-    declare_inductive(
-        env,
-        OptionDeclaration.OPTION_DECLARATION.value,
-        (
-            OptionDeclaration.OPTION_NONE_DECLARATION.value,
-            OptionDeclaration.OPTION_SOME_DECLARATION.value,
-        ),
-        None,
-    )
-
-    # Finite
-    declare_inductive(
-        env,
-        FinDeclaration.FIN_DECLARATION.value,
-        (
-            FinDeclaration.FIN_ZERO_DECLARATION.value,
-            FinDeclaration.FIN_SUCC_DECLARATION.value,
-        ),
-        None,
-    )
-
-    # List
-    declare_inductive(
-        env,
-        ListDeclaration.LIST_DECLARATION.value,
-        (
-            ListDeclaration.LIST_NIL_DECLARATION.value,
-            ListDeclaration.LIST_CONS_DECLARATION.value,
-        ),
-        None,
     )
 
     # Logic
@@ -162,6 +124,54 @@ def create_standard_environment() -> Environment:
         LogicDeclaration.EXISTS_REC_DECLARATION.value,
     )
 
+    # Natural numbers
+    declare_inductive(
+        env,
+        NatDeclaration.NAT_DECLARATION.value,
+        (
+            NatDeclaration.NAT_ZERO_DECLARATION.value,
+            NatDeclaration.NAT_SUCC_DECLARATION.value,
+        ),
+        NatDeclaration.NAT_REC_DECLARATION.value,
+    )
+    declare_definition(
+        env,
+        NatDeclaration.NAT_ADD_DECLARATION.value
+    )
+
+    # List
+    declare_inductive(
+        env,
+        ListDeclaration.LIST_DECLARATION.value,
+        (
+            ListDeclaration.LIST_NIL_DECLARATION.value,
+            ListDeclaration.LIST_CONS_DECLARATION.value,
+        ),
+        None,
+    )
+
+    # Vector
+    declare_inductive(
+        env,
+        VectorDeclaration.VECTOR_DECLARATION.value,
+        (
+            VectorDeclaration.VECTOR_NIL_DECLARATION.value,
+            VectorDeclaration.VECTOR_CONS_DECLARATION.value,
+        ),
+        None,
+    )
+
+    # Finite
+    declare_inductive(
+        env,
+        FinDeclaration.FIN_DECLARATION.value,
+        (
+            FinDeclaration.FIN_ZERO_DECLARATION.value,
+            FinDeclaration.FIN_SUCC_DECLARATION.value,
+        ),
+        None,
+    )
+
     # Product
     declare_inductive(
         env,
@@ -170,15 +180,6 @@ def create_standard_environment() -> Environment:
             ProdDeclaration.PROD_MK_DECLARATION.value,
         ),
         None,
-    )
-
-    # Quotient
-    declare_quotient(
-        env,
-        QuotDeclaration.QUOT_DECLARATION.value,
-        QuotDeclaration.QUOT_MK_DECLARATION.value,
-        QuotDeclaration.QUOT_LIFT_DECLARATION.value,
-        QuotDeclaration.QUOT_IND_DECLARATION.value
     )
 
     # Sigma
@@ -202,25 +203,24 @@ def create_standard_environment() -> Environment:
         None,
     )
 
-    # Unit
+    # Option
     declare_inductive(
         env,
-        UnitDeclaration.UNIT_DECLARATION.value,
+        OptionDeclaration.OPTION_DECLARATION.value,
         (
-            UnitDeclaration.UNIT_UNIT_DECLARATION.value,
+            OptionDeclaration.OPTION_NONE_DECLARATION.value,
+            OptionDeclaration.OPTION_SOME_DECLARATION.value,
         ),
         None,
     )
 
-    # Vector
-    declare_inductive(
+    # Quotient
+    declare_quotient(
         env,
-        VectorDeclaration.VECTOR_DECLARATION.value,
-        (
-            VectorDeclaration.VECTOR_NIL_DECLARATION.value,
-            VectorDeclaration.VECTOR_CONS_DECLARATION.value,
-        ),
-        None,
+        QuotDeclaration.QUOT_DECLARATION.value,
+        QuotDeclaration.QUOT_MK_DECLARATION.value,
+        QuotDeclaration.QUOT_LIFT_DECLARATION.value,
+        QuotDeclaration.QUOT_IND_DECLARATION.value
     )
 
     return env
