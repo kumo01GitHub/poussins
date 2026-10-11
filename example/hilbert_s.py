@@ -3,11 +3,14 @@ from poussins.framework import Lemma, Prop, create_standard_environment
 
 env = create_standard_environment()
 
-p, q, r = Prop("P", env), Prop("Q", env), Prop("R", env)
+p, q, r = Prop("P"), Prop("Q"), Prop("R")
+statement = Prop.forall(
+    (("P", p.type()), ("Q", q.type()), ("R", r.type())),
+    (p >> (q >> r)) >> ((p >> q) >> (p >> r)),
+)
+hilbert_s = Lemma("HilbertS", statement, env)
 
-hilbert_s = Lemma("HilbertS", ((p >> (q >> r)) >> ((p >> q) >> (p >> r))), env)
-
-hilbert_s.intros(["hPQR", "hPQ", "hP"])
+hilbert_s.intros(["P", "Q", "R", "hPQR", "hPQ", "hP"])
 hilbert_s.apply("hPQR")
 hilbert_s.exact("hP")
 hilbert_s.apply("hPQ")

@@ -3,11 +3,17 @@ from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
 
-p, q = Prop("P", env), Prop("Q", env)
+p, q = Prop("P"), Prop("Q")
 
-example1 = Example(p >> (q >> (p & q)), env)
+example1 = Example(
+    Prop.forall(
+        (("P", p.type()), ("Q", q.type())),
+        p >> (q >> (p & q))
+    ),
+    env,
+)
 
-example1.intros(["hP", "hQ"])
+example1.intros(["P", "Q", "hP", "hQ"])
 example1.constructor()
 example1.exact("hP")
 example1.exact("hQ")
