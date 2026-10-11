@@ -7,8 +7,9 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final
 
-from ..ast import EVar, Expr
+from ..ast import EVar, Expr, build_pi_chain, collect_free_vars
 from ..environment import Environment, TheoremDeclaration
+from ..environment.library import Sort
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     CasesPatterns,
@@ -99,6 +100,11 @@ class ProofScript(ABC):
 
     def __init__(self, statement: Expr, env: Environment):
         """Create a proof script bound to a statement and environment."""
+        free_vars = sorted(collect_free_vars(statement))
+        if free_vars:
+            binders = [(v, Sort.PROP.sort) for v in free_vars]
+            statement = build_pi_chain(binders, statement)
+
         self.statement: Final[Expr] = statement
         self.env: Final[Environment] = env
         self.manager: Final[ProofManager] = ProofManager(statement, env)
