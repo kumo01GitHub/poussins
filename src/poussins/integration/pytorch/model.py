@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypedDict
 
 import torch
 from torch import nn
@@ -19,6 +19,15 @@ SUPPORTED_TACTICS: list[str] = [
     "assumption",
     "simpl",
 ]
+
+
+class VocabularyDict(TypedDict):
+    """Primitive dictionary representation of a TacticVocabulary."""
+
+    token_to_id: dict[str, int]
+    id_to_token: dict[str, str]
+    tactic_to_id: dict[str, int]
+    id_to_tactic: dict[str, str]
 
 
 @dataclass
@@ -97,7 +106,7 @@ class TacticVocabulary:
             ids.extend([self.pad_id] * (max_len - len(ids)))
         return ids
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> VocabularyDict:
         """Serialize vocabulary mappings to a primitive dictionary."""
         return {
             "token_to_id": self.token_to_id,
@@ -107,7 +116,7 @@ class TacticVocabulary:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> TacticVocabulary:
+    def from_dict(cls, data: VocabularyDict) -> TacticVocabulary:
         """Deserialize vocabulary mappings from a dictionary."""
         vocab = cls()
         vocab.token_to_id = data["token_to_id"]

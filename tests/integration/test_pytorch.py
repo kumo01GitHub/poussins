@@ -69,13 +69,13 @@ def test_trainer_and_checkpoint_persistence() -> None:
             ProofStep(
                 goal_statement="(Π hP : P, P)",
                 tactic_name="intro",
-                tactic_args={"name": "hP"},
+                tactic_args={"as_": "hP"},
             ),
             ProofStep(
                 goal_statement="P",
                 hypotheses=[("hP", "P")],
                 tactic_name="exact",
-                tactic_args={"expr_or_name": "hP"},
+                tactic_args={"via": "hP"},
             ),
         ]
     )
@@ -142,23 +142,23 @@ def test_proof_step_arbitrary_tactic_serialization() -> None:
         hypotheses=[("hP", "P")],
         tactic_name="cases",
         tactic_args={
-            "hyp_name": "hP",
+            "at": "hP",
             "patterns": (("Nat.zero",), ("Nat.succ", "n")),
-            "expr_or_name": EVar("hP"),
-            "unfolding": frozenset({"Nat.add"}),
+            "via": EVar("hP"),
+            "unfolding": {"Nat.add"},
         },
     )
     serialized = step.to_dict()
     restored = ProofStep.from_dict(serialized)
 
     assert restored.tactic_name == "cases"
-    assert restored.tactic_args["hyp_name"] == "hP"
+    assert restored.tactic_args["at"] == "hP"
     assert restored.tactic_args["patterns"] == (
         ("Nat.zero",),
         ("Nat.succ", "n"),
     )
-    assert restored.tactic_args["expr_or_name"] == EVar("hP")
-    assert restored.tactic_args["unfolding"] == frozenset({"Nat.add"})
+    assert restored.tactic_args["via"] == EVar("hP")
+    assert restored.tactic_args["unfolding"] == {"Nat.add"}
 
 
 def test_pytorch_proof_script_error_cases() -> None:

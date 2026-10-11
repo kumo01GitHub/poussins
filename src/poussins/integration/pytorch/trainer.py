@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import cast
 
 import torch
 from torch import nn
@@ -11,7 +11,12 @@ from torch.utils.data import DataLoader
 
 from ...errors import PyTorchIntegrationError
 from .dataset import ProofDataset
-from .model import SUPPORTED_TACTICS, TacticPredictor, TacticVocabulary
+from .model import (
+    SUPPORTED_TACTICS,
+    TacticPredictor,
+    TacticVocabulary,
+    VocabularyDict,
+)
 
 
 class TacticTrainer:
@@ -94,7 +99,7 @@ class TacticTrainer:
         target_path = Path(path)
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
-        payload: dict[str, Any] = {
+        payload: dict[str, object] = {
             "model_state_dict": self.model.state_dict(),
             "vocab_data": self.vocabulary.to_dict(),
             "model_config": {
@@ -119,9 +124,12 @@ class TacticTrainer:
         if not target_path.exists():
             raise PyTorchIntegrationError(f"Checkpoint not found at '{target_path}'.")
 
-        data = torch.load(target_path, map_location=device, weights_only=False)
-        vocab = TacticVocabulary.from_dict(data["vocab_data"])
-        cfg = data["model_config"]
+        data: dict[str, object] = torch.load(
+            target_path, map_location=device, weights_only=False
+        )
+        vocab_data = cast(VocabularyDict, data["vocab_data"])
+        vocab = TacticVocabulary.from_dict(vocab_data)
+        cfg = cast(dict[str, int], data["model_config"])
 
         model = TacticPredictor(
             vocab_size=cfg["vocab_size"],
@@ -131,7 +139,8 @@ class TacticTrainer:
             hidden_dim=cfg.get("hidden_dim", 128),
             num_layers=cfg.get("num_layers", 2),
         )
-        model.load_state_dict(data["model_state_dict"])
+        state_dict = cast(dict[str, torch.Tensor], data["model_state_dict"])
+        model.load_state_dict(state_dict)
         model.to(device)
         model.eval()
 

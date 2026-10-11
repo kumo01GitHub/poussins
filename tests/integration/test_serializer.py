@@ -14,12 +14,11 @@ from poussins.ast import (
     UnivLevelSucc,
     UnivLevelZero,
 )
-from poussins.integration.serializer import (
+from poussins.integration.expr import (
     ExprSerializer,
-    TacticPlanSerializer,
     UnivLevelSerializer,
 )
-from poussins.integration.tactic import TacticPlan
+from poussins.integration.tactic import TacticPlan, TacticPlanSerializer
 
 
 def test_univ_level_round_trip() -> None:

@@ -4,6 +4,8 @@ from __future__ import annotations
 from typing import cast
 
 from ..ast import Expr
+from ..framework import Prop
+from ..framework.declared_type import DeclaredType
 from ..framework.proof_script import ExprLike
 from .expr import ExprSerializer
 from .serializer import JsonValue, Serializer
@@ -23,34 +25,33 @@ class ExprLikeSerializer(Serializer[ExprLike]):
                 "__kind": "expr",
                 "value": ExprSerializer.to_dict(obj),
             }
+        if isinstance(obj, (Prop, DeclaredType)):
+            return {
+                "__kind": "prop",
+                "value": ExprSerializer.to_dict(obj.expr),
+            }
         return {
-            "__kind": "prop",
-            "value": ExprSerializer.to_dict(obj.expr),
+            "__kind": "str",
+            "value": obj,
         }
 
     @classmethod
     def from_dict(cls, data: dict[str, JsonValue]) -> ExprLike:
         """Convert a dictionary into an ExprLike instance."""
         kind = data.get("__kind")
-        if kind == "expr":
+        if kind in ("expr", "prop", "declared_type"):
             raw_expr = data.get("value")
             if not isinstance(raw_expr, dict):
-                msg = "Invalid expr payload in ExprLike."
+                msg = f"Invalid {kind} payload in ExprLike."
                 raise ValueError(msg)
-            return cast(
-                ExprLike,
-                ExprSerializer.from_dict(cast(dict[str, JsonValue], raw_expr)),
-            )
-        if kind == "prop":
-            raw_expr = data.get("value")
-            if not isinstance(raw_expr, dict):
-                msg = "Invalid prop payload in ExprLike."
-                raise ValueError(msg)
-            expr = cast(
-                Expr,
-                ExprSerializer.from_dict(cast(dict[str, JsonValue], raw_expr)),
-            )
+            expr = ExprSerializer.from_dict(cast(dict[str, JsonValue], raw_expr))
             return cast(ExprLike, expr)
+        if kind == "str":
+            raw_val = data.get("value")
+            if not isinstance(raw_val, str):
+                msg = "Invalid str payload in ExprLike."
+                raise ValueError(msg)
+            return raw_val
         msg = f"Unknown kind in ExprLike: {kind}"
         raise ValueError(msg)
 
@@ -87,7 +88,7 @@ class TacticPlanSerializer(Serializer[TacticPlan]):
                 "__kind": "expr",
                 "value": ExprSerializer.to_dict(value),
             }
-        if isinstance(value, Prop):
+        if isinstance(value, (Prop, DeclaredType)):
             return {
                 "__kind": "prop",
                 "value": ExprSerializer.to_dict(value.expr),
@@ -108,10 +109,10 @@ class TacticPlanSerializer(Serializer[TacticPlan]):
             if not isinstance(kind, str):
                 msg = "Dictionary tactic argument must include '__kind'."
                 raise ValueError(msg)
-            if kind == "expr":
+            if kind in ("expr", "prop", "declared_type"):
                 raw_expr = value.get("value")
                 if not isinstance(raw_expr, dict):
-                    msg = "Invalid expr payload in tactic argument."
+                    msg = f"Invalid {kind} payload in tactic argument."
                     raise ValueError(msg)
                 return cast(
                     TacticArg,
@@ -145,8 +146,14 @@ class TacticPlanSerializer(Serializer[TacticPlan]):
                     raise ValueError(msg)
                 return cast(
                     TacticArg,
-                    {cast(str, item) for item in decoded_items}
+                    {cast(str, item) for item in decoded_items},
                 )
+            if kind == "str":
+                raw_val = value.get("value")
+                if not isinstance(raw_val, str):
+                    msg = "Invalid str payload in tactic argument."
+                    raise ValueError(msg)
+                return raw_val
             msg = f"Unknown tactic argument kind: {kind}"
             raise ValueError(msg)
 
@@ -158,9 +165,9 @@ class TacticPlanSerializer(Serializer[TacticPlan]):
         raise ValueError(msg)
 
     @classmethod
-    def to_dict(cls, plan: TacticPlan) -> dict[str, JsonValue]:
+    def to_dict(cls, obj: TacticPlan) -> dict[str, JsonValue]:
         """Convert a TacticPlan instance into a JSON-safe dictionary."""
-        tactic, args = plan
+        tactic, args = obj
         return {
             "tactic": tactic,
             "args": {
@@ -177,19 +184,15 @@ class TacticPlanSerializer(Serializer[TacticPlan]):
         if "args" not in data:
             msg = "Missing 'args' key in TacticPlan data."
             raise ValueError(msg)
-
-        tactic = data["tactic"]
-        if not isinstance(tactic, str):
-            msg = "Tactic name must be a string."
+        raw_tactic = data["tactic"]
+        if not isinstance(raw_tactic, str):
+            msg = "'tactic' must be a string."
             raise ValueError(msg)
         raw_args = data["args"]
         if not isinstance(raw_args, dict):
-            msg = "Tactic args must be a dictionary."
+            msg = "'args' must be a dictionary."
             raise ValueError(msg)
-
-        args = {
-            key: cast(TacticArg, cls.decode_arg(cast(JsonValue, value)))
-            for key, value in raw_args.items()
+        decoded_args = {
+            key: cls.decode_arg(val) for key, val in raw_args.items()
         }
-
-        return (tactic, args)
+        return raw_tactic, decoded_args

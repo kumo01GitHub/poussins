@@ -87,6 +87,109 @@ class AITacticPlanner:
                 suggestions.append((tactic_name, prob))
         return suggestions
 
+    @staticmethod
+    def _rank_hypotheses(
+        ordered_hyp_names: list[str],
+        arg_logits: torch.Tensor,
+    ) -> list[str]:
+        """Rank hypotheses according to model argument logits."""
+        if not ordered_hyp_names:
+            return []
+        arg_probs = torch.softmax(arg_logits[0], dim=-1)
+        scored: list[tuple[str, float]] = []
+        for idx, hyp_name in enumerate(ordered_hyp_names):
+            score = (
+                float(arg_probs[idx].item())
+                if idx < len(arg_probs)
+                else 0.0
+            )
+            scored.append((hyp_name, score))
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [name for name, _ in scored]
+
+    @staticmethod
+    def _collect_intro_names(goal_statement: Expr, hyp_count: int) -> list[str]:
+        """Extract argument names from consecutive Pi binders."""
+        names: list[str] = []
+        curr: Expr = goal_statement
+        idx = hyp_count
+        while isinstance(curr, EPi):
+            if curr.var != "_":
+                names.append(curr.var)
+            else:
+                names.append(f"h{idx}")
+                idx += 1
+            curr = curr.body
+        return names if names else [f"h{hyp_count}"]
+
+    def _generate_binder_actions(
+        self,
+        tactic_name: str,
+        goal: Goal,
+        param_names: set[str],
+        params: list[inspect.Parameter],
+        hyp_count: int,
+    ) -> list[dict[str, TacticArg]]:
+        """Generate candidate actions for binder tactics (intro, intros, etc.)."""
+        actions: list[dict[str, TacticArg]] = []
+        if "as_" in param_names:
+            as_param = next(p for p in params if p.name == "as_")
+            if tactic_name == "intros" or as_param.annotation in (
+                "list[str]",
+                list[str],
+            ):
+                actions.append({
+                    "as_": self._collect_intro_names(goal.statement, hyp_count)
+                })
+            else:
+                var_name = (
+                    goal.statement.var
+                    if isinstance(goal.statement, EPi)
+                    and goal.statement.var != "_"
+                    else f"h{hyp_count}"
+                )
+                actions.append({"as_": var_name})
+        elif "name" in param_names and len(params) == 1:
+            var_name = (
+                goal.statement.var
+                if isinstance(goal.statement, EPi)
+                and goal.statement.var != "_"
+                else f"h{hyp_count}"
+            )
+            actions.append({"name": var_name})
+        elif "names" in param_names and len(params) == 1:
+            actions.append({
+                "names": self._collect_intro_names(goal.statement, hyp_count)
+            })
+        return actions
+
+    @staticmethod
+    def _generate_hyp_actions(
+        param_names: set[str],
+        scored_hyps: list[str],
+    ) -> list[dict[str, TacticArg]]:
+        """Generate actions referencing existing hypotheses."""
+        actions: list[dict[str, TacticArg]] = []
+        target_term_key = (
+            "via" if "via" in param_names
+            else "expr_or_name" if "expr_or_name" in param_names
+            else None
+        )
+        if target_term_key:
+            for hyp_name in scored_hyps:
+                actions.append({target_term_key: hyp_name})
+
+        target_hyp_key = (
+            "at" if "at" in param_names
+            else "hyp_name" if "hyp_name" in param_names
+            else "hypothesis_name" if "hypothesis_name" in param_names
+            else None
+        )
+        if target_hyp_key:
+            for hyp_name in scored_hyps:
+                actions.append({target_hyp_key: hyp_name})
+        return actions
+
     def _generate_candidate_actions(
         self,
         script: _SearchScript,
@@ -114,57 +217,18 @@ class AITacticPlanner:
         if not params or all(p.default is not inspect.Parameter.empty for p in params):
             actions.append({})
 
-        # Extract sorted hypothesis names by neural arg ranking
-        scored_hyps = ordered_hyp_names
-        if ordered_hyp_names:
-            arg_probs = torch.softmax(arg_logits[0], dim=-1)
-            scored = []
-            for idx, hyp_name in enumerate(ordered_hyp_names):
-                score = (
-                    float(arg_probs[idx].item())
-                    if idx < len(arg_probs)
-                    else 0.0
-                )
-                scored.append((hyp_name, score))
-            scored.sort(key=lambda x: x[1], reverse=True)
-            scored_hyps = [name for name, _ in scored]
-
-        # Case 2: Inspect parameter patterns
+        scored_hyps = self._rank_hypotheses(ordered_hyp_names, arg_logits)
         param_names = {p.name for p in params}
 
-        if "name" in param_names and len(params) == 1:
-            if isinstance(goal.statement, EPi) and goal.statement.var != "_":
-                actions.append({"name": goal.statement.var})
-            else:
-                actions.append({"name": f"h{len(ordered_hyp_names)}"})
+        # Case 2: Binder tactics
+        actions.extend(
+            self._generate_binder_actions(
+                tactic_name, goal, param_names, params, len(ordered_hyp_names)
+            )
+        )
 
-        elif "names" in param_names and len(params) == 1:
-            names: list[str] = []
-            curr: Expr = goal.statement
-            idx = len(ordered_hyp_names)
-            while isinstance(curr, EPi):
-                if curr.var != "_":
-                    names.append(curr.var)
-                else:
-                    names.append(f"h{idx}")
-                    idx += 1
-                curr = curr.body
-            if names:
-                actions.append({"names": names})
-            else:
-                actions.append({"names": [f"h{len(ordered_hyp_names)}"]})
-
-        elif "expr_or_name" in param_names:
-            for hyp_name in scored_hyps:
-                actions.append({"expr_or_name": hyp_name})
-
-        elif "hyp_name" in param_names:
-            for hyp_name in scored_hyps:
-                actions.append({"hyp_name": hyp_name})
-
-        elif "hypothesis_name" in param_names:
-            for hyp_name in scored_hyps:
-                actions.append({"hypothesis_name": hyp_name})
+        # Cases 3 & 4: Term and hypothesis tactics
+        actions.extend(self._generate_hyp_actions(param_names, scored_hyps))
 
         return actions
 

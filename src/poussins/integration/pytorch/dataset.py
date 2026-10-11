@@ -4,10 +4,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from ...errors import PyTorchIntegrationError
-from ..tactic import TacticPlanSerializer
+from ..serializer import JsonValue
+from ..tactic import TacticArg, TacticPlanSerializer
 from .model import TacticVocabulary
 
 try:
@@ -20,6 +21,17 @@ except ImportError as err:
     )
     raise PyTorchIntegrationError(msg) from err
 
+HYP_ENTRY_LEN = 2
+
+
+class ProofStepDict(TypedDict):
+    """Primitive dictionary representation of a ProofStep."""
+
+    goal_statement: str
+    hypotheses: list[list[str]]
+    tactic_name: str
+    tactic_args: dict[str, JsonValue]
+
 
 @dataclass
 class ProofStep:
@@ -28,7 +40,7 @@ class ProofStep:
     goal_statement: str
     hypotheses: list[tuple[str, str]] = field(default_factory=list)
     tactic_name: str = ""
-    tactic_args: dict[str, Any] = field(default_factory=dict)
+    tactic_args: dict[str, TacticArg] = field(default_factory=dict)
 
     def to_tokens(self) -> list[str]:
         """Convert goal statement and hypotheses into an interleaved token sequence."""
@@ -39,7 +51,7 @@ class ProofStep:
             tokens.extend(TacticVocabulary.tokenize(f"{name} : {typ_str}"))
         return tokens
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> ProofStepDict:
         """Serialize proof step into a JSON-safe dictionary using serializer."""
         encoded_args = {
             key: TacticPlanSerializer.encode_arg(val)
@@ -47,22 +59,27 @@ class ProofStep:
         }
         return {
             "goal_statement": self.goal_statement,
-            "hypotheses": [list(h) for h in self.hypotheses],
+            "hypotheses": [[h[0], h[1]] for h in self.hypotheses],
             "tactic_name": self.tactic_name,
             "tactic_args": encoded_args,
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> ProofStep:
+    def from_dict(cls, data: ProofStepDict) -> ProofStep:
         """Instantiate a ProofStep from a dictionary representation."""
         raw_args = data.get("tactic_args", {})
         decoded_args = {
             key: TacticPlanSerializer.decode_arg(val)
             for key, val in raw_args.items()
         }
+        parsed_hypotheses: list[tuple[str, str]] = [
+            (h[0], h[1])
+            for h in data.get("hypotheses", [])
+            if len(h) >= HYP_ENTRY_LEN
+        ]
         return cls(
             goal_statement=data.get("goal_statement", ""),
-            hypotheses=[tuple(h) for h in data.get("hypotheses", [])],
+            hypotheses=parsed_hypotheses,
             tactic_name=data.get("tactic_name", ""),
             tactic_args=decoded_args,
         )
@@ -131,8 +148,11 @@ class ProofDataset(Dataset):
             tactic_id = self.vocabulary.tactic_to_id[step.tactic_name]
 
             arg_target = 0
-            target_arg = step.tactic_args.get("expr_or_name") or step.tactic_args.get(
-                "hyp_name"
+            target_arg = (
+                step.tactic_args.get("via")
+                or step.tactic_args.get("at")
+                or step.tactic_args.get("expr_or_name")
+                or step.tactic_args.get("hyp_name")
             )
             if isinstance(target_arg, str):
                 for idx, (hyp_name, _) in enumerate(step.hypotheses):

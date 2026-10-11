@@ -4,7 +4,7 @@
     "hypotheses": [],
     "tactic_name": "intro",
     "tactic_args": {
-      "name": "hP"
+      "as_": "hP"
     }
   },
   {
@@ -14,7 +14,7 @@
     ],
     "tactic_name": "exact",
     "tactic_args": {
-      "expr_or_name": "hP"
+      "via": "hP"
     }
   },
   {
@@ -22,7 +22,7 @@
     "hypotheses": [],
     "tactic_name": "intros",
     "tactic_args": {
-      "names": ["hP", "hQ"]
+      "as_": ["hP", "hQ"]
     }
   },
   {
@@ -42,7 +42,7 @@
     ],
     "tactic_name": "exact",
     "tactic_args": {
-      "expr_or_name": "hP"
+      "via": "hP"
     }
   },
   {
@@ -53,7 +53,7 @@
     ],
     "tactic_name": "exact",
     "tactic_args": {
-      "expr_or_name": "hQ"
+      "via": "hQ"
     }
   },
   {
@@ -79,7 +79,7 @@
     "hypotheses": [],
     "tactic_name": "intros",
     "tactic_args": {
-      "names": ["hA", "hB"]
+      "as_": ["hA", "hB"]
     }
   },
   {
@@ -90,7 +90,7 @@
     ],
     "tactic_name": "exact",
     "tactic_args": {
-      "expr_or_name": "hA"
+      "via": "hA"
     }
   },
   {
@@ -107,7 +107,7 @@
     "hypotheses": [],
     "tactic_name": "intros",
     "tactic_args": {
-      "names": ["hA", "hB", "hC"]
+      "as_": ["hA", "hB", "hC"]
     }
   },
   {
@@ -119,7 +119,7 @@
     ],
     "tactic_name": "exact",
     "tactic_args": {
-      "expr_or_name": "hB"
+      "via": "hB"
     }
   }
 ]
