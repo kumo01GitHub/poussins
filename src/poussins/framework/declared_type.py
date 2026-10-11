@@ -19,11 +19,12 @@ class DeclaredType(ABC):
 
     expr: Expr
 
-    def __init__(self, expr: Expr | str) -> None:
+    def __init__(self, expr_or_name: Expr | str) -> None:
         """Initialize a declaration-backed wrapper."""
-        if isinstance(expr, str):
-            expr = EVar(expr)
-        object.__setattr__(self, "expr", expr)
+        if isinstance(expr_or_name, Expr):
+            object.__setattr__(self, "expr", expr_or_name)
+        else:
+            object.__setattr__(self, "expr", EVar(expr_or_name))
 
     @classmethod
     def type(cls, *args: DeclaredType | Expr) -> Expr:
