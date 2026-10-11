@@ -1,5 +1,10 @@
 """Kernel-level components of the proof system."""
 from .declare import (
+    check_axiom,
+    check_definition,
+    check_inductive,
+    check_quotient,
+    check_theorem,
     declare_axiom,
     declare_definition,
     declare_inductive,
@@ -31,8 +36,13 @@ __all__ = [
     "unify",
     "whnf",
     "declare_axiom",
+    "check_axiom",
     "declare_definition",
+    "check_definition",
     "declare_theorem",
+    "check_theorem",
     "declare_inductive",
+    "check_inductive",
     "declare_quotient",
+    "check_quotient",
 ]

@@ -29,7 +29,7 @@ from ..ast import (
 )
 from ..environment.library import Sort
 
-Binding = tuple[str, Expr]
+type Binding = tuple[str, Expr]
 
 
 @dataclass(frozen=True)

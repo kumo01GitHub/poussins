@@ -7,9 +7,8 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final
 
-from ..ast import EVar, Expr, build_pi_chain, collect_free_vars
+from ..ast import EVar, Expr
 from ..environment import Environment, TheoremDeclaration
-from ..environment.library import Sort
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     CasesPatterns,

@@ -5,9 +5,9 @@ from logging import Logger
 from typing import Final, override
 
 from ..ast import Expr
-from ..environment import Environment, TheoremDeclaration
+from ..environment import Declaration, Environment, TheoremDeclaration
 from ..errors import FrameworkError
-from ..kernel import declare_theorem
+from ..kernel import check_theorem, declare_theorem
 from ..utils.logging import get_logger
 from .proof_script import ProofScript
 from .prop import Prop
@@ -74,7 +74,7 @@ class Theorem(ProofScript):
                 f"Theorem '{self.name}' is successfully proved: {self.statement}"
             )
             self.logger.info(f"==> {proof_term}")
-        except ValueError as e:
+        except Exception as e:
             raise FrameworkError("Failed to register theorem") from e
 
 
@@ -114,5 +114,22 @@ class Example(ProofScript):
                 "Example internal error: Failed to extract a valid proof term."
             )
 
-        self.logger.info(f"Example is successfully proved: {self.statement}")
-        self.logger.info(f"==> {self.manager.current_proof_term}")
+        declaration = TheoremDeclaration(
+            name="__example__",
+            level_params=(),
+            type=self.statement,
+            value=self.manager.current_proof_term,
+        )
+        staged_decls: list[Declaration] = [declaration]
+
+        stage_id = self.env.stage(declarations=staged_decls)
+        staging_env = self.env.get_staging(stage_id)
+
+        try:
+            check_theorem(staging_env, declaration)
+            self.env.rollback(stage_id)
+            self.logger.info(f"Example is successfully proved: {self.statement}")
+            self.logger.info(f"==> {self.manager.current_proof_term}")
+        except Exception as e:
+            self.env.rollback(stage_id)
+            raise FrameworkError("Failed to verify example") from e
