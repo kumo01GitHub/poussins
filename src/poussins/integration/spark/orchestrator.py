@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, cast
 
 from pyspark.sql import SparkSession
 
-from ...environment import Environment
+from ...environment import Environment, TheoremDeclaration
 from ...errors import SparkIntegrationError
+from ...kernel import declare_theorem
 from ...utils.logging import get_logger
 from .task import ProofTaskDAG
 from .task_executor import ProofTaskExecutor, TaskExecutionResult
@@ -71,8 +72,8 @@ class ProofOrchestrator:
                     self.logger.error(error_msg)
                     raise SparkIntegrationError(error_msg)
 
-                decl = res["declaration"]
-                self.env.add(decl)
+                decl = cast(TheoremDeclaration, res["declaration"])
+                declare_theorem(self.env, decl)
                 self.logger.info(
                     f"Registered declaration for theorem '{res['task_name']}'"
                     " into staging Environment"

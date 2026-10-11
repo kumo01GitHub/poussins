@@ -29,6 +29,7 @@ from ..ast import (
 )
 from ..environment import DefinitionDeclaration, Environment
 from ..environment.library import Sort
+from ..kernel import declare_definition
 
 Binding = tuple[str, Expr]
 
@@ -50,12 +51,13 @@ class Prop:
         else:
             object.__setattr__(self, "expr", EVar(expr_or_name))
             if env is not None and env.get(expr_or_name) is None:
-                env.add(
+                declare_definition(
+                    env,
                     DefinitionDeclaration(
                         name=expr_or_name,
                         level_params=(),
                         type=Sort.PROP.sort,
-                        value=EConst("P", ()),
+                        value=EConst(expr_or_name, ()),
                     )
                 )
 

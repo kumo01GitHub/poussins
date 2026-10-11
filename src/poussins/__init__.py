@@ -23,14 +23,16 @@ from .framework import (
     Theorem,
     Unit,
     Vector,
+    create_environment,
+    create_standard_environment,
 )
 
 __all__ = [
+    "Environment",
     "Axiom",
     "Bool",
     "Corollary",
     "Empty",
-    "Environment",
     "Example",
     "Fact",
     "Fin",
@@ -49,4 +51,6 @@ __all__ = [
     "Theorem",
     "Unit",
     "Vector",
+    "create_environment",
+    "create_standard_environment",
 ]

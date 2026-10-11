@@ -31,16 +31,9 @@ from .equality import is_def_eq, whnf
 from .typecheck import infer_type
 
 
-def declare(env: Environment, declaration: Declaration) -> None:
-    """Declare a new declaration in the environment."""
-    env.add(declaration)
-
-
 # ------------------------------------------------------------------
 # Axiom Declaration
 # ------------------------------------------------------------------
-
-
 def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate and declare an axiom in the environment.
 
@@ -52,9 +45,17 @@ def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
         KernelTypeError: If the statement does not evaluate to a Sort.
 
     """
-    check_axiom(env, decl)
-    declare(env, decl)
+    staged_decls: list[Declaration] = [decl]
 
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        check_axiom(staging_env, decl)
+        env.commit(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate that an axiom's statement evaluates to a Sort.
@@ -76,8 +77,6 @@ def check_axiom(env: Environment, decl: AxiomDeclaration) -> None:
 # ------------------------------------------------------------------
 # Definition Declaration
 # ------------------------------------------------------------------
-
-
 def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate and declare a definition in the environment.
 
@@ -90,9 +89,17 @@ def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
             match the declared type.
 
     """
-    check_definition(env, decl)
-    declare(env, decl)
+    staged_decls: list[Declaration] = [decl]
 
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        check_definition(staging_env, decl)
+        env.commit(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate that a definition's value matches its declared type.
@@ -126,8 +133,6 @@ def check_definition(env: Environment, decl: DefinitionDeclaration) -> None:
 # ------------------------------------------------------------------
 # Theorem Declaration
 # ------------------------------------------------------------------
-
-
 def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate and declare a theorem in the environment.
 
@@ -139,9 +144,17 @@ def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
         KernelTypeError: If the proof does not type-check or match statement.
 
     """
-    check_theorem(env, decl)
-    declare(env, decl)
+    staged_decls: list[Declaration] = [decl]
 
+    stage_id = env.stage(declarations=staged_decls)
+    staging_env = env.get_staging(stage_id)
+
+    try:
+        check_theorem(staging_env, decl)
+        env.commit(stage_id)
+    except Exception:
+        env.rollback(stage_id)
+        raise
 
 def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate that a theorem's proof term matches its declared proposition.
@@ -175,8 +188,6 @@ def check_theorem(env: Environment, decl: TheoremDeclaration) -> None:
 # ------------------------------------------------------------------
 # Inductive Declaration
 # ------------------------------------------------------------------
-
-
 def declare_inductive(
     env: Environment,
     decl: InductiveDeclaration,
@@ -201,15 +212,14 @@ def declare_inductive(
         staged_decls.append(rec)
 
     stage_id = env.stage(declarations=staged_decls)
-    check_env = env.get_staging(stage_id)
+    staging_env = env.get_staging(stage_id)
 
     try:
-        check_inductive(check_env, decl, ctors, rec)
+        check_inductive(staging_env, decl, ctors, rec)
         env.commit(stage_id)
     except Exception:
         env.rollback(stage_id)
         raise
-
 
 def check_inductive(
     env: Environment,
@@ -234,7 +244,6 @@ def check_inductive(
     if rec is not None:
         _check_recursor(env, decl, rec)
 
-
 def _check_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
     """Check that the inductive declaration's type evaluates to a Sort."""
     sort_expr = infer_type(decl.type, {}, {}, env)
@@ -244,7 +253,6 @@ def _check_inductive_head(env: Environment, decl: InductiveDeclaration) -> None:
             f"Type of inductive '{decl.name}' must be a Sort, got: "
             f"{sort_expr}"
         )
-
 
 def _check_constructor(
     env: Environment,
@@ -275,7 +283,6 @@ def _check_constructor(
             f"{head.name if isinstance(head, EConst) else head}"
         )
 
-
 def _check_strict_positivity(
     env: Environment, ind_name: str, domain: Expr
 ) -> None:
@@ -294,7 +301,6 @@ def _check_strict_positivity(
                 f"type: {curr.domain}"
             )
         curr = whnf(curr.body, {}, env)
-
 
 def _check_recursor(
     env: Environment,
@@ -324,7 +330,6 @@ def _check_recursor(
             f"inductive name '{decl.name}.'"
         )
 
-
 def _occurs_in(target_name: str, expr: Expr) -> bool:
     """Recursively check if `target_name` (as EConst) occurs in `expr`."""
     match expr:
@@ -351,8 +356,6 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
 # ------------------------------------------------------------------
 # Quotient Declaration
 # ------------------------------------------------------------------
-
-
 def declare_quotient(
     env: Environment,
     quot_decl: QuotientDeclaration,
@@ -388,7 +391,6 @@ def declare_quotient(
     except Exception:
         env.rollback(stage_id)
         raise
-
 
 def check_quotient(
     env: Environment,

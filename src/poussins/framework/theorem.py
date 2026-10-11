@@ -7,6 +7,7 @@ from typing import Final, override
 from ..ast import Expr
 from ..environment import Environment, TheoremDeclaration
 from ..errors import FrameworkError
+from ..kernel import declare_theorem
 from ..utils.logging import get_logger
 from .proof_script import ProofScript
 from .prop import Prop
@@ -68,7 +69,7 @@ class Theorem(ProofScript):
         )
 
         try:
-            self.env.add(declaration)
+            declare_theorem(self.env, declaration)
             self.logger.info(
                 f"Theorem '{self.name}' is successfully proved: {self.statement}"
             )

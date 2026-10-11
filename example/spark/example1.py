@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from poussins import Environment, Nat, Prop
+from poussins import Nat, Prop, create_standard_environment
 from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 from poussins.utils.logging import get_logger
 
@@ -23,7 +23,7 @@ def main() -> None:
     runner = ProofRunner(spark)
 
     logger.info("=== 2. Setting up Environment and Task Registry ===")
-    env = Environment.standard()
+    env = create_standard_environment()
     registry = ProofTaskRegistry()
 
     stmt_lemma = Prop(
@@ -42,7 +42,7 @@ def main() -> None:
         name="main_theorem",
         statement=stmt_lemma,
         tactic_plan=[
-            ("exact", {"expr_or_name": "lemma_base"})
+            ("exact", {"via": "lemma_base"})
         ],
         depends_on=["lemma_base"]
     )

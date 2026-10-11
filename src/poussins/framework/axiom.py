@@ -7,6 +7,7 @@ from typing import Final
 from ..ast import Expr
 from ..environment import AxiomDeclaration, Environment
 from ..errors import FrameworkError
+from ..kernel import declare_axiom
 from ..utils.logging import get_logger
 from .prop import Prop
 
@@ -39,7 +40,7 @@ class Axiom:
         )
 
         try:
-            self.env.add(declaration)
+            declare_axiom(self.env, declaration)
             self.logger.info(
                 f"Axiom '{self.name}' is successfully declared: {self.statement}"
             )
