@@ -27,9 +27,7 @@ from ..ast import (
     Expr,
     UnivLevelParam,
 )
-from ..environment import DefinitionDeclaration, Environment
 from ..environment.library import Sort
-from ..kernel import declare_definition
 
 Binding = tuple[str, Expr]
 
@@ -43,23 +41,17 @@ class Prop:
     def __init__(
         self,
         expr_or_name: Expr | str,
-        env: Environment | None = None
     ) -> None:
         """Create a proposition from an expression or a named variable."""
         if isinstance(expr_or_name, Expr):
             object.__setattr__(self, "expr", expr_or_name)
         else:
             object.__setattr__(self, "expr", EVar(expr_or_name))
-            if env is not None and env.get(expr_or_name) is None:
-                declare_definition(
-                    env,
-                    DefinitionDeclaration(
-                        name=expr_or_name,
-                        level_params=(),
-                        type=Sort.PROP.sort,
-                        value=EConst(expr_or_name, ()),
-                    )
-                )
+
+    @classmethod
+    def type(cls) -> Expr:
+        """Return the type of propositions (Prop)."""
+        return Sort.PROP.sort
 
     # ------------------------------------------------------------------
     # Coercion helpers
