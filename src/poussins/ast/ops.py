@@ -1,6 +1,8 @@
 """AST operation utilities for expression traversal, substitution, and analysis."""
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from .expr import (
     EApp,
     EConst,
@@ -33,7 +35,7 @@ def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
 
 
 def build_lambda_chain(
-    binders: list[tuple[str, Expr]],
+    binders: Sequence[tuple[str, Expr]],
     body: Expr,
 ) -> Expr:
     """Build nested lambdas from binders, ending in body."""
@@ -44,7 +46,7 @@ def build_lambda_chain(
 
 
 def build_pi_chain(
-    binders: list[tuple[str, Expr]],
+    binders: Sequence[tuple[str, Expr]],
     body: Expr,
 ) -> Expr:
     """Build nested Pi types from binders, ending in body."""
