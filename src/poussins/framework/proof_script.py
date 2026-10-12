@@ -7,8 +7,8 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final
 
-from ..ast import EVar, Expr
-from ..environment import Environment, TheoremDeclaration
+from ..ast import EConst, EVar, Expr, UnivLevelParam
+from ..environment import Declaration, Environment, TheoremDeclaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     CasesPatterns,
@@ -130,7 +130,26 @@ class ProofScript(ABC):
         elif isinstance(term, DeclaredType):
             return DeclaredType.to_expr(term)
         elif isinstance(term, str):
-            return EVar(term)
+            current_goal = self.current_state.current_goal
+            if current_goal is None:
+                raise ValueError(
+                    f"Cannot convert string '{term}' to expression: "
+                    + "No active goal to resolve local context."
+                )
+            elif current_goal.has_local_hypothesis(term):
+                return EVar(term)
+            else:
+                decl = self.env.get(term)
+                if isinstance(decl, Declaration):
+                    return EConst(
+                        name=term,
+                        levels=tuple(UnivLevelParam(p) for p in decl.level_params)
+                    )
+
+            raise ValueError(
+                f"Cannot convert string '{term}' to expression: "
+                + "Not a local hypothesis or declared constant."
+            )
 
     # ------------------------------------------------------------------
     #  1. Forward Reasoning & Context
