@@ -114,7 +114,7 @@ This section explains how proof construction flows through the system and how th
 
 - Stores declarations (`ConstantDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, `RecursorDeclaration`, ...).
 - Uses Enum-based library modules (e.g., `LogicDeclaration`, `NatDeclaration`, `BoolDeclaration`) under `src/poussins/environment/library/` to define primitives and recursors cleanly.
-- `Environment.standard()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`, `Prod`, `Sigma`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`) plus quotient primitives (`Quot`, `Quot.mk`, `Quot.lift`).
+- `create_standard_environment()` preloads basic logical primitives (`True`, `False`, `And`, `Or`, `Not`, and their recursors) and core inductives (`Nat`, `Bool`, `Prod`, `Sigma`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`) plus quotient primitives (`Quot`, `Quot.mk`, `Quot.lift`).
 
 ### Kernel (`kernel/`)
 
@@ -190,7 +190,7 @@ When adding a new user-facing inductive type such as `Bool` or `List`, split the
 1. Add declarations using the Enum-based structure under `src/poussins/environment/library/`.
   - Define members in the corresponding declaration Enum (e.g., `ListDeclaration`, `LogicDeclaration`, or a dedicated module).
   - Add one `InductiveDeclaration` for the type itself, `ConstructorDeclaration` members for each constructor, and any necessary `RecursorDeclaration` members (such as `.rec` with universe parameters).
-  - Register the new Enum or its items in `Environment.standard()`.
+  - Register the new Enum or its items in `create_standard_environment()`.
 2. Keep `InductiveDeclaration.type` as the full type former of the inductive name.
   - Nullary inductives use a sort directly, for example `Nat : Type`.
   - Parameterized inductives use a Pi-shaped expression, for example `Eq : Π A : Type, A -> A -> Prop`.

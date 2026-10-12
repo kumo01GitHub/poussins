@@ -266,7 +266,7 @@ The following example demonstrates how to set up an environment, register depend
 from __future__ import annotations
 
 from pyspark.sql import SparkSession
-from poussins import Environment, Nat, Prop
+from poussins import Nat, Prop, create_standard_environment
 from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 
 def main() -> None:
@@ -281,7 +281,7 @@ def main() -> None:
     # 2. Use ProofRunner context manager
     with ProofRunner(spark) as runner:
         # 3. Create the base logical environment and task registry
-        env = Environment.standard()
+        env = create_standard_environment()
         registry = ProofTaskRegistry()
 
         # 4. Formulate the proposition statement: 0 + 0 = 0

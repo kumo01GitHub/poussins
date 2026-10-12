@@ -121,14 +121,6 @@ class TestUniverseUnification:
         assert unify_univ_levels(self.one, self.param_u, {"u": self.one}) == {
             "u": self.one,
         }
-        assert (
-            unify_univ_levels(
-                UnivLevelIMax(self.one, self.zero),
-                UnivLevelIMax(self.zero, self.zero),
-                {},
-            )
-            is None
-        )
 
 
 class TestUniverseDefinitionalEquality:

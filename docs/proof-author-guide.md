@@ -39,7 +39,7 @@ Prefer importing from the subpackage that owns the API.
 
 The framework layer gives you a friendly interface:
 
-- `Environment.standard()`: creates the standard logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`)
+- `create_standard_environment()`: creates the standard logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`)
 - `Prop`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`)
 - `Example(statement, env)`: anonymous proof (useful for exploration)
 - `Theorem(name, statement, env)`: named proof; `qed()` registers it into the environment
@@ -47,10 +47,9 @@ The framework layer gives you a friendly interface:
 ### Minimal `Example`
 
 ```python
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 p = Prop("P", env)
 
 ex = Example(p >> p, env)
@@ -106,12 +105,11 @@ You can call tactics as methods on `Example`/`Theorem`. The table below is the q
 The built-in Nat type can be constructed with the public Nat DSL:
 
 ```python
-from poussins.environment import Environment
-from poussins.framework import Example, Nat
+from poussins.framework import Example, Nat, create_standard_environment
 from poussins.ast import EConst, EMetaVar
 from poussins.kernel.goal import Goal
 
-env = Environment.standard()
+env = create_standard_environment()
 
 example = Example(EConst("True", ()), env)
 subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("Nat", ())})
@@ -137,10 +135,9 @@ These are convenience wrappers around the constructor tactic and are intended fo
 Goal: prove $P \to Q \to P \land Q$.
 
 ```python
-from poussins.environment import Environment
-from poussins.framework import Prop, Theorem
+from poussins.framework import Prop, Theorem, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 p, q = Prop("P", env), Prop("Q", env)
 
 th = Theorem("and_intro", p >> q >> (p & q), env)
@@ -158,10 +155,9 @@ After `qed()`, `and_intro` is available from `env` as a reusable declaration.
 Goal: prove `True -> True` by splitting on the hypothesis.
 
 ```python
-from poussins.environment import Environment
-from poussins.framework import Example, Prop
+from poussins.framework import Example, Prop, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 
 ex = Example(Prop.top() >> Prop.top(), env)
 ex.intro("hTrue")
@@ -176,9 +172,9 @@ Goal: prove $(P \to Q) \to P \to Q$.
 
 ```python
 from poussins.environment import Environment
-from poussins.framework import Prop, Theorem
+from poussins.framework import Prop, Theorem, create_standard_environment
 
-env = Environment.standard()
+env = create_standard_environment()
 p, q = Prop("P", env), Prop("Q", env)
 
 mp = Theorem("mp", (p >> q) >> p >> q, env)

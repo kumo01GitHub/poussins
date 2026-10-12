@@ -18,8 +18,9 @@ from poussins.ast import (
     UnivLevelSucc,
     UnivLevelZero,
 )
-from poussins.environment import AxiomDeclaration, Environment
+from poussins.environment import AxiomDeclaration
 from poussins.errors import KernelTypeError
+from poussins.framework import create_environment, create_standard_environment
 from poussins.kernel.proof_state import MetaVar
 from poussins.kernel.typecheck import check_type, infer_metavar_types, infer_type
 
@@ -48,7 +49,7 @@ class TestInferType:
 
     def test_constant_rule_with_universe_instantiation(self):
         """Polymorphic constants instantiate level parameters correctly."""
-        env = Environment()
+        env = create_environment()
         env.add(
             AxiomDeclaration(
                 name="idTy",
@@ -61,7 +62,7 @@ class TestInferType:
 
     def test_constant_rule_rejects_wrong_level_arity(self):
         """Typing fails when level arity does not match declaration."""
-        env = Environment()
+        env = create_environment()
         env.add(
             AxiomDeclaration(
                 name="poly",
@@ -162,7 +163,7 @@ class TestInferType:
 
     def test_match_typing_checks_constructor_branches(self):
         """Match typing validates branch arity/types against constructors."""
-        env = Environment.standard()
+        env = create_standard_environment()
         nat = EConst("Nat", ())
         motive = ELam("_n", nat, nat)
         expr = EMatch(
@@ -179,7 +180,7 @@ class TestInferType:
 
     def test_match_typing_rejects_invalid_branch_type(self):
         """Match typing rejects branches that do not match constructor binders."""
-        env = Environment.standard()
+        env = create_standard_environment()
         nat = EConst("Nat", ())
         motive = ELam("_n", nat, nat)
         expr = EMatch(
@@ -197,7 +198,7 @@ class TestInferType:
 
     def test_sigma_type_is_registered_in_standard_environment(self):
         """Sigma is available as a dependent inductive family."""
-        env = Environment.standard()
+        env = create_standard_environment()
         sigma = EConst("Sigma", (UnivLevelZero(), UnivLevelZero()))
         assert env.get("Sigma") is not None
         assert infer_type(sigma, {}, {}, env) == EPi(

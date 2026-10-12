@@ -11,7 +11,8 @@ from poussins.ast import (
     EVar,
     UnivLevelZero,
 )
-from poussins.environment import DefinitionDeclaration, Environment
+from poussins.environment import DefinitionDeclaration
+from poussins.framework import create_environment, create_standard_environment
 from poussins.kernel.eval import instantiate, instantiate_metavar, whnf
 from poussins.kernel.proof_state import MetaVar
 
@@ -62,7 +63,7 @@ class TestWhnfConversionSoundness:
 
     def test_delta_then_beta_on_head_constant(self):
         """Definition unfolding (delta) composes with head beta-reduction."""
-        env = Environment()
+        env = create_environment()
         env.add(
             DefinitionDeclaration(
                 name="id",
@@ -76,7 +77,7 @@ class TestWhnfConversionSoundness:
 
     def test_guarded_unfolding_prevents_nontermination(self):
         """Unfolding guard blocks infinite delta-expansion on recursive heads."""
-        env = Environment()
+        env = create_environment()
         env.add(
             DefinitionDeclaration(
                 name="loop",
@@ -89,7 +90,7 @@ class TestWhnfConversionSoundness:
 
     def test_match_reduces_constructor_discriminee(self):
         """Match on a constructor discriminee reduces to the matching branch."""
-        env = Environment.standard()
+        env = create_standard_environment()
         nat = EConst("Nat", ())
         motive = ELam("_n", nat, nat)
         expr = EMatch(
@@ -105,7 +106,7 @@ class TestWhnfConversionSoundness:
 
     def test_match_reduces_and_substitutes_constructor_arguments(self):
         """Match branch lambdas are instantiated with constructor arguments."""
-        env = Environment.standard()
+        env = create_standard_environment()
         nat = EConst("Nat", ())
         discriminee = EApp(EConst("Nat.succ", ()), EConst("Nat.zero", ()))
         motive = ELam("_n", nat, nat)
