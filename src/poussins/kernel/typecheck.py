@@ -209,7 +209,11 @@ def _infer_match(
         for var_name, domain in reversed(binders):
             expected_branch_type = EPi(var_name, domain, expected_branch_type)
 
-        branch_type = infer_type(branch_expr, context, metavars, env)
+        branch_context = dict(context)
+        for var_name, domain in binders:
+            branch_context[var_name] = domain
+
+        branch_type = infer_type(branch_expr, branch_context, metavars, env)
         if not is_def_eq(branch_type, expected_branch_type, context, metavars, env):
             raise KernelTypeError(
                 "Match branch type mismatch for constructor "
