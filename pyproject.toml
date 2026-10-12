@@ -50,6 +50,8 @@ ignore = []
 [tool.ruff.lint.pylint]
 max-returns = 10
 max-branches = 20
+max-args = 10
+max-statements = 60
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]

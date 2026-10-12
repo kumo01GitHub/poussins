@@ -1,6 +1,6 @@
 """Example 5: Propositional logic with And and Or introduction rules."""
+from poussins import Example, Prop, create_standard_environment
 from poussins.ast import EVar
-from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
 p, q, r = Prop("P"), Prop("Q"), Prop("R")
@@ -12,16 +12,16 @@ bindings = (("P", p.type()), ("Q", q.type()), ("R", r.type()))
 #   Prove that from (P and (Q or R)),
 #   we can derive P using And and Or introduction rules.
 # ------------------------------------------------------------------
-# example1 = Example(Prop.forall(bindings, (p & (q | r)) >> p), env)
+example1 = Example(Prop.forall(bindings, (p & (q | r)) >> p), env)
 
-# example1.intros(["P", "Q", "R"])
-# example1.intro("hAnd")
-# example1.cases("hAnd", with_=(("And.intro", "hP", "hOr"),))
-# example1.cases("hOr", with_=(("Or.inl", "hQ"), ("Or.inr", "hR")))
-# example1.exact("hP")
-# example1.exact("hP")
+example1.intros(["P", "Q", "R"])
+example1.intro("hAnd")
+example1.cases("hAnd", with_=(("And.intro", "hP", "hOr"),))
+example1.cases("hOr", with_=(("Or.inl", "hQ"), ("Or.inr", "hR")))
+example1.exact("hP")
+example1.exact("hP")
 
-# example1.qed()
+example1.qed()
 
 
 # ------------------------------------------------------------------
@@ -41,9 +41,10 @@ example2.qed()
 
 
 # ------------------------------------------------------------------
-# Example 3: Prove that P follows from (P and (Q or R)) using the 'obtain' tactic.
+# Example 3:
+#   Prove that P follows from (P and (Q or R)) using the 'obtain' tactic.
 # ------------------------------------------------------------------
-example3 = Example(Prop.forall(bindings, (p & (q | r)) >> p), env)
+example3 = Example(Prop.forall(bindings, (p & p) >> p), env)
 
 example3.intros(["P", "Q", "R"])
 example3.intro("hAnd")

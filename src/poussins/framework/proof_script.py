@@ -235,7 +235,7 @@ class ProofScript(ABC):
     # ------------------------------------------------------------------
 
     @log_tactic
-    def cases(self, at: str, with_: CasesPatterns = None ) -> None:
+    def cases(self, at: str, with_: CasesPatterns = None) -> None:
         """Case-split on an inductive hypothesis."""
         cases(self.manager, at, with_)
 

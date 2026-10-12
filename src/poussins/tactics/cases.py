@@ -10,11 +10,11 @@ from ..ast import (
     EMatch,
     EMetaVar,
     EPi,
-    ESort,
     EVar,
     Expr,
     UnivLevelParam,
     build_lambda_chain,
+    flatten_app_chain,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
@@ -75,7 +75,8 @@ def _collect_pi_binders(expr: Expr) -> list[str]:
 
 
 def _normalize_patterns(
-    patterns: tuple[tuple[str, ...], ...] | None, constructor_names: Sequence[str]
+    patterns: tuple[tuple[str, ...], ...] | None,
+    constructor_names: Sequence[str],
 ) -> tuple[tuple[str, tuple[str, ...]], ...]:
     """Normalize user-provided patterns into (constructor, binder_names) pairs."""
     if patterns is None:
@@ -87,63 +88,17 @@ def _normalize_patterns(
             raise TacticError("empty patterns are not supported.")
         constructor_name = pattern[0]
         if constructor_name not in constructor_names:
-            raise TacticError(
-                f"unknown constructor '{constructor_name}' in patterns."
-            )
+            raise TacticError(f"Unknown constructor '{constructor_name}' in patterns.")
         if constructor_name in by_constructor:
-            raise TacticError(
-                f"duplicate constructor pattern '{constructor_name}'."
-            )
+            raise TacticError(f"Duplicate constructor pattern '{constructor_name}'.")
         by_constructor[constructor_name] = tuple(pattern[1:])
 
     return tuple((name, by_constructor.get(name, ())) for name in constructor_names)
 
 
-def _infer_inductive_parameter_substitutions(
-    target_expr: Expr, actual_expr: Expr
-) -> dict[str, Expr]:
-    """Infer substitutions for an inductive constructor's parameters."""
-    substitutions: dict[str, Expr] = {}
-
-    def visit(expr: Expr, value: Expr) -> None:
-        if isinstance(expr, EVar):
-            substitutions[expr.name] = value
-            return
-
-        if isinstance(expr, EApp) and isinstance(value, EApp):
-            visit(expr.fn, value.fn)
-            visit(expr.arg, value.arg)
-            return
-
-        if isinstance(expr, EConst) and isinstance(value, EConst):
-            if expr.name != value.name or expr.levels != value.levels:
-                return
-            return
-
-        if isinstance(expr, ESort) and isinstance(value, ESort):
-            return
-
-        if isinstance(expr, EMetaVar) and isinstance(value, EMetaVar):
-            if expr.goal_id != value.goal_id:
-                return
-            return
-
-        if isinstance(expr, EPi) and isinstance(value, EPi):
-            visit(expr.domain, value.domain)
-            visit(expr.body, value.body)
-            return
-
-        if type(expr) is type(value):
-            return
-
-        return
-
-    visit(target_expr, actual_expr)
-    return substitutions
-
-
 def _specialize_with_parameter_substitutions(
-    expr: Expr, substitutions: dict[str, Expr]
+    expr: Expr,
+    substitutions: dict[str, Expr]
 ) -> Expr:
     """Specialize an expression by substituting inferred inductive parameters."""
     specialized_expr = expr
@@ -151,6 +106,7 @@ def _specialize_with_parameter_substitutions(
         specialized_expr = substitute_expr_var(
             specialized_expr, param_name, param_value
         )
+
     return specialized_expr
 
 
@@ -169,17 +125,19 @@ def _build_branch_local_context(
         names_for_branch,
         parameter_substitutions,
     ) = branch_alias_spec
-
     branch_local_context = {
         name: substitute_expr_var(type_expr, hyp_name, constructor_pattern)
         for name, type_expr in current_goal.local_context.items()
         if name != hyp_name
     }
     for var_name, var_type in branch_binders:
-        branch_local_context[var_name] = var_type
+        branch_local_context[var_name] = _specialize_with_parameter_substitutions(
+            var_type,
+            parameter_substitutions
+        )
 
     if len(names_for_branch) > len(constructor_arg_binders):
-        raise TacticError("too many branch names for constructor pattern.")
+        raise TacticError("Too many branch names for constructor pattern.")
 
     for branch_name, (_, binder_type) in zip(
         names_for_branch,
@@ -193,8 +151,9 @@ def _build_branch_local_context(
     branch_local_context[hyp_name] = substitute_expr_var(
         current_goal.local_context[hyp_name],
         hyp_name,
-        constructor_pattern,
+        constructor_pattern
     )
+
     return branch_local_context
 
 
@@ -229,9 +188,17 @@ def cases(
     if not inductive_decl.constructor_names:
         raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
-    inductive_parameters = _collect_pi_binders(inductive_decl.type)
+    _, hypothesis_args = flatten_app_chain(hypothesis_type)
+
+    inductive_param_count = 0
+    curr_t = inductive_decl.type
+    while isinstance(curr_t, EPi):
+        inductive_param_count += 1
+        curr_t = curr_t.body
+
     normalized_patterns = _normalize_patterns(
-        patterns, inductive_decl.constructor_names
+        patterns,
+        inductive_decl.constructor_names
     )
 
     subgoals: list[Goal] = []
@@ -245,46 +212,68 @@ def cases(
         constructor = EConst(
             name=constructor_name,
             levels=tuple(
-                UnivLevelParam(param) for param in constructor_decl.level_params
-            )
+                UnivLevelParam(param)
+                for param in constructor_decl.level_params
+            ),
         )
         constructor_pattern, branch_binders = _build_constructor_pattern(
             constructor=constructor,
             constructor_type=constructor_decl.type,
             context=current_goal.context,
-            used_names=set(),
+            used_names=set(current_goal.context.keys()),
         )
 
-        constructor_return_type = constructor_decl.type
-        while isinstance(constructor_return_type, EPi):
-            constructor_return_type = constructor_return_type.body
+        parameter_substitutions: dict[str, Expr] = {}
+        for idx in range(
+            min(inductive_param_count, len(hypothesis_args), len(branch_binders))
+        ):
+            p_var_name = branch_binders[idx][0]
+            parameter_substitutions[p_var_name] = hypothesis_args[idx]
 
-        parameter_substitutions = _infer_inductive_parameter_substitutions(
-            target_expr=constructor_return_type,
-            actual_expr=hypothesis_type,
-        )
-        constructor_arg_binders = branch_binders[len(inductive_parameters):]
+        constructor_arg_binders = branch_binders[inductive_param_count:]
         specialized_constructor_arg_binders = [
             (
                 binder_name,
                 _specialize_with_parameter_substitutions(
-                    binder_type,
-                    parameter_substitutions,
+                    binder_type, parameter_substitutions
                 ),
             )
             for binder_name, binder_type in constructor_arg_binders
         ]
 
+        final_branch_binders = list(branch_binders)
+        if names_for_branch:
+            num_to_rename = len(names_for_branch)
+            for i in range(num_to_rename):
+                target_idx = len(final_branch_binders) - num_to_rename + i
+                old_name, old_type = final_branch_binders[target_idx]
+                new_name = names_for_branch[i]
+                final_branch_binders[target_idx] = (new_name, old_type)
+                constructor_pattern = substitute_expr_var(
+                    constructor_pattern, old_name, EVar(new_name)
+                )
+
+        specialized_branch_binders = [
+            (
+                b_name,
+                _specialize_with_parameter_substitutions(
+                    b_type,
+                    parameter_substitutions
+                )
+            )
+            for b_name, b_type in final_branch_binders
+        ]
+
         branch_goal_statement = substitute_expr_var(
             current_goal.statement,
             hyp_name,
-            constructor_pattern,
+            constructor_pattern
         )
         branch_local_context = _build_branch_local_context(
             current_goal=current_goal,
             hyp_name=hyp_name,
             constructor_pattern=constructor_pattern,
-            branch_binders=branch_binders,
+            branch_binders=specialized_branch_binders,
             branch_alias_spec=(
                 specialized_constructor_arg_binders,
                 names_for_branch,
@@ -300,7 +289,7 @@ def cases(
         subgoals.append(branch_goal)
         branch_terms.append(
             build_lambda_chain(
-                branch_binders,
+                specialized_branch_binders,
                 EMetaVar(branch_goal.id),
             )
         )
@@ -311,7 +300,6 @@ def cases(
         substitute_expr_var(current_goal.statement, hyp_name, EVar("_case")),
     )
     assignment = EMatch(head_name, EVar(hyp_name), motive, tuple(branch_terms))
-
     manager.refine_goal(assignment, subgoals)
 
 
@@ -323,7 +311,6 @@ def _apply_rcases_pattern(
     """Recursively destruct a hypothesis according to the given pattern structure."""
     if isinstance(pattern, str):
         return
-
     if not pattern:
         return
 
@@ -336,7 +323,6 @@ def _apply_rcases_pattern(
 
     current_goal = require_current_goal(manager)
     used_names = set(current_goal.local_context.keys())
-
     bound_names: list[str] = []
     nested_targets: list[tuple[str, RCasesPattern]] = []
 
@@ -359,7 +345,36 @@ def _apply_rcases_pattern(
     cases(manager, hyp_name=hyp_name, patterns=(branch_pattern,))
 
     for sub_name, sub_pattern in nested_targets:
-        _apply_rcases_pattern(manager, sub_name, sub_pattern)
+        target_goal = None
+        state_after = manager.current_state
+        for g in state_after.goals:
+            if g.has_local_hypothesis(sub_name):
+                target_goal = g
+                break
+
+        if target_goal is not None:
+            current_state = manager.current_state
+            if current_state.goals and current_state.goals[0].id != target_goal.id:
+                idx = next(
+                    (
+                        i for i, g in enumerate(current_state.goals)
+                        if g.id == target_goal.id
+                    ),
+                    -1,
+                )
+                if idx != -1:
+                    rotated = tuple(
+                        list(current_state.goals[idx:])
+                        + list(current_state.goals[:idx])
+                    )
+                    manager.session.update_state(
+                        current_state.__class__(
+                            goals=rotated, metavars=current_state.metavars
+                        )
+                    )
+
+            _apply_rcases_pattern(manager, sub_name, sub_pattern)
+
 
 @requires_active_goal
 def rcases(

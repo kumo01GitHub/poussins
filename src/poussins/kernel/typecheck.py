@@ -148,7 +148,7 @@ def _infer_match(
         metavars,
         env,
     )
-    discriminee_head, _ = flatten_app_chain(discriminee_type)
+    discriminee_head, discriminee_args = flatten_app_chain(discriminee_type)
     if not isinstance(discriminee_head, EConst):
         raise KernelTypeError("Match discriminee must have an inductive type head.")
     if discriminee_head.name != expr.inductive_name:
@@ -165,20 +165,27 @@ def _infer_match(
     if len(expr.cases) != len(constructor_names):
         raise KernelTypeError(
             "Match branch count mismatch. "
-            + f"Expected {len(constructor_names)}, found {len(expr.cases)}."
+            f"Expected {len(constructor_names)}, found {len(expr.cases)}."
         )
 
     motive_type = whnf(infer_type(expr.motive, context, metavars, env), metavars, env)
     if not isinstance(motive_type, EPi):
         raise KernelTypeError("Match motive must be a function (Pi type).")
+
     motive_domain = whnf(motive_type.domain, metavars, env)
     if not is_def_eq(motive_domain, discriminee_type, context, metavars, env):
         raise KernelTypeError("Match motive domain mismatch with discriminee type.")
 
+    inductive_param_count = 0
+    curr_t = inductive_decl.type
+    while isinstance(curr_t, EPi):
+        inductive_param_count += 1
+        curr_t = curr_t.body
+
     for branch_expr, constructor_name in zip(
         expr.cases,
         constructor_names,
-        strict=False,
+        strict=False
     ):
         constructor_decl = env.get(constructor_name)
         if not isinstance(constructor_decl, ConstructorDeclaration):
@@ -192,8 +199,9 @@ def _infer_match(
         constructor_type = whnf(
             infer_type(constructor_const, context, metavars, env),
             metavars,
-            env,
+            env
         )
+
         binders: list[tuple[str, Expr]] = []
         constructor_args: list[Expr] = []
         current_constructor_type = constructor_type
@@ -204,14 +212,33 @@ def _infer_match(
             constructor_args.append(EVar(current_constructor_type.var))
             current_constructor_type = current_constructor_type.body
 
-        constructor_instance = build_app_chain(constructor_const, *constructor_args)
-        expected_branch_type: Expr = EApp(expr.motive, constructor_instance)
-        for var_name, domain in reversed(binders):
-            expected_branch_type = EPi(var_name, domain, expected_branch_type)
+        param_substitutions: dict[str, Expr] = {}
+        for idx in range(
+            min(inductive_param_count, len(discriminee_args), len(binders))
+        ):
+            p_var_name = binders[idx][0]
+            param_substitutions[p_var_name] = discriminee_args[idx]
 
+        specialized_binders: list[tuple[str, Expr]] = []
         branch_context = dict(context)
         for var_name, domain in binders:
-            branch_context[var_name] = domain
+            spec_domain = domain
+            for p_name, p_val in param_substitutions.items():
+                spec_domain = substitute_expr_var(spec_domain, p_name, p_val)
+            specialized_binders.append((var_name, spec_domain))
+            branch_context[var_name] = spec_domain
+
+        constructor_instance = build_app_chain(constructor_const, *constructor_args)
+        for p_name, p_val in param_substitutions.items():
+            constructor_instance = substitute_expr_var(
+                constructor_instance,
+                p_name,
+                p_val
+            )
+
+        expected_branch_type: Expr = EApp(expr.motive, constructor_instance)
+        for var_name, domain in reversed(specialized_binders):
+            expected_branch_type = EPi(var_name, domain, expected_branch_type)
 
         branch_type = infer_type(branch_expr, branch_context, metavars, env)
         if not is_def_eq(branch_type, expected_branch_type, context, metavars, env):
