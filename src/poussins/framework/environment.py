@@ -32,25 +32,31 @@ def create_standard_environment() -> Environment:
     """Create a standard environment with common declarations."""
     env = Environment()
 
+    # ------------------------------------------------------------------
     # Empty
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         EmptyDeclaration.EMPTY_DECLARATION.value,
         (),
-        None,
+        EmptyDeclaration.EMPTY_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Unit
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         UnitDeclaration.UNIT_DECLARATION.value,
         (
             UnitDeclaration.UNIT_UNIT_DECLARATION.value,
         ),
-        None,
+        UnitDeclaration.UNIT_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Boolean
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         BoolDeclaration.BOOL_DECLARATION.value,
@@ -61,7 +67,9 @@ def create_standard_environment() -> Environment:
         BoolDeclaration.BOOL_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Equality
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         EqualityDeclaration.EQ_DECLARATION.value,
@@ -79,7 +87,9 @@ def create_standard_environment() -> Environment:
         EqualityDeclaration.EQ_TRANS_DECLARATION.value
     )
 
+    # ------------------------------------------------------------------
     # Logic
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         LogicDeclaration.TRUE_DECLARATION.value,
@@ -124,7 +134,9 @@ def create_standard_environment() -> Environment:
         LogicDeclaration.EXISTS_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Natural numbers
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         NatDeclaration.NAT_DECLARATION.value,
@@ -139,7 +151,9 @@ def create_standard_environment() -> Environment:
         NatDeclaration.NAT_ADD_DECLARATION.value
     )
 
+    # ------------------------------------------------------------------
     # List
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         ListDeclaration.LIST_DECLARATION.value,
@@ -147,10 +161,12 @@ def create_standard_environment() -> Environment:
             ListDeclaration.LIST_NIL_DECLARATION.value,
             ListDeclaration.LIST_CONS_DECLARATION.value,
         ),
-        None,
+        ListDeclaration.LIST_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Vector
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         VectorDeclaration.VECTOR_DECLARATION.value,
@@ -158,10 +174,12 @@ def create_standard_environment() -> Environment:
             VectorDeclaration.VECTOR_NIL_DECLARATION.value,
             VectorDeclaration.VECTOR_CONS_DECLARATION.value,
         ),
-        None,
+        VectorDeclaration.VECTOR_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Finite
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         FinDeclaration.FIN_DECLARATION.value,
@@ -169,30 +187,36 @@ def create_standard_environment() -> Environment:
             FinDeclaration.FIN_ZERO_DECLARATION.value,
             FinDeclaration.FIN_SUCC_DECLARATION.value,
         ),
-        None,
+        FinDeclaration.FIN_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Product
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         ProdDeclaration.PROD_DECLARATION.value,
         (
             ProdDeclaration.PROD_MK_DECLARATION.value,
         ),
-        None,
+        ProdDeclaration.PROD_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Sigma
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         SigmaDeclaration.SIGMA_DECLARATION.value,
         (
             SigmaDeclaration.SIGMA_MK_DECLARATION.value,
         ),
-        None,
+        SigmaDeclaration.SIGMA_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Sum
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         SumDeclaration.SUM_DECLARATION.value,
@@ -200,10 +224,12 @@ def create_standard_environment() -> Environment:
             SumDeclaration.SUM_INL_DECLARATION.value,
             SumDeclaration.SUM_INR_DECLARATION.value,
         ),
-        None,
+        SumDeclaration.SUM_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Option
+    # ------------------------------------------------------------------
     declare_inductive(
         env,
         OptionDeclaration.OPTION_DECLARATION.value,
@@ -211,10 +237,12 @@ def create_standard_environment() -> Environment:
             OptionDeclaration.OPTION_NONE_DECLARATION.value,
             OptionDeclaration.OPTION_SOME_DECLARATION.value,
         ),
-        None,
+        OptionDeclaration.OPTION_REC_DECLARATION.value,
     )
 
+    # ------------------------------------------------------------------
     # Quotient
+    # ------------------------------------------------------------------
     declare_quotient(
         env,
         QuotDeclaration.QUOT_DECLARATION.value,

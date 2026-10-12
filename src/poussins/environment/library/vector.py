@@ -4,7 +4,12 @@ from __future__ import annotations
 from enum import Enum
 
 from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
-from ..declaration import ConstructorDeclaration, Declaration, InductiveDeclaration
+from ..declaration import (
+    ConstructorDeclaration,
+    Declaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 
 
 class VectorDeclaration(Enum):
@@ -57,6 +62,116 @@ class VectorDeclaration(Enum):
                         EApp(
                             EApp(EConst("Vector", (UnivLevelParam("u"),)), EVar("A")),
                             EApp(EConst("Nat.succ", ()), EVar("n")),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    VECTOR_REC_DECLARATION = RecursorDeclaration(
+        name="Vector.rec",
+        level_params=("u", "v"),
+        inductive_name="Vector",
+        num_params=1,
+        num_indices=1,
+        num_minors=2,
+        type=EPi(
+            "A", ESort(UnivLevelParam("u")),
+            EPi(
+                "motive",
+                EPi(
+                    "n", EConst("Nat", ()),
+                    EPi(
+                        "_",
+                        EApp(
+                            EApp(EConst("Vector", (UnivLevelParam("u"),)), EVar("A")),
+                            EVar("n")
+                        ),
+                        ESort(UnivLevelParam("v"))
+                    ),
+                ),
+                EPi(
+                    "nil",
+                    EApp(
+                        EApp(
+                            EVar("motive"),
+                            EConst("Nat.zero", ()),
+                        ),
+                        EApp(
+                            EConst("Vector.nil", (UnivLevelParam("u"),)),
+                            EVar("A"),
+                        ),
+                    ),
+                    EPi(
+                        "cons",
+                        EPi(
+                            "n", EConst("Nat", ()),
+                            EPi(
+                                "head", EVar("A"),
+                                EPi(
+                                    "tail",
+                                    EApp(
+                                        EApp(
+                                            EConst("Vector", (UnivLevelParam("u"),)),
+                                            EVar("A"),
+                                        ),
+                                        EVar("n"),
+                                    ),
+                                    EPi(
+                                        "ih",
+                                        EApp(
+                                            EApp(
+                                                EVar("motive"),
+                                                EVar("n"),
+                                            ),
+                                            EVar("tail"),
+                                        ),
+                                        EApp(
+                                            EApp(
+                                                EVar("motive"),
+                                                EApp(EConst("Nat.succ", ()), EVar("n")),
+                                            ),
+                                            EApp(
+                                                EApp(
+                                                    EApp(
+                                                        EApp(
+                                                            EConst(
+                                                                "Vector.cons",
+                                                                (UnivLevelParam("u"),)
+                                                            ),
+                                                            EVar("A"),
+                                                        ),
+                                                        EVar("n"),
+                                                    ),
+                                                    EVar("head"),
+                                                ),
+                                                EVar("tail"),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        EPi(
+                            "n", EConst("Nat", ()),
+                            EPi(
+                                "v",
+                                EApp(
+                                    EApp(
+                                        EConst("Vector", (UnivLevelParam("u"),)),
+                                        EVar("A"),
+                                    ),
+                                    EVar("n"),
+                                ),
+                                EApp(
+                                    EApp(
+                                        EVar("motive"),
+                                        EVar("n"),
+                                    ),
+                                    EVar("v"),
+                                ),
+                            ),
                         ),
                     ),
                 ),

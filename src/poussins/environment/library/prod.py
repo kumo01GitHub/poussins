@@ -4,7 +4,12 @@ from __future__ import annotations
 from enum import Enum
 
 from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
-from ..declaration import ConstructorDeclaration, Declaration, InductiveDeclaration
+from ..declaration import (
+    ConstructorDeclaration,
+    Declaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 
 
 class ProdDeclaration(Enum):
@@ -40,6 +45,68 @@ class ProdDeclaration(Enum):
                         EApp(
                             EApp(EConst("Prod", (UnivLevelParam("u"),)), EVar("A")),
                             EVar("B"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    PROD_REC_DECLARATION = RecursorDeclaration(
+        name="Prod.rec",
+        level_params=("u", "v"),
+        inductive_name="Prod",
+        num_params=2,
+        num_indices=0,
+        num_minors=1,
+        type=EPi(
+            "A", ESort(UnivLevelParam("u")),
+            EPi("B", ESort(UnivLevelParam("u")),
+                EPi(
+                    "motive",
+                    EPi(
+                        "_",
+                        EApp(
+                            EApp(
+                                EConst("Prod", (UnivLevelParam("u"),)),
+                                EVar("A")
+                            ),
+                            EVar("B")
+                        ),
+                        ESort(UnivLevelParam("v"))
+                    ),
+                    EPi(
+                        "mk",
+                        EPi("fst", EVar("A"),
+                            EPi("snd", EVar("B"),
+                                EApp(
+                                    EVar("motive"),
+                                    EApp(
+                                        EApp(
+                                            EApp(
+                                                EApp(
+                                                    EConst(
+                                                        "Prod.mk",
+                                                        (UnivLevelParam("u"),)
+                                                    ),
+                                                    EVar("A")
+                                                ),
+                                                EVar("B"),
+                                            ),
+                                            EVar("fst"),
+                                        ),
+                                        EVar("snd"),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        EPi(
+                            "p",
+                            EApp(
+                                EApp(EConst("Prod", (UnivLevelParam("u"),)), EVar("A")),
+                                EVar("B")
+                            ),
+                            EApp(EVar("motive"), EVar("p")),
                         ),
                     ),
                 ),

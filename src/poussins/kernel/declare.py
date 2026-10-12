@@ -232,7 +232,7 @@ def declare_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
-    rec: RecursorDeclaration | None = None,
+    rec: RecursorDeclaration
 ) -> None:
     """Validate and declare an inductive type, its constructors, and recursor.
 
@@ -252,7 +252,7 @@ def validate_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
-    rec: RecursorDeclaration | None = None,
+    rec: RecursorDeclaration
 ) -> None:
     """Validate an inductive type, its constructors, and optional recursor.
 
@@ -266,15 +266,12 @@ def _declare_inductive_on_staging(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
-    rec: RecursorDeclaration | None = None,
+    rec: RecursorDeclaration,
     *,
     with_commit: bool
 ) -> None:
     """Validate an inductive declaration, optionally committing to the environment."""
-    staged_decls: list[Declaration] = [decl]
-    staged_decls.extend(ctors)
-    if rec is not None:
-        staged_decls.append(rec)
+    staged_decls: list[Declaration] = [decl, *ctors, rec]
 
     stage_id = env.stage(declarations=staged_decls)
     staging_env = env.get_staging(stage_id)
@@ -287,9 +284,8 @@ def _declare_inductive_on_staging(
         for ctor in ctors:
             _validate_constructor(staging_env, decl, ctor)
 
-        # 3. Validate the recursor if provided.
-        if rec is not None:
-            _validate_recursor(staging_env, decl, rec)
+        # 3. Validate the recursor with strict structural checks.
+        _validate_recursor(staging_env, decl, ctors, rec)
 
         if with_commit:
             env.commit(stage_id)
@@ -360,40 +356,65 @@ def _validate_strict_positivity(
 def _validate_recursor(
     env: Environment,
     decl: InductiveDeclaration,
+    ctors: Sequence[ConstructorDeclaration],
     rec: RecursorDeclaration,
 ) -> None:
-    """Validate the recursor type formation and its relation to the inductive type."""
+    """Validate the recursor declaration."""
     # 1. Check that the recursor's type evaluates to a Sort.
     rec_sort = infer_type(rec.type, {}, {}, env)
     if not isinstance(whnf(rec_sort, {}, env), ESort):
         raise KernelTypeError(
-            f"Recursor '{rec.name}' type must evaluate to a Sort, got: "
-            f"{rec_sort}"
+            f"Recursor '{rec.name}' type must evaluate to a Sort, got: {rec_sort}"
         )
 
-    # 2. Check that the recursor's type contains the target Inductive type (decl.name).
-    if not _occurs_in(decl.name, rec.type):
-        raise KernelTypeError(
-            f"Recursor '{rec.name}' type does not target the inductive "
-            f"type '{decl.name}'"
-        )
-
-    # 3. Check that the recursor's name is prefixed with the Inductive name
+    # 2. Check that the recursor's name is prefixed with the Inductive name.
     if not rec.name.startswith(f"{decl.name}."):
         raise KernelTypeError(
-            f"Recursor name '{rec.name}' must be prefixed with "
-            f"inductive name '{decl.name}.'"
+            f"Recursor name '{rec.name}' must be prefixed "
+            + f"with inductive name '{decl.name}.'"
+        )
+
+    # 3. Check that the recursor's type contains the target Inductive type.
+    if not _occurs_in(decl.name, rec.type):
+        raise KernelTypeError(
+            f"Recursor '{rec.name}' type does not target "
+            + f"the inductive type '{decl.name}'"
+        )
+
+    # 4. Strict Structural Validation
+    curr = whnf(rec.type, {}, env)
+
+    pi_binders = []
+    while isinstance(curr, EPi):
+        pi_binders.append(curr)
+        curr = whnf(curr.body, {}, env)
+
+    expected_min_binders = len(ctors) + 2
+    if len(pi_binders) < expected_min_binders:
+        raise KernelTypeError(
+            f"Recursor '{rec.name}' has invalid structure: expected at least "
+            + f"{expected_min_binders} Pi binders "
+            + f"(motive + {len(ctors)} minor premises + target), "
+            + f"got {len(pi_binders)}"
+        )
+
+    target_found = (
+        any(_occurs_in(decl.name, b.domain) for b in pi_binders)
+        or _occurs_in(decl.name, curr)
+    )
+    if not target_found:
+        raise KernelTypeError(
+            f"Recursor '{rec.name}' structure does not properly reference "
+            f"inductive type '{decl.name}'"
         )
 
 def _occurs_in(target_name: str, expr: Expr) -> bool:
     """Recursively check if `target_name` (as EConst) occurs in `expr`."""
     match expr:
-        case EConst(name) if name == target_name:
+        case EConst(name=name) if name == target_name:
             return True
         case EPi(_, domain, body) | ELam(_, domain, body):
-            return _occurs_in(target_name, domain) or _occurs_in(
-                target_name, body
-            )
+            return _occurs_in(target_name, domain) or _occurs_in(target_name, body)
         case EApp(fn, arg):
             return _occurs_in(target_name, fn) or _occurs_in(target_name, arg)
         case EMatch(_, discriminee, motive, cases):
@@ -402,7 +423,7 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
                 or _occurs_in(target_name, motive)
                 or any(_occurs_in(target_name, c) for c in cases)
             )
-        case ESort(_) | EVar(_) | EMetaVar(_):
+        case ESort(_) | EVar(_) | EMetaVar(_) | EConst(_):
             return False
         case _:
             return False
