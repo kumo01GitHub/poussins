@@ -430,7 +430,7 @@ def declare_quotient(
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,
     lift_decl: QuotientDeclaration,
-    ind_decl: QuotientDeclaration,
+    sound_decl: AxiomDeclaration,
 ) -> None:
     """Validate and declare the complete set of quotient primitives.
 
@@ -439,14 +439,14 @@ def declare_quotient(
         quot_decl: The Quot type former declaration (variant='quot').
         mk_decl: The Quot.mk constructor declaration (variant='mk').
         lift_decl: The Quot.lift non-dependent recursor (variant='lift').
-        ind_decl: The Quot.ind induction principle (variant='ind').
+        sound_decl: The Quot.sound axiom declaration (AxiomDeclaration).
 
     Raises:
         KernelTypeError: If variant kinds are invalid or any type check fails.
 
     """
     _declare_quotient_on_staging(
-        env, quot_decl, mk_decl, lift_decl, ind_decl, with_commit=True
+        env, quot_decl, mk_decl, lift_decl, sound_decl, with_commit=True
     )
 
 def validate_quotient(
@@ -454,11 +454,11 @@ def validate_quotient(
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,
     lift_decl: QuotientDeclaration,
-    ind_decl: QuotientDeclaration,
+    sound_decl: AxiomDeclaration,
 ) -> None:
-    """Validate that all 4 quotient declarations are valid and form a matching set."""
+    """Validate that all quotient primitives and the sound axiom form a matching set."""
     _declare_quotient_on_staging(
-        env, quot_decl, mk_decl, lift_decl, ind_decl, with_commit=False
+        env, quot_decl, mk_decl, lift_decl, sound_decl, with_commit=False
     )
 
 
@@ -467,36 +467,33 @@ def _declare_quotient_on_staging(
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,
     lift_decl: QuotientDeclaration,
-    ind_decl: QuotientDeclaration,
+    sound_decl: AxiomDeclaration,
     *,
-    with_commit: bool
+    with_commit: bool,
 ) -> None:
-    """Validate a quotient declaration, optionally committing to the environment."""
+    """Validate quotient declarations, optionally committing to the environment."""
     staged_decls: list[Declaration] = [
         quot_decl,
         mk_decl,
         lift_decl,
-        ind_decl,
+        sound_decl,
     ]
     stage_id = env.stage(declarations=staged_decls)
     staging_env = env.get_staging(stage_id)
 
     try:
-        decls = [
+        # 1. Validate Quotient-specific primitives (quot, mk, lift)
+        quot_decls = [
             ("quot", quot_decl),
             ("mk", mk_decl),
             ("lift", lift_decl),
-            ("ind", ind_decl),
         ]
-
-        # 1. Check variant names and ensure each declaration's type evaluates to a Sort.
-        for expected_variant, decl in decls:
+        for expected_variant, decl in quot_decls:
             if decl.variant != expected_variant:
                 raise KernelTypeError(
                     f"Expected quotient variant '{expected_variant}', "
                     f"got '{decl.variant}' for declaration '{decl.name}'"
                 )
-
             type_inferred = infer_type(decl.type, {}, {}, staging_env)
             type_sort = whnf(type_inferred, {}, staging_env)
             if not isinstance(type_sort, ESort):
@@ -504,6 +501,15 @@ def _declare_quotient_on_staging(
                     f"Quotient declaration '{decl.name}' must evaluate to a "
                     f"Sort, got: {type_sort}"
                 )
+
+        # 2. Validate Quot.sound axiom declaration
+        sound_type_inferred = infer_type(sound_decl.type, {}, {}, staging_env)
+        sound_sort = whnf(sound_type_inferred, {}, staging_env)
+        if not isinstance(sound_sort, ESort):
+            raise KernelTypeError(
+                f"Axiom statement '{sound_decl.name}' must evaluate to a Sort, got: "
+                f"{sound_sort}"
+            )
 
         if with_commit:
             env.commit(stage_id)
