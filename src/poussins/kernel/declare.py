@@ -367,21 +367,14 @@ def _validate_recursor(
             f"Recursor '{rec.name}' type must evaluate to a Sort, got: {rec_sort}"
         )
 
-    # 2. Check that the recursor's name is prefixed with the Inductive name.
-    if not rec.name.startswith(f"{decl.name}."):
-        raise KernelTypeError(
-            f"Recursor name '{rec.name}' must be prefixed "
-            + f"with inductive name '{decl.name}.'"
-        )
-
-    # 3. Check that the recursor's type contains the target Inductive type.
+    # 2. Check that the recursor's type contains the target Inductive type.
     if not _occurs_in(decl.name, rec.type):
         raise KernelTypeError(
             f"Recursor '{rec.name}' type does not target "
             + f"the inductive type '{decl.name}'"
         )
 
-    # 4. Strict Structural Validation
+    # 3. Strict Structural Validation
     curr = whnf(rec.type, {}, env)
 
     pi_binders = []
