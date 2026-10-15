@@ -34,7 +34,7 @@ from .typecheck import infer_type
 # ------------------------------------------------------------------
 # Axiom Declaration
 # ------------------------------------------------------------------
-def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
+def register_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate and declare an axiom in the environment.
 
     Args:
@@ -45,7 +45,7 @@ def declare_axiom(env: Environment, decl: AxiomDeclaration) -> None:
         KernelTypeError: If the statement does not evaluate to a Sort.
 
     """
-    _declare_axiom_on_staging(env, decl, with_commit=True)
+    _register_axiom_on_staging(env, decl, with_commit=True)
 
 def validate_axiom(env: Environment, decl: AxiomDeclaration) -> None:
     """Validate that an axiom's statement evaluates to a Sort.
@@ -55,10 +55,10 @@ def validate_axiom(env: Environment, decl: AxiomDeclaration) -> None:
             does not evaluate to a Sort.
 
     """
-    _declare_axiom_on_staging(env, decl, with_commit=False)
+    _register_axiom_on_staging(env, decl, with_commit=False)
 
 
-def _declare_axiom_on_staging(
+def _register_axiom_on_staging(
     env: Environment,
     decl: AxiomDeclaration,
     *,
@@ -91,7 +91,7 @@ def _declare_axiom_on_staging(
 # ------------------------------------------------------------------
 # Definition Declaration
 # ------------------------------------------------------------------
-def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
+def register_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate and declare a definition in the environment.
 
     Args:
@@ -103,7 +103,7 @@ def declare_definition(env: Environment, decl: DefinitionDeclaration) -> None:
             match the declared type.
 
     """
-    _declare_definition_on_staging(env, decl, with_commit=True)
+    _register_definition_on_staging(env, decl, with_commit=True)
 
 def validate_definition(env: Environment, decl: DefinitionDeclaration) -> None:
     """Validate that a definition's value matches its declared type.
@@ -113,9 +113,9 @@ def validate_definition(env: Environment, decl: DefinitionDeclaration) -> None:
             does not definitionally equal the declared type.
 
     """
-    _declare_definition_on_staging(env, decl, with_commit=False)
+    _register_definition_on_staging(env, decl, with_commit=False)
 
-def _declare_definition_on_staging(
+def _register_definition_on_staging(
     env: Environment,
     decl: DefinitionDeclaration,
     *,
@@ -160,7 +160,7 @@ def _declare_definition_on_staging(
 # ------------------------------------------------------------------
 # Theorem Declaration
 # ------------------------------------------------------------------
-def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
+def register_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate and declare a theorem in the environment.
 
     Args:
@@ -171,7 +171,7 @@ def declare_theorem(env: Environment, decl: TheoremDeclaration) -> None:
         KernelTypeError: If the proof does not type-check or match statement.
 
     """
-    _declare_theorem_on_staging(env, decl, with_commit=True)
+    _register_theorem_on_staging(env, decl, with_commit=True)
 
 def validate_theorem(env: Environment, decl: TheoremDeclaration) -> None:
     """Validate that a theorem's proof term matches its declared proposition.
@@ -181,9 +181,9 @@ def validate_theorem(env: Environment, decl: TheoremDeclaration) -> None:
             does not definitionally equal the declared theorem type.
 
     """
-    _declare_theorem_on_staging(env, decl, with_commit=False)
+    _register_theorem_on_staging(env, decl, with_commit=False)
 
-def _declare_theorem_on_staging(
+def _register_theorem_on_staging(
     env: Environment,
     decl: TheoremDeclaration,
     *,
@@ -228,7 +228,7 @@ def _declare_theorem_on_staging(
 # ------------------------------------------------------------------
 # Inductive Declaration
 # ------------------------------------------------------------------
-def declare_inductive(
+def register_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
@@ -246,7 +246,7 @@ def declare_inductive(
         KernelTypeError: If type checking, positivity check, or recursor rules fail.
 
     """
-    _declare_inductive_on_staging(env, decl, ctors, rec, with_commit=True)
+    _register_inductive_on_staging(env, decl, ctors, rec, with_commit=True)
 
 def validate_inductive(
     env: Environment,
@@ -260,9 +260,9 @@ def validate_inductive(
         KernelTypeError: If any kernel verification rule fails.
 
     """
-    _declare_inductive_on_staging(env, decl, ctors, rec, with_commit=False)
+    _register_inductive_on_staging(env, decl, ctors, rec, with_commit=False)
 
-def _declare_inductive_on_staging(
+def _register_inductive_on_staging(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
@@ -425,7 +425,7 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
 # ------------------------------------------------------------------
 # Quotient Declaration
 # ------------------------------------------------------------------
-def declare_quotient(
+def register_quotient(
     env: Environment,
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,
@@ -445,7 +445,7 @@ def declare_quotient(
         KernelTypeError: If variant kinds are invalid or any type check fails.
 
     """
-    _declare_quotient_on_staging(
+    _register_quotient_on_staging(
         env, quot_decl, mk_decl, lift_decl, sound_decl, with_commit=True
     )
 
@@ -457,12 +457,12 @@ def validate_quotient(
     sound_decl: AxiomDeclaration,
 ) -> None:
     """Validate that all quotient primitives and the sound axiom form a matching set."""
-    _declare_quotient_on_staging(
+    _register_quotient_on_staging(
         env, quot_decl, mk_decl, lift_decl, sound_decl, with_commit=False
     )
 
 
-def _declare_quotient_on_staging(
+def _register_quotient_on_staging(
     env: Environment,
     quot_decl: QuotientDeclaration,
     mk_decl: QuotientDeclaration,

@@ -17,9 +17,9 @@ from ..environment.library import (
     VectorDeclaration,
 )
 from ..kernel import (
-    declare_definition,
-    declare_inductive,
-    declare_quotient,
+    register_definition,
+    register_inductive,
+    register_quotient,
 )
 
 
@@ -35,7 +35,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Empty
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         EmptyDeclaration.EMPTY_DECLARATION.value,
         (),
@@ -45,7 +45,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Unit
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         UnitDeclaration.UNIT_DECLARATION.value,
         (
@@ -57,7 +57,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Boolean
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         BoolDeclaration.BOOL_DECLARATION.value,
         (
@@ -70,7 +70,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Equality
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         EqualityDeclaration.EQ_DECLARATION.value,
         (
@@ -78,11 +78,11 @@ def create_standard_environment() -> Environment:
         ),
         EqualityDeclaration.EQ_REC_DECLARATION.value,
     )
-    declare_definition(
+    register_definition(
         env,
         EqualityDeclaration.EQ_SYMM_DECLARATION.value
     )
-    declare_definition(
+    register_definition(
         env,
         EqualityDeclaration.EQ_TRANS_DECLARATION.value
     )
@@ -90,7 +90,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Logic
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         LogicDeclaration.TRUE_DECLARATION.value,
         (
@@ -98,13 +98,13 @@ def create_standard_environment() -> Environment:
         ),
         LogicDeclaration.TRUE_REC_DECLARATION.value,
     )
-    declare_inductive(
+    register_inductive(
         env,
         LogicDeclaration.FALSE_DECLARATION.value,
         (),
         LogicDeclaration.FALSE_REC_DECLARATION.value,
     )
-    declare_inductive(
+    register_inductive(
         env,
         LogicDeclaration.AND_DECLARATION.value,
         (
@@ -112,7 +112,7 @@ def create_standard_environment() -> Environment:
         ),
         LogicDeclaration.AND_REC_DECLARATION.value,
     )
-    declare_inductive(
+    register_inductive(
         env,
         LogicDeclaration.OR_DECLARATION.value,
         (
@@ -121,11 +121,11 @@ def create_standard_environment() -> Environment:
         ),
         LogicDeclaration.OR_REC_DECLARATION.value,
     )
-    declare_definition(
+    register_definition(
         env,
         LogicDeclaration.NOT_DECLARATION.value
     )
-    declare_inductive(
+    register_inductive(
         env,
         LogicDeclaration.EXISTS_DECLARATION.value,
         (
@@ -137,7 +137,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Natural numbers
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         NatDeclaration.NAT_DECLARATION.value,
         (
@@ -146,7 +146,7 @@ def create_standard_environment() -> Environment:
         ),
         NatDeclaration.NAT_REC_DECLARATION.value,
     )
-    declare_definition(
+    register_definition(
         env,
         NatDeclaration.NAT_ADD_DECLARATION.value
     )
@@ -154,7 +154,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # List
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         ListDeclaration.LIST_DECLARATION.value,
         (
@@ -167,7 +167,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Vector
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         VectorDeclaration.VECTOR_DECLARATION.value,
         (
@@ -180,7 +180,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Finite
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         FinDeclaration.FIN_DECLARATION.value,
         (
@@ -193,7 +193,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Product
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         ProdDeclaration.PROD_DECLARATION.value,
         (
@@ -205,7 +205,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Sigma
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         SigmaDeclaration.SIGMA_DECLARATION.value,
         (
@@ -217,7 +217,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Sum
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         SumDeclaration.SUM_DECLARATION.value,
         (
@@ -230,7 +230,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Option
     # ------------------------------------------------------------------
-    declare_inductive(
+    register_inductive(
         env,
         OptionDeclaration.OPTION_DECLARATION.value,
         (
@@ -243,7 +243,7 @@ def create_standard_environment() -> Environment:
     # ------------------------------------------------------------------
     # Quotient
     # ------------------------------------------------------------------
-    declare_quotient(
+    register_quotient(
         env,
         QuotDeclaration.QUOT_DECLARATION.value,
         QuotDeclaration.QUOT_MK_DECLARATION.value,

@@ -8,7 +8,7 @@ from pyspark.sql import SparkSession
 
 from ...environment import Environment, TheoremDeclaration
 from ...errors import SparkIntegrationError
-from ...kernel import declare_theorem
+from ...kernel import register_theorem
 from ...utils.logging import get_logger
 from .task import ProofTaskDAG
 from .task_executor import ProofTaskExecutor, TaskExecutionResult
@@ -73,7 +73,7 @@ class ProofOrchestrator:
                     raise SparkIntegrationError(error_msg)
 
                 decl = cast(TheoremDeclaration, res["declaration"])
-                declare_theorem(self.env, decl)
+                register_theorem(self.env, decl)
                 self.logger.info(
                     f"Registered declaration for theorem '{res['task_name']}'"
                     " into staging Environment"

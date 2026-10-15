@@ -16,7 +16,6 @@ from .framework import (
     Prop,
     Property,
     Proposition,
-    Quot,
     Remark,
     Sigma,
     Sum,
@@ -25,6 +24,11 @@ from .framework import (
     Vector,
     create_environment,
     create_standard_environment,
+    declare_axiom,
+    declare_definition,
+    declare_inductive,
+    declare_quot,
+    declare_theorem,
 )
 
 __all__ = [
@@ -44,7 +48,6 @@ __all__ = [
     "Prop",
     "Property",
     "Proposition",
-    "Quot",
     "Remark",
     "Sigma",
     "Sum",
@@ -53,4 +56,9 @@ __all__ = [
     "Vector",
     "create_environment",
     "create_standard_environment",
+    "declare_axiom",
+    "declare_definition",
+    "declare_inductive",
+    "declare_quot",
+    "declare_theorem",
 ]

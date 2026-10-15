@@ -1,6 +1,13 @@
 """Public DSL layer: Prop, Axiom, Theorem, Example, and aliases."""
 from .axiom import Axiom
 from .bool import Bool
+from .declaration import (
+    declare_axiom,
+    declare_definition,
+    declare_inductive,
+    declare_quot,
+    declare_theorem,
+)
 from .declared_type import DeclaredType
 from .empty import Empty
 from .environment import create_environment, create_standard_environment
@@ -11,7 +18,6 @@ from .option import Option
 from .prod import Prod
 from .proof_script import ProofScript
 from .prop import Prop
-from .quot import Quot
 from .sigma import Sigma
 from .sum import Sum
 from .theorem import (
@@ -45,7 +51,6 @@ __all__ = [
     "Prod",
     "Property",
     "Proposition",
-    "Quot",
     "Remark",
     "Sigma",
     "Sum",
@@ -54,4 +59,9 @@ __all__ = [
     "Vector",
     "create_environment",
     "create_standard_environment",
+    "declare_axiom",
+    "declare_definition",
+    "declare_inductive",
+    "declare_theorem",
+    "declare_quot",
 ]
