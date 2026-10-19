@@ -14,8 +14,10 @@ from .task import ProofTaskNode
 class SparkProofScript(Theorem):
     """A theorem variant optimized for Spark Worker-side execution.
 
-    Directly executes tactic plans and yields TheoremDeclaration without
-    unnecessary Environment round-trips.
+    This class is designed to execute a sequence of tactics (tactic plans) sent from
+    the Spark Master node. It extends the base Theorem class and provides methods to
+    execute the tactic plan and validate the proof, returning a TheoremDeclaration upon
+    successful completion.
     """
 
     def __init__(
