@@ -130,7 +130,7 @@ class Example(Theorem):
 
         declaration = TheoremDeclaration(
             name="__example__",
-            level_params=(),
+            level_params=self.level_params,
             type=self.statement,
             value=self.manager.current_proof_term,
         )
