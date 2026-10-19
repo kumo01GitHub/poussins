@@ -32,7 +32,7 @@ from ..ast import (
 from ..environment.library import LogicDeclaration
 from .bindable_mixin import BindableMixin, Binding
 
-type Boundable = Sequence[Binding | BindableMixin] | Binding | BindableMixin
+type BindingLike = Sequence[Binding | BindableMixin] | Binding | BindableMixin
 
 
 @dataclass(frozen=True)
@@ -89,7 +89,7 @@ class Prop:
         return cls(EConst(LogicDeclaration.FALSE_DECLARATION.name, levels=()))
 
     @staticmethod
-    def _normalize_bindings(bindings: Boundable) -> Sequence[Binding]:
+    def _normalize_bindings(bindings: BindingLike) -> Sequence[Binding]:
         if not bindings:
             raise TypeError("bindings requires at least one binding")
 
@@ -112,7 +112,7 @@ class Prop:
             return normalized
 
     @classmethod
-    def forall(cls, bindings: Boundable, body: Prop | Expr) -> Prop:
+    def forall(cls, bindings: BindingLike, body: Prop | Expr) -> Prop:
         """Construct a universal quantifier proposition.
 
         The interface is intentionally explicit: a tuple of ``(name, type)``
@@ -127,7 +127,7 @@ class Prop:
         return cls(expr)
 
     @classmethod
-    def exists(cls, bindings: Boundable, body: Prop | Expr) -> Prop:
+    def exists(cls, bindings: BindingLike, body: Prop | Expr) -> Prop:
         """Construct an existential quantifier proposition.
 
         Accepts a single Inductive variable, a single (name, type) tuple,
