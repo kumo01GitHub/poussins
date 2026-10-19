@@ -1,14 +1,14 @@
-"""Framework-level base class providing method-style tactic access for Theorems."""
+"""Mixin class providing method-style tactic access for Theorems."""
 from __future__ import annotations
 
 import functools
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final
 
 from ..ast import EConst, EVar, Expr, UnivLevelParam
-from ..environment import Declaration, Environment, TheoremDeclaration
+from ..environment import Declaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
     CasesPatterns,
@@ -49,20 +49,20 @@ from ..tactics import (
     unfold,
     use,
 )
-from .declared_type import DeclaredType
+from .inductive import Inductive
 from .prop import Prop
 
-type ExprLike = Expr | Prop | DeclaredType | str
+type ExprLike = Expr | Prop | Inductive | str
 
 
 def log_tactic[**TacticParams](
-    func: Callable[Concatenate[ProofScript, TacticParams], None]
-) -> Callable[Concatenate[ProofScript, TacticParams], None]:
+    func: Callable[Concatenate[TacticMixin, TacticParams], None]
+) -> Callable[Concatenate[TacticMixin, TacticParams], None]:
     """Log the execution of a tactic method in ProofScript."""
 
     @functools.wraps(func)
     def wrapper(
-        self: ProofScript,
+        self: TacticMixin,
         *args: TacticParams.args,
         **kwargs: TacticParams.kwargs
     ) -> None:
@@ -87,21 +87,16 @@ def log_tactic[**TacticParams](
     return wrapper
 
 
-class ProofScript(ABC):
-    """Abstract base class for all proof-carrying script objects (Theorem, Example).
+class TacticMixin(ABC):
+    """Mixin class providing method-style tactic access for Theorems."""
 
-    This class acts purely as a fluent frontend interface for writing proof scripts.
-    It completely delegates all state mutation and
-    history tracking concerns to ProofManager.
-    """
+    manager: Final[ProofManager]
+    logger: Final[Logger]
 
-    logger: Logger
-
-    def __init__(self, statement: Expr, env: Environment):
-        """Create a proof script bound to a statement and environment."""
-        self.statement: Final[Expr] = statement
-        self.env: Final[Environment] = env
-        self.manager: Final[ProofManager] = ProofManager(statement, env)
+    def __init__(self, manager, logger) -> None:
+        """Initialize the TacticMixin with a logger and proof manager."""
+        self.manager = manager
+        self.logger = logger
 
     @property
     def current_state(self) -> ProofState:
@@ -117,18 +112,13 @@ class ProofScript(ABC):
         """Revert the proof to the previous state."""
         self.manager.undo()
 
-    @abstractmethod
-    def qed(self) -> TheoremDeclaration | None:
-        """Finalize the proof script."""
-        pass
-
     def _to_expr(self, term: ExprLike) -> Expr:
         if isinstance(term, Expr):
             return term
         elif isinstance(term, Prop):
             return Prop.to_expr(term)
-        elif isinstance(term, DeclaredType):
-            return DeclaredType.to_expr(term)
+        elif isinstance(term, Inductive):
+            return Inductive.to_expr(term)
         elif isinstance(term, str):
             current_goal = self.current_state.current_goal
             if current_goal is None:
@@ -139,7 +129,7 @@ class ProofScript(ABC):
             elif current_goal.has_local_hypothesis(term):
                 return EVar(term)
             else:
-                decl = self.env.get(term)
+                decl = self.manager.env.get(term)
                 if isinstance(decl, Declaration):
                     return EConst(
                         name=term,

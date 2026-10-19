@@ -10,6 +10,7 @@ from ...ast import (
     EPi,
     ESort,
     EVar,
+    Sort,
     UnivLevelParam,
 )
 from ..declaration import (
@@ -19,7 +20,6 @@ from ..declaration import (
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from .sort import Sort
 
 
 class NatDeclaration(Enum):

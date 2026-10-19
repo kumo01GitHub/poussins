@@ -40,7 +40,7 @@ class Goal:
             return dict(self.context)
         else:
             return {
-                name: typ for name, typ in self.context.items()
+                name: type_ for name, type_ in self.context.items()
                 if name not in self.local_hypothesis_names
             }
 

@@ -6,12 +6,14 @@ from .ops import (
     build_pi_chain,
     collect_free_vars,
     collect_metavar_ids,
+    collect_univ_levels,
     flatten_app_chain,
     has_metavar,
     substitute_expr,
     substitute_expr_var,
     substitute_metavar,
 )
+from .sort import Sort
 from .universe import (
     UnivLevel,
     UnivLevelIMax,
@@ -39,6 +41,8 @@ __all__ = [
     "UnivLevelParam",
     "UnivLevelMax",
     "UnivLevelIMax",
+    # Sort classes
+    "Sort",
     # Expr operations
     "has_metavar",
     "build_app_chain",
@@ -50,4 +54,5 @@ __all__ = [
     "substitute_expr_var",
     "collect_free_vars",
     "substitute_expr",
+    "collect_univ_levels",
 ]

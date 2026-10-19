@@ -12,13 +12,13 @@ from .declaration import (
 from .environment import Environment
 
 __all__ = [
-    "AxiomDeclaration",
-    "ConstructorDeclaration",
-    "Declaration",
-    "DefinitionDeclaration",
     "Environment",
-    "InductiveDeclaration",
-    "QuotientDeclaration",
-    "RecursorDeclaration",
+    "Declaration",
+    "AxiomDeclaration",
+    "DefinitionDeclaration",
     "TheoremDeclaration",
+    "InductiveDeclaration",
+    "ConstructorDeclaration",
+    "RecursorDeclaration",
+    "QuotientDeclaration",
 ]

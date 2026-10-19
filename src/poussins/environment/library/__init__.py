@@ -10,26 +10,24 @@ from .option import OptionDeclaration
 from .prod import ProdDeclaration
 from .quot import QuotDeclaration
 from .sigma import SigmaDeclaration
-from .sort import Sort
 from .sum import SumDeclaration
 from .unit import UnitDeclaration
 from .vector import VectorDeclaration
 
 __all__ = [
-    "BoolDeclaration",
     "EmptyDeclaration",
+    "UnitDeclaration",
+    "BoolDeclaration",
     "EqualityDeclaration",
-    "FinDeclaration",
-    "ListDeclaration",
+    "EQ_APP_ARITY",
     "LogicDeclaration",
     "NatDeclaration",
-    "OptionDeclaration",
-    "ProdDeclaration",
-    "QuotDeclaration",
-    "SigmaDeclaration",
-    "Sort",
-    "SumDeclaration",
-    "UnitDeclaration",
+    "ListDeclaration",
     "VectorDeclaration",
-    "EQ_APP_ARITY",
+    "FinDeclaration",
+    "ProdDeclaration",
+    "SigmaDeclaration",
+    "SumDeclaration",
+    "OptionDeclaration",
+    "QuotDeclaration",
 ]

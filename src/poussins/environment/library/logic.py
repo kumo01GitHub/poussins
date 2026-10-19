@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ...ast import EApp, EConst, ELam, EPi, ESort, EVar, UnivLevelParam
+from ...ast import EApp, EConst, ELam, EPi, ESort, EVar, Sort, UnivLevelParam
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
@@ -11,7 +11,6 @@ from ..declaration import (
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from .sort import Sort
 
 
 class LogicDeclaration(Enum):

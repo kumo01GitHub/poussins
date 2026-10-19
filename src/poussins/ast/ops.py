@@ -14,6 +14,7 @@ from .expr import (
     EVar,
     Expr,
 )
+from .universe import UnivLevel
 
 
 def build_app_chain(fn: Expr, *args: Expr) -> Expr:
@@ -250,3 +251,34 @@ def substitute_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
             )
         case _:
             return expr
+
+
+def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
+    """Collect all unique universe levels present in the expression."""
+    ordered_levels: list[UnivLevel] = []
+
+    def _collect(e: Expr) -> None:
+        match e:
+            case ESort(level):
+                if level not in ordered_levels:
+                    ordered_levels.append(level)
+            case EConst(_, levels):
+                for lvl in levels:
+                    if lvl not in ordered_levels:
+                        ordered_levels.append(lvl)
+            case EVar(_) | EMetaVar(_):
+                pass
+            case EPi(_, domain, body) | ELam(_, domain, body):
+                _collect(domain)
+                _collect(body)
+            case EApp(fn, arg):
+                _collect(fn)
+                _collect(arg)
+            case EMatch(_, discriminee, motive, cases):
+                _collect(discriminee)
+                _collect(motive)
+                for case_expr in cases:
+                    _collect(case_expr)
+
+    _collect(expr)
+    return tuple(ordered_levels)

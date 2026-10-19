@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ...ast import EApp, EConst, EPi, ESort, EVar, UnivLevelParam
+from ...ast import EApp, EConst, EPi, ESort, EVar, Sort, UnivLevelParam
 from ..declaration import AxiomDeclaration, Declaration, QuotientDeclaration
-from .sort import Sort
 
 
 class QuotDeclaration(Enum):

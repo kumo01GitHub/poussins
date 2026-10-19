@@ -3,15 +3,13 @@ from __future__ import annotations
 
 from enum import Enum
 
-from ...ast.expr import EApp, EConst, EPi, ESort, EVar
-from ...ast.universe import UnivLevelParam
+from ...ast import EApp, EConst, EPi, ESort, EVar, Sort, UnivLevelParam
 from ..declaration import (
     ConstructorDeclaration,
     Declaration,
     InductiveDeclaration,
     RecursorDeclaration,
 )
-from .sort import Sort
 
 
 class BoolDeclaration(Enum):

@@ -1,19 +1,19 @@
 """Theorem, Lemma, Example: proof-carrying DSL objects."""
 from __future__ import annotations
 
-from logging import Logger
 from typing import Final, override
+from uuid import uuid4
 
 from ..ast import Expr
 from ..environment import Environment, TheoremDeclaration
 from ..errors import FrameworkError
-from ..kernel import register_theorem, validate_theorem
+from ..kernel import ProofManager, register_theorem, validate_theorem
 from ..utils.logging import get_logger
-from .proof_script import ProofScript
 from .prop import Prop
+from .tactic_mixin import TacticMixin
 
 
-class Theorem(ProofScript):
+class Theorem(TacticMixin):
     """A named proposition together with an interactive proof session.
 
     Tactics can be applied as methods (via ProofScript) or as standalone functions
@@ -36,14 +36,19 @@ class Theorem(ProofScript):
     ) -> None:
         """Create a theorem."""
         self.name: Final[str] = name
+        self.statement: Final[Expr] = Prop.to_expr(statement)
         self.level_params: Final[tuple[str, ...]] = level_params
-        super().__init__(Prop.to_expr(statement), env)
+        self.env: Final[Environment] = env
 
-        self.logger: Logger = get_logger(__name__)
+        TacticMixin.__init__(
+            self,
+            manager=ProofManager(self.statement, self.env),
+            logger=get_logger(__name__),
+        )
+
         self.logger.info(f"Theorem '{self.name}': {self.statement}")
 
-    @override
-    def qed(self) -> None:
+    def qed(self) -> TheoremDeclaration:
         """Qualify the theorem.
 
         Verify that the proof is closed, extract the final proof term,
@@ -77,6 +82,8 @@ class Theorem(ProofScript):
         except Exception as e:
             raise FrameworkError("Failed to register theorem") from e
 
+        return declaration
+
 
 # Stylistic aliases for Theorem.
 Lemma = Theorem
@@ -87,22 +94,29 @@ Remark = Theorem
 Property = Theorem
 
 
-class Example(ProofScript):
+class Example(Theorem):
     """An anonymous proof for exploration or testing.
 
     Like Theorem but without a name and without registering to Environment.
     """
 
-    def __init__(self, statement: Prop | Expr, env: Environment) -> None:
-        """Create an anonymous proof script for the given statement."""
-        pure_expr = Prop.to_expr(statement)
-        super().__init__(pure_expr, env)
-
-        self.logger: Logger = get_logger(__name__)
-        self.logger.info(f"Example: {self.statement}")
+    def __init__(
+        self,
+        statement: Prop | Expr,
+        env: Environment,
+        level_params: tuple[str, ...] = (),
+    ) -> None:
+        """Create a anonymous theorem."""
+        Theorem.__init__(
+            self,
+            name=f"__example:{uuid4()}__",
+            env=env,
+            statement=statement,
+            level_params=level_params
+        )
 
     @override
-    def qed(self) -> None:
+    def qed(self) -> TheoremDeclaration:
         """Verify the anonymity proof is complete."""
         if not self.is_closed:
             raise FrameworkError(
@@ -127,3 +141,5 @@ class Example(ProofScript):
             self.logger.info(f"==> {self.manager.current_proof_term}")
         except Exception as e:
             raise FrameworkError("Failed to verify example") from e
+
+        return declaration

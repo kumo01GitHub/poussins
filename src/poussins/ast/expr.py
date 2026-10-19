@@ -18,8 +18,6 @@ class ESort:
         match self.level:
             case UnivLevelZero():
                 return "Prop"
-            case UnivLevelSucc(UnivLevelZero()):
-                return "Type"
             case UnivLevelSucc(pred):
                 depth = 1
                 current = pred
@@ -27,7 +25,7 @@ class ESort:
                     depth += 1
                     current = current.pred
                 if isinstance(current, UnivLevelZero):
-                    return f"Type {depth}"
+                    return f"Type {depth - 1}"
                 elif isinstance(current, UnivLevelParam):
                     return f"Sort({current.name} + {depth})"
                 else:
