@@ -1,48 +1,41 @@
 """Module for defining axioms in the framework."""
 from __future__ import annotations
 
-from logging import Logger
-from typing import Final
+from dataclasses import dataclass
 
 from ..ast import Expr
 from ..environment import AxiomDeclaration, Environment
-from ..errors import FrameworkError
-from ..kernel import register_axiom
-from ..utils.logging import get_logger
+from .declaration import declare_axiom
 from .prop import Prop
 
 
+@dataclass(frozen=True, init=False)
 class Axiom:
     """Represent a proposition accepted without proof."""
 
+    env: Environment
+    name: str
+    statement: Expr
+    level_params: tuple[str, ...]
+
     def __init__(
         self,
+        env: Environment,
         name: str,
         statement: Prop | Expr,
-        env: Environment,
         level_params: tuple[str, ...] = (),
     ) -> None:
         """Create an axiom."""
-        self.name: Final[str] = name
-        self.level_params: Final[tuple[str, ...]] = level_params
-        self.statement: Final[Expr] = Prop.to_expr(statement)
-        self.env: Final[Environment] = env
-        self.logger: Final[Logger] = get_logger(__name__)
+        object.__setattr__(self, "env", env)
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "statement", Prop.to_expr(statement))
+        object.__setattr__(self, "level_params", level_params)
 
-        self.declare()
-
-    def declare(self) -> None:
+    def declare(self) -> AxiomDeclaration:
         """Declare the axiom in the environment."""
-        declaration = AxiomDeclaration(
+        return declare_axiom(
+            env=self.env,
             name=self.name,
+            statement=self.statement,
             level_params=self.level_params,
-            type=self.statement,
         )
-
-        try:
-            register_axiom(self.env, declaration)
-            self.logger.info(
-                f"Axiom '{self.name}' is successfully declared: {self.statement}"
-            )
-        except ValueError as e:
-            raise FrameworkError(f"Failed to register axiom '{self.name}'") from e

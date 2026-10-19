@@ -7,7 +7,9 @@ from .declaration import (
     declare_quot,
     declare_theorem,
 )
+from .definition import Definition
 from .environment import create_environment, create_standard_environment
+from .inductive import Inductive
 from .prop import Prop
 from .theorem import (
     Corollary,
@@ -19,23 +21,33 @@ from .theorem import (
     Remark,
     Theorem,
 )
+from .type import Type
 
 __all__ = [
-    "Axiom",
-    "Corollary",
-    "Example",
-    "Fact",
-    "Lemma",
-    "Prop",
-    "Property",
-    "Proposition",
-    "Remark",
-    "Theorem",
+    # Environment
     "create_environment",
     "create_standard_environment",
     "declare_axiom",
     "declare_definition",
-    "declare_inductive",
     "declare_theorem",
+    "declare_inductive",
     "declare_quot",
+    # Axiom
+    "Axiom",
+    # Definition
+    "Definition",
+    # Theorem
+    "Theorem",
+    "Lemma",
+    "Proposition",
+    "Corollary",
+    "Fact",
+    "Remark",
+    "Property",
+    "Example",
+    # Inductive
+    "Inductive",
+    # Expression Wrappers
+    "Prop",
+    "Type",
 ]
