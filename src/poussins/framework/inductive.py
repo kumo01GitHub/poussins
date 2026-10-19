@@ -18,7 +18,6 @@ from ..ast import (
 )
 from ..environment.library import EqualityDeclaration
 from .bindable_mixin import BindableMixin
-from .prop import Prop
 
 
 @dataclass(frozen=True)
@@ -74,22 +73,25 @@ class Inductive(BindableMixin, ABC):
         cls,
         left: Inductive | Expr,
         right: Inductive | Expr,
-    ) -> Prop:
-        """Construct an equality proposition over this inductive type."""
-        return Prop(
+    ) -> Expr:
+        """Return the equality proposition between two inductive values."""
+        return EApp(
             EApp(
                 EApp(
-                    EApp(
-                        EConst(
-                            EqualityDeclaration.EQ_DECLARATION.declaration.name,
-                            (cls.sort().level,),
+                    EConst(
+                        EqualityDeclaration.EQ_DECLARATION.declaration.name,
+                        tuple(
+                                UnivLevelParam(param) for param in (
+                                    EqualityDeclaration.EQ_DECLARATION.declaration
+                                    .level_params
+                                )
                         ),
-                        cls.type_expr()
                     ),
-                    cls.to_expr(left)
+                    cls.type_expr()
                 ),
-                cls.to_expr(right),
-            )
+                cls.to_expr(left)
+            ),
+            cls.to_expr(right),
         )
 
     @property

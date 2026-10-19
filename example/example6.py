@@ -1,5 +1,6 @@
 """Example 6: Demonstrates the use of equality in Poussins."""
-from poussins.framework import Example, Nat, Prop, create_standard_environment
+from poussins.framework import Example, Prop, create_standard_environment
+from poussins.framework.inductive_types import Nat
 
 env = create_standard_environment()
 n, m, k = Nat("n"), Nat("m"), Nat("k")
@@ -8,11 +9,7 @@ n, m, k = Nat("n"), Nat("m"), Nat("k")
 # ------------------------------------------------------------------
 # Example 1: Prove that if n = m, then n + k = m + k.
 # ------------------------------------------------------------------
-bindings1 = (
-    ("n", Nat.type()),
-    ("m", Nat.type()),
-    ("k", Nat.type()),
-)
+bindings1 = (n, m, k)
 statement1 = Prop.forall(
     bindings1,
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(n + k, m + k)),
@@ -29,10 +26,7 @@ example1.qed()
 #------------------------------------------------------------------
 # Example 2: Prove that if n = m, then m = n (symmetry of equality).
 # ------------------------------------------------------------------
-bindings2 = (
-    ("n", Nat.type()),
-    ("m", Nat.type()),
-)
+bindings2 = (n, m)
 statement2 = Prop.forall(
     bindings2,
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(m, n)),
@@ -49,11 +43,7 @@ example2.qed()
 # ------------------------------------------------------------------
 # Example 3: Prove that if n = m and m = k, then n = k (transitivity of equality).
 # ------------------------------------------------------------------
-bindings3 = (
-    ("n", Nat.type()),
-    ("m", Nat.type()),
-    ("k", Nat.type()),
-)
+bindings3 = (n, m, k)
 statement3 = Prop.forall(
     bindings3,
     Prop(Nat.eq(n, m)) >> (Prop(Nat.eq(m, k)) >> Prop(Nat.eq(n, k))),

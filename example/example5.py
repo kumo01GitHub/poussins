@@ -1,10 +1,10 @@
 """Example 5: Propositional logic with And and Or introduction rules."""
-from poussins import Example, Prop, create_standard_environment
 from poussins.ast import EVar
+from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
 p, q, r = Prop("P"), Prop("Q"), Prop("R")
-bindings = (("P", p.type()), ("Q", q.type()), ("R", r.type()))
+bindings = (p, q, r)
 
 
 # ------------------------------------------------------------------

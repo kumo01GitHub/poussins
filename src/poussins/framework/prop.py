@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast, override
+from typing import ClassVar, cast, override
 
 from ..ast import (
     EApp,
@@ -36,10 +36,11 @@ type BindingLike = Sequence[Binding | BindableMixin] | Binding | BindableMixin
 
 
 @dataclass(frozen=True)
-class Prop:
+class Prop(BindableMixin):
     """Immutable wrapper for proposition expressions with operator syntax."""
 
     statement: Expr
+    BINDING_LEN: ClassVar[int] = 2
 
     def __init__(
         self,
@@ -74,6 +75,18 @@ class Prop:
         """Return the type expression of this proposition instance."""
         return self.__class__.type_expr()
 
+    @property
+    @override
+    def bound_type(self) -> Expr:
+        """Return the type of the bound variable (Prop)."""
+        return self.type_expr()
+
+    @property
+    @override
+    def bound_value(self) -> Expr:
+        """Return the value of the bound variable (the proposition itself)."""
+        return self.statement
+
     # ------------------------------------------------------------------
     # Factory helpers
     # ------------------------------------------------------------------
@@ -81,26 +94,44 @@ class Prop:
     @classmethod
     def top(cls) -> Prop:
         """⊤ (True)."""
-        return cls(EConst(LogicDeclaration.TRUE_DECLARATION.name, levels=()))
+        return cls(
+            EConst(
+                name=LogicDeclaration.TRUE_DECLARATION.declaration.name,
+                levels=()
+            )
+        )
 
     @classmethod
     def bottom(cls) -> Prop:
         """⊥ (False)."""
-        return cls(EConst(LogicDeclaration.FALSE_DECLARATION.name, levels=()))
+        return cls(
+            EConst(
+                name=LogicDeclaration.FALSE_DECLARATION.declaration.name,
+                levels=()
+            )
+        )
 
-    @staticmethod
-    def _normalize_bindings(bindings: BindingLike) -> Sequence[Binding]:
+    @classmethod
+    def _normalize_bindings(cls, bindings: BindingLike) -> Sequence[Binding]:
+        def is_binding(obj: object) -> bool:
+            return (
+                isinstance(obj, tuple)
+                and len(obj) == cls.BINDING_LEN
+                and isinstance(obj[0], str)
+                and isinstance(obj[1], Expr)
+            )
+
         if not bindings:
             raise TypeError("bindings requires at least one binding")
 
-        if isinstance(bindings, Binding.__value__):
+        if is_binding(bindings):
             return (cast(Binding, bindings),)
         elif isinstance(bindings, BindableMixin):
             return (bindings.to_binding(),)
         else:
             normalized: Sequence[Binding] = []
             for binding in bindings:
-                if isinstance(binding, Binding.__value__):
+                if is_binding(binding):
                     normalized.append(cast(Binding, binding))
                 elif isinstance(binding, BindableMixin):
                     normalized.append(binding.to_binding())

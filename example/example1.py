@@ -7,7 +7,7 @@ p, q = Prop("P"), Prop("Q")
 
 example1 = Example(
     Prop.forall(
-        (("P", p.type()), ("Q", q.type())),
+        (p, q),
         p >> (q >> (p & q))
     ),
     env,
@@ -22,10 +22,7 @@ example1.qed()
 
 
 example2 = Example(
-    Prop.forall(
-        (("P", p.type()),),
-        p >> p
-    ),
+    Prop.forall((p,), p >> p),
     env,
 )
 

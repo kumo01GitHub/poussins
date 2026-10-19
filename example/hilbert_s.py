@@ -5,7 +5,7 @@ env = create_standard_environment()
 
 p, q, r = Prop("P"), Prop("Q"), Prop("R")
 statement = Prop.forall(
-    (("P", p.type()), ("Q", q.type()), ("R", r.type())),
+    (p, q, r),
     (p >> (q >> r)) >> ((p >> q) >> (p >> r)),
 )
 hilbert_s = Lemma("HilbertS", statement, env)

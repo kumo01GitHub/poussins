@@ -4,7 +4,7 @@ from poussins.framework import Example, Prop, create_standard_environment
 env = create_standard_environment()
 p, q, r = Prop("P"), Prop("Q"), Prop("R")
 transitivity = Prop.forall(
-    (("P", p.type()), ("Q", q.type()), ("R", r.type())),
+    (p, q, r),
     ((p >> q) >> ((q >> r) >> (p >> r)))
 )
 

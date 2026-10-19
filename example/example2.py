@@ -3,7 +3,7 @@ from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
 p, q = Prop("P"), Prop("Q")
-bindings = (("P", p.type()), ("Q", q.type()))
+bindings = (p, q)
 
 example1 = Example(Prop.forall(bindings,(p >> (p | q))), env)
 
