@@ -80,12 +80,7 @@ class Inductive(BindableMixin, ABC):
                 EApp(
                     EConst(
                         EqualityDeclaration.EQ_DECLARATION.declaration.name,
-                        tuple(
-                                UnivLevelParam(param) for param in (
-                                    EqualityDeclaration.EQ_DECLARATION.declaration
-                                    .level_params
-                                )
-                        ),
+                        (cls.sort().level,),
                     ),
                     cls.type_expr()
                 ),

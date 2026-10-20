@@ -118,7 +118,7 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
     """Substitute all occurrences of the variable."""
     replacement_fvs = collect_free_vars(replacement)
 
-    def subst(e: Expr) -> Expr:
+    def _subst(e: Expr) -> Expr:
         match e:
             case EVar(name):
                 return replacement if name == var_name else e
@@ -126,7 +126,7 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                 return e
 
             case EPi(var, domain, body):
-                new_domain = subst(domain)
+                new_domain = _subst(domain)
                 if var == var_name:
                     return EPi(var, new_domain, body)
 
@@ -141,10 +141,10 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                         substitute_expr_var(alpha_body, var_name, replacement)
                     )
 
-                return EPi(var, new_domain, subst(body))
+                return EPi(var, new_domain, _subst(body))
 
             case ELam(var, domain, body):
-                new_domain = subst(domain)
+                new_domain = _subst(domain)
                 if var == var_name:
                     return ELam(var, new_domain, body)
 
@@ -159,19 +159,19 @@ def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
                         substitute_expr_var(alpha_body, var_name, replacement)
                     )
 
-                return ELam(var, new_domain, subst(body))
+                return ELam(var, new_domain, _subst(body))
 
             case EApp(fn, arg):
-                return EApp(subst(fn), subst(arg))
+                return EApp(_subst(fn), _subst(arg))
             case EMatch(inductive_name, discriminee, motive, cases):
                 return EMatch(
                     inductive_name,
-                    subst(discriminee),
-                    subst(motive),
-                    tuple(subst(c) for c in cases)
+                    _subst(discriminee),
+                    _subst(motive),
+                    tuple(_subst(c) for c in cases)
                 )
 
-    return subst(expr)
+    return _subst(expr)
 
 
 def collect_metavar_ids(expr: Expr) -> list[str]:
@@ -282,3 +282,13 @@ def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
 
     _collect(expr)
     return tuple(ordered_levels)
+
+
+def count_pi_binders(expr: Expr) -> int:
+    """Count the number of nested EPi binders (arity) in an expression."""
+    count = 0
+    current = expr
+    while isinstance(current, EPi):
+        count += 1
+        current = current.body
+    return count

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ..ast import (
     EApp,
+    EConst,
     ELam,
     EMatch,
     EMetaVar,
@@ -10,6 +11,7 @@ from ..ast import (
     ESort,
     EVar,
     Expr,
+    UnivLevel,
     collect_metavar_ids,
     substitute_expr_var,
 )
@@ -18,7 +20,7 @@ from ..errors import KernelTypeError
 from .equality import is_alpha_eq
 from .eval import instantiate, whnf
 from .proof_state import MetaVar
-from .univ import unify_univ_levels
+from .univ import instantiate_univ, unify_univ_levels
 
 
 def _assign_open_metavar(
@@ -88,6 +90,35 @@ def unify(
             raise KernelTypeError(
                 f"Unification failed: universe level mismatch between {l1} and {l2}"
             )
+        case (EConst(n1, lv1), EConst(n2, lv2)):
+            if n1 != n2 or len(lv1) != len(lv2):
+                raise KernelTypeError(
+                    f"Unification failed: constant mismatch: {n1} vs {n2}"
+                )
+            param_assignment: dict[str, UnivLevel] = {}
+            for l1, l2 in zip(lv1, lv2, strict=False):
+                res = unify_univ_levels(l1, l2, param_assignment)
+                if res is None:
+                    raise KernelTypeError(
+                        "Unification failed: universe level mismatch "
+                        + f"between {l1} and {l2}"
+                    )
+                param_assignment = res
+
+            if param_assignment:
+                updated_metavars = {}
+                for m_id, mvar in metavars.items():
+                    new_stmt = instantiate_univ(mvar.statement, param_assignment)
+                    new_assignment = (
+                        instantiate_univ(mvar.assignment, param_assignment)
+                        if mvar.assignment is not None
+                        else None
+                    )
+                    updated_metavars[m_id] = MetaVar(
+                        statement=new_stmt, assignment=new_assignment
+                    )
+                return updated_metavars
+            return metavars
         case (EApp(f1, a1), EApp(f2, a2)):
             current_metavars = unify(f1, f2, context, metavars, env)
             a1_inst = instantiate(a1, current_metavars)

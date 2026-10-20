@@ -26,67 +26,127 @@ from ..declaration import (
 class EqualityDeclaration(Enum):
     """Inductive declaration for propositional equality."""
 
-    """Eq inductive declaration for propositional equality."""
     EQ_DECLARATION = InductiveDeclaration(
         name="Eq",
-        level_params=(),
+        level_params=("u",),
         type=EPi(
-            "A", Sort.TYPE.sort,
-            EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort))
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort)),
         ),
         constructor_names=("Eq.refl",),
     )
 
-    """Eq.refl constructor declaration for propositional equality."""
     EQ_REFL_DECLARATION = ConstructorDeclaration(
         name="Eq.refl",
-        level_params=(),
+        level_params=("u",),
         inductive_name="Eq",
         type=EPi(
             "A",
-            Sort.TYPE.sort,
+            ESort(UnivLevelParam("u")),
             EPi(
                 "x",
                 EVar("A"),
-                EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("x")),
+                EApp(
+                    EApp(
+                        EApp(
+                            EConst("Eq", (UnivLevelParam("u"),)),
+                            EVar("A"),
+                        ),
+                        EVar("x"),
+                    ),
+                    EVar("x"),
+                ),
             ),
         ),
     )
 
-    """Eq.rec recursor declaration for propositional equality."""
     EQ_REC_DECLARATION = RecursorDeclaration(
         name="Eq.rec",
-        level_params=("u",),
+        level_params=("u", "l"),
         inductive_name="Eq",
         num_params=2,
         num_indices=1,
         num_minors=1,
-        type=EPi("A", Sort.TYPE.sort,
-            EPi("x", EVar("A"),
-                EPi("motive", EPi("y", EVar("A"), EPi("h",
-                    EApp(EApp(EApp(EConst("Eq", ()), EVar("A")), EVar("x")), EVar("y")),
-                    ESort(UnivLevelParam("u")))),
-                    EPi("minor", EApp(EApp(EVar("motive"), EVar("x")),
-                        EApp(EApp(EConst("Eq.refl", ()), EVar("A")), EVar("x"))),
-                        EPi("y", EVar("A"),
-                            EPi("h", EApp(EApp(EApp(EConst("Eq", ()), EVar("A")),
-                                EVar("x")), EVar("y")),
-                                EApp(EApp(EVar("motive"), EVar("y")), EVar("h"))
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    )
-
-    """Eq.symm definition for symmetry of equality."""
-    EQ_SYMM_DECLARATION = DefinitionDeclaration(
-        name="Eq.symm",
-        level_params=(),
         type=EPi(
             "A",
-            Sort.TYPE.sort,
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "x",
+                EVar("A"),
+                EPi(
+                    "motive",
+                    EPi(
+                        "y",
+                        EVar("A"),
+                        EPi(
+                            "h",
+                            EApp(
+                                EApp(
+                                    EApp(
+                                        EConst("Eq", (UnivLevelParam("u"),)),
+                                        EVar("A"),
+                                    ),
+                                    EVar("x"),
+                                ),
+                                EVar("y"),
+                            ),
+                            ESort(UnivLevelParam("l")),
+                        ),
+                    ),
+                    EPi(
+                        "minor",
+                        EApp(
+                            EApp(
+                                EVar("motive"),
+                                EVar("x"),
+                            ),
+                            EApp(
+                                EApp(
+                                    EConst("Eq.refl", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("x"),
+                            ),
+                        ),
+                        EPi(
+                            "y",
+                            EVar("A"),
+                            EPi(
+                                "h",
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EConst(
+                                                "Eq", (UnivLevelParam("u"),)
+                                            ),
+                                            EVar("A"),
+                                        ),
+                                        EVar("x"),
+                                    ),
+                                    EVar("y"),
+                                ),
+                                EApp(
+                                    EApp(
+                                        EVar("motive"),
+                                        EVar("y"),
+                                    ),
+                                    EVar("h"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    EQ_SYMM_DECLARATION = DefinitionDeclaration(
+        name="Eq.symm",
+        level_params=("u",),
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
             EPi(
                 "x",
                 EVar("A"),
@@ -95,15 +155,25 @@ class EqualityDeclaration(Enum):
                     EVar("A"),
                     EPi(
                         "h",
-                        EApp(EApp(
-                            EApp(EConst("Eq", ()), EVar("A")),
-                            EVar("x")),
-                            EVar("y")
+                        EApp(
+                            EApp(
+                                EApp(
+                                    EConst("Eq", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("x"),
+                            ),
+                            EVar("y"),
                         ),
-                        EApp(EApp(
-                            EApp(EConst("Eq", ()), EVar("A")),
-                            EVar("y")),
-                            EVar("x")
+                        EApp(
+                            EApp(
+                                EApp(
+                                    EConst("Eq", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("y"),
+                            ),
+                            EVar("x"),
                         ),
                     ),
                 ),
@@ -111,7 +181,7 @@ class EqualityDeclaration(Enum):
         ),
         value=ELam(
             "A",
-            Sort.TYPE.sort,
+            ESort(UnivLevelParam("u")),
             ELam(
                 "x",
                 EVar("A"),
@@ -120,10 +190,15 @@ class EqualityDeclaration(Enum):
                     EVar("A"),
                     ELam(
                         "h",
-                        EApp(EApp(
-                            EApp(EConst("Eq", ()), EVar("A")),
-                            EVar("x")),
-                            EVar("y")
+                        EApp(
+                            EApp(
+                                EApp(
+                                    EConst("Eq", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("x"),
+                            ),
+                            EVar("y"),
                         ),
                         EApp(
                             EApp(
@@ -131,7 +206,13 @@ class EqualityDeclaration(Enum):
                                     EApp(
                                         EApp(
                                             EApp(
-                                                EConst("Eq.rec", (UnivLevelZero(),)),
+                                                EConst(
+                                                    "Eq.rec",
+                                                    (
+                                                        UnivLevelParam("u"),
+                                                        UnivLevelZero(),
+                                                    ),
+                                                ),
                                                 EVar("A"),
                                             ),
                                             EVar("x"),
@@ -141,23 +222,52 @@ class EqualityDeclaration(Enum):
                                             EVar("A"),
                                             ELam(
                                                 "_",
-                                                EApp(EApp(
-                                                    EApp(EConst("Eq", ()),EVar("A")),
-                                                    EVar("x")),
-                                                    EVar("z")
+                                                EApp(
+                                                    EApp(
+                                                        EApp(
+                                                            EConst(
+                                                                "Eq",
+                                                                (
+                                                                    UnivLevelParam(
+                                                                        "u"
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            EVar("A"),
+                                                        ),
+                                                        EVar("x"),
+                                                    ),
+                                                    EVar("z"),
                                                 ),
-                                                EApp(EApp(
-                                                    EApp(EConst("Eq", ()), EVar("A")),
-                                                    EVar("z")),
-                                                    EVar("x")
+                                                EApp(
+                                                    EApp(
+                                                        EApp(
+                                                            EConst(
+                                                                "Eq",
+                                                                (
+                                                                    UnivLevelParam(
+                                                                        "u"
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            EVar("A"),
+                                                        ),
+                                                        EVar("z"),
+                                                    ),
+                                                    EVar("x"),
                                                 ),
                                             ),
                                         ),
                                     ),
-                                    EApp(EApp(
-                                        EConst("Eq.refl", ()),
-                                        EVar("A")),
-                                        EVar("x")
+                                    EApp(
+                                        EApp(
+                                            EConst(
+                                                "Eq.refl",
+                                                (UnivLevelParam("u"),),
+                                            ),
+                                            EVar("A"),
+                                        ),
+                                        EVar("x"),
                                     ),
                                 ),
                                 EVar("y"),
@@ -170,13 +280,12 @@ class EqualityDeclaration(Enum):
         ),
     )
 
-    """Eq.trans definition for transitivity of equality."""
     EQ_TRANS_DECLARATION = DefinitionDeclaration(
         name="Eq.trans",
-        level_params=(),
+        level_params=("u",),
         type=EPi(
             "A",
-            Sort.TYPE.sort,
+            ESort(UnivLevelParam("u")),
             EPi(
                 "x",
                 EVar("A"),
@@ -190,7 +299,10 @@ class EqualityDeclaration(Enum):
                             "h1",
                             EApp(
                                 EApp(
-                                    EApp(EConst("Eq", ()), EVar("A")),
+                                    EApp(
+                                        EConst("Eq", (UnivLevelParam("u"),)),
+                                        EVar("A"),
+                                    ),
                                     EVar("x"),
                                 ),
                                 EVar("y"),
@@ -199,14 +311,24 @@ class EqualityDeclaration(Enum):
                                 "h2",
                                 EApp(
                                     EApp(
-                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EApp(
+                                            EConst(
+                                                "Eq", (UnivLevelParam("u"),)
+                                            ),
+                                            EVar("A"),
+                                        ),
                                         EVar("y"),
                                     ),
                                     EVar("z"),
                                 ),
                                 EApp(
                                     EApp(
-                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EApp(
+                                            EConst(
+                                                "Eq", (UnivLevelParam("u"),)
+                                            ),
+                                            EVar("A"),
+                                        ),
                                         EVar("x"),
                                     ),
                                     EVar("z"),
@@ -219,7 +341,7 @@ class EqualityDeclaration(Enum):
         ),
         value=ELam(
             "A",
-            Sort.TYPE.sort,
+            ESort(UnivLevelParam("u")),
             ELam(
                 "x",
                 EVar("A"),
@@ -233,7 +355,10 @@ class EqualityDeclaration(Enum):
                             "h1",
                             EApp(
                                 EApp(
-                                    EApp(EConst("Eq", ()), EVar("A")),
+                                    EApp(
+                                        EConst("Eq", (UnivLevelParam("u"),)),
+                                        EVar("A"),
+                                    ),
                                     EVar("x"),
                                 ),
                                 EVar("y"),
@@ -242,7 +367,12 @@ class EqualityDeclaration(Enum):
                                 "h2",
                                 EApp(
                                     EApp(
-                                        EApp(EConst("Eq", ()), EVar("A")),
+                                        EApp(
+                                            EConst(
+                                                "Eq", (UnivLevelParam("u"),)
+                                            ),
+                                            EVar("A"),
+                                        ),
                                         EVar("y"),
                                     ),
                                     EVar("z"),
@@ -256,6 +386,9 @@ class EqualityDeclaration(Enum):
                                                         EConst(
                                                             "Eq.rec",
                                                             (
+                                                                UnivLevelParam(
+                                                                    "u"
+                                                                ),
                                                                 UnivLevelZero(),
                                                             ),
                                                         ),
@@ -263,7 +396,6 @@ class EqualityDeclaration(Enum):
                                                     ),
                                                     EVar("y"),
                                                 ),
-                                                # motive: (z' : A) -> Eq y z' -> Prop
                                                 ELam(
                                                     "z'",
                                                     EVar("A"),
@@ -274,7 +406,11 @@ class EqualityDeclaration(Enum):
                                                                 EApp(
                                                                     EConst(
                                                                         "Eq",
-                                                                        (),
+                                                                        (
+                                                                            UnivLevelParam(
+                                                                                "u"
+                                                                            ),
+                                                                        ),
                                                                     ),
                                                                     EVar("A"),
                                                                 ),
@@ -287,7 +423,11 @@ class EqualityDeclaration(Enum):
                                                                 EApp(
                                                                     EConst(
                                                                         "Eq",
-                                                                        (),
+                                                                        (
+                                                                            UnivLevelParam(
+                                                                                "u"
+                                                                            ),
+                                                                        ),
                                                                     ),
                                                                     EVar("A"),
                                                                 ),
@@ -298,13 +438,10 @@ class EqualityDeclaration(Enum):
                                                     ),
                                                 ),
                                             ),
-                                            # minor: h1
                                             EVar("h1"),
                                         ),
-                                        # index: z
                                         EVar("z"),
                                     ),
-                                    # major proof: h2
                                     EVar("h2"),
                                 ),
                             ),
@@ -319,6 +456,3 @@ class EqualityDeclaration(Enum):
     def declaration(self) -> Declaration:
         """Return the underlying declaration."""
         return self.value
-
-
-EQ_APP_ARITY = 3

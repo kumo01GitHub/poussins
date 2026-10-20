@@ -144,6 +144,10 @@ def _is_def_eq_same_shape(
     match (t1_whnf, t2_whnf):
         case (ESort(level1), ESort(level2)):
             return is_def_eq_univ(level1, level2)
+        case (EConst(n1, lv1), EConst(n2, lv2)):
+            if n1 != n2 or len(lv1) != len(lv2):
+                return False
+            return all(is_def_eq_univ(l1, l2) for l1, l2 in zip(lv1, lv2, strict=False))
         case (EApp(f1, a1), EApp(f2, a2)):
             return (
                 is_def_eq(f1, f2, context, metavars, env)

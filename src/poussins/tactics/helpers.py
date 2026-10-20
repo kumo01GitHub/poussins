@@ -5,9 +5,9 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from ..ast import EConst, Expr, UnivLevelParam, flatten_app_chain
+from ..ast import EConst, Expr, UnivLevelParam, count_pi_binders, flatten_app_chain
 from ..environment import Declaration
-from ..environment.library import EQ_APP_ARITY, EqualityDeclaration
+from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 
@@ -72,7 +72,9 @@ def parse_eq_app(expr: Expr) -> tuple[Expr, Expr, Expr] | None:
         return None
     if (
         head.name != EqualityDeclaration.EQ_DECLARATION.declaration.name
-        or len(args) != EQ_APP_ARITY
+        or len(args) != count_pi_binders(
+            EqualityDeclaration.EQ_DECLARATION.declaration.type
+        )
     ):
         return None
     return args[0], args[1], args[2]

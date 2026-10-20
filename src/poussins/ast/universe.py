@@ -27,8 +27,12 @@ class UnivLevelSucc:
         while isinstance(base, UnivLevelSucc):
             offset += 1
             base = base.pred
-        return f"({base} + {offset})"
 
+        return (
+            str(offset)
+            if isinstance(base, UnivLevelZero)
+            else f"({base} + {offset})"
+        )
 
 @dataclass(frozen=True)
 class UnivLevelParam:

@@ -1,7 +1,7 @@
 """Standard declarations."""
 from .bool import BoolDeclaration
 from .empty import EmptyDeclaration
-from .equality import EQ_APP_ARITY, EqualityDeclaration
+from .equality import EqualityDeclaration
 from .fin import FinDeclaration
 from .list import ListDeclaration
 from .logic import LogicDeclaration
@@ -19,7 +19,6 @@ __all__ = [
     "UnitDeclaration",
     "BoolDeclaration",
     "EqualityDeclaration",
-    "EQ_APP_ARITY",
     "LogicDeclaration",
     "NatDeclaration",
     "ListDeclaration",
