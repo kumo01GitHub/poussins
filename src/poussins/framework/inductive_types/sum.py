@@ -35,6 +35,7 @@ class Sum(Inductive):
             else right_item
         )
 
+        @dataclass(frozen=True, init=False)
         class BoundSum(cls):
             @override
             @classmethod

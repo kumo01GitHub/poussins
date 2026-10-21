@@ -33,6 +33,11 @@ class Definition:
         object.__setattr__(self, "value", value)
         object.__setattr__(self, "level_params", level_params)
 
+    @staticmethod
+    def to_expr(value: Definition | Expr) -> Expr:
+        """Return the underlying expression."""
+        return value.value if isinstance(value, Definition) else value
+
     def declare(self) -> DefinitionDeclaration:
         """Declare the definition in the environment."""
         return declare_definition(

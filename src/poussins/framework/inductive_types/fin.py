@@ -22,6 +22,7 @@ class Fin(Inductive):
         """Return a new class representing Fin of given index."""
         index_expr = cls.to_expr(item)
 
+        @dataclass(frozen=True, init=False)
         class BoundFin(cls):
             @override
             @classmethod

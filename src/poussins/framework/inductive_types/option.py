@@ -25,7 +25,7 @@ class Option(Inductive):
             if isinstance(item, type) and issubclass(item, Inductive)
             else item
         )
-
+        @dataclass(frozen=True, init=False)
         class BoundOption(cls):
             @override
             @classmethod

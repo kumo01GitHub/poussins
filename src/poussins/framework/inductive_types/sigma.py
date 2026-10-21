@@ -35,6 +35,7 @@ class Sigma(Inductive):
             else right_item
         )
 
+        @dataclass(frozen=True, init=False)
         class BoundSigma(cls):
             @override
             @classmethod

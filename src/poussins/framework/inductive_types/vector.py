@@ -31,6 +31,7 @@ class Vector(Inductive):
         )
         length_expr = cls.to_expr(length_item)
 
+        @dataclass(frozen=True, init=False)
         class BoundVector(cls):
             @override
             @classmethod

@@ -26,6 +26,7 @@ class List(Inductive):
             else item
         )
 
+        @dataclass(frozen=True, init=False)
         class BoundList(cls):
             @override
             @classmethod

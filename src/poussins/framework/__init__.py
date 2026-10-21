@@ -11,6 +11,7 @@ from .definition import Definition
 from .environment import create_environment, create_standard_environment
 from .inductive import Inductive
 from .prop import Prop
+from .quot import Quot
 from .theorem import (
     Corollary,
     Example,
@@ -47,6 +48,8 @@ __all__ = [
     "Example",
     # Inductive
     "Inductive",
+    # Quotient
+    "Quot",
     # Expression Wrappers
     "Prop",
     "Type",
