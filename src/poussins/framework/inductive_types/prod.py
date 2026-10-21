@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Prod[T1: Inductive | Expr, T2: Inductive | Expr](Inductive):
+class Prod(Inductive):
     """Immutable wrapper for direct-product expressions."""
 
     TYPE_NAME: ClassVar[str] = ProdDeclaration.PROD_DECLARATION.declaration.name

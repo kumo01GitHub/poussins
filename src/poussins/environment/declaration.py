@@ -111,8 +111,8 @@ class RecursorDeclaration(Declaration):
 class QuotientDeclaration(Declaration):
     """Quotient type information."""
 
-    variant: str
+    kind: str
 
     @override
     def __str__(self) -> str:
-        return f"{self.name} : {self.type} (quotient variant={self.variant})"
+        return f"{self.name} : {self.type} (quotient kind={self.kind})"

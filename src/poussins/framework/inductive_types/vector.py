@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Vector[T: Inductive | Expr, N: Inductive | Expr](Inductive):
+class Vector(Inductive):
     """Immutable wrapper for length-indexed vector expressions."""
 
     TYPE_NAME: ClassVar[str] = VectorDeclaration.VECTOR_DECLARATION.declaration.name

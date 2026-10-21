@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Sum[T1: Inductive | Expr, T2: Inductive | Expr](Inductive):
+class Sum(Inductive):
     """Immutable wrapper for sum-type expressions."""
 
     TYPE_NAME: ClassVar[str] = SumDeclaration.SUM_DECLARATION.declaration.name

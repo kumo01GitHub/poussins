@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Fin[N: Inductive | Expr](Inductive):
+class Fin(Inductive):
     """Immutable wrapper for finite-index expressions."""
 
     TYPE_NAME: ClassVar[str] = FinDeclaration.FIN_DECLARATION.declaration.name

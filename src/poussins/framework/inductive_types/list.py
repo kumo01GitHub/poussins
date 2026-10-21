@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class List[T: Inductive | Expr](Inductive):
+class List(Inductive):
     """Immutable wrapper for list expressions."""
 
     TYPE_NAME: ClassVar[str] = ListDeclaration.LIST_DECLARATION.declaration.name

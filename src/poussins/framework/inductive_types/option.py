@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Option[T: Inductive | Expr](Inductive):
+class Option(Inductive):
     """Immutable wrapper for optional-value expressions."""
 
     TYPE_NAME: ClassVar[str] = OptionDeclaration.OPTION_DECLARATION.declaration.name

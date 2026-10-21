@@ -10,7 +10,7 @@ from ..inductive import Inductive
 
 
 @dataclass(frozen=True, init=False)
-class Sigma[T1: Inductive | Expr, T2: Inductive | Expr](Inductive):
+class Sigma(Inductive):
     """Immutable wrapper for dependent-pair expressions."""
 
     TYPE_NAME: ClassVar[str] = SigmaDeclaration.SIGMA_DECLARATION.declaration.name

@@ -26,7 +26,7 @@ class QuotDeclaration(Enum):
                 ESort(UnivLevelParam("u")),
             ),
         ),
-        variant="quot",
+        kind="type",
     )
 
     QUOT_MK_DECLARATION = QuotientDeclaration(
@@ -51,7 +51,7 @@ class QuotDeclaration(Enum):
                 ),
             ),
         ),
-        variant="mk",
+        kind="mk",
     )
 
     QUOT_LIFT_DECLARATION = QuotientDeclaration(
@@ -111,7 +111,76 @@ class QuotDeclaration(Enum):
                 ),
             ),
         ),
-        variant="lift",
+        kind="lift",
+    )
+
+    QUOT_IND_DECLARATION = QuotientDeclaration(
+        name="Quot.ind",
+        level_params=("u",),
+        type=EPi(
+            "A",
+            ESort(UnivLevelParam("u")),
+            EPi(
+                "r",
+                EPi(
+                    "x",
+                    EVar("A"),
+                    EPi("y", EVar("A"), Sort.PROP.sort),
+                ),
+                EPi(
+                    "motive",
+                    EPi(
+                        "q",
+                        EApp(
+                            EApp(
+                                EConst("Quot", (UnivLevelParam("u"),)),
+                                EVar("A"),
+                            ),
+                            EVar("r"),
+                        ),
+                        Sort.PROP.sort,
+                    ),
+                    EPi(
+                        "h",
+                        EPi(
+                            "a",
+                            EVar("A"),
+                            EApp(
+                                EVar("motive"),
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EConst(
+                                                "Quot.mk",
+                                                (UnivLevelParam("u"),),
+                                            ),
+                                            EVar("A"),
+                                        ),
+                                        EVar("r"),
+                                    ),
+                                    EVar("a"),
+                                ),
+                            ),
+                        ),
+                        EPi(
+                            "q_elem",
+                            EApp(
+                                EApp(
+                                    EConst("Quot", (UnivLevelParam("u"),)),
+                                    EVar("A"),
+                                ),
+                                EVar("r"),
+                            ),
+                            EApp(
+                                EVar("motive"),
+                                EVar("q_elem"),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        kind="ind",
     )
 
     QUOT_SOUND_DECLARATION = AxiomDeclaration(
