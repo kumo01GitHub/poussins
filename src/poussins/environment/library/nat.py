@@ -79,6 +79,66 @@ class NatDeclaration(Enum):
         value=ELam("n", EConst("Nat", ()), ELam("m", EConst("Nat", ()), EVar("m"))),
     )
 
+    """Nat.sub definition declaration for natural numbers."""
+    NAT_SUB_DECLARATION = DefinitionDeclaration(
+        name="Nat.sub",
+        level_params=(),
+        type=EPi(
+            "n",
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
+        ),
+        value=ELam("n", EConst("Nat", ()), ELam("m", EConst("Nat", ()), EVar("n"))),
+    )
+
+    """Nat.mul definition declaration for natural numbers."""
+    NAT_MUL_DECLARATION = DefinitionDeclaration(
+        name="Nat.mul",
+        level_params=(),
+        type=EPi(
+            "n",
+            EConst("Nat", ()), EPi("m", EConst("Nat", ()),
+                EConst("Nat", ()))
+        ),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam("m", EConst("Nat", ()), EConst("Nat.zero", ()))
+        ),
+    )
+
+    """Nat.div definition declaration for natural numbers."""
+    NAT_DIV_DECLARATION = DefinitionDeclaration(
+        name="Nat.div",
+        level_params=(),
+        type=EPi(
+            "n",
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
+        ),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam("m", EConst("Nat", ()), EConst("Nat.zero", ()))
+        ),
+    )
+
+    """Nat.mod definition declaration for natural numbers."""
+    NAT_MOD_DECLARATION = DefinitionDeclaration(
+        name="Nat.mod",
+        level_params=(),
+        type=EPi(
+            "n",
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
+        ),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam("m", EConst("Nat", ()), EVar("n"))
+        ),
+    )
+
     @property
     def declaration(self) -> Declaration:
         """Return the underlying declaration."""

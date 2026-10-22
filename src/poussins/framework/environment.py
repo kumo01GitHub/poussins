@@ -150,6 +150,22 @@ def create_standard_environment() -> Environment:
         env,
         NatDeclaration.NAT_ADD_DECLARATION.value
     )
+    register_definition(
+        env,
+        NatDeclaration.NAT_SUB_DECLARATION.value
+    )
+    register_definition(
+        env,
+        NatDeclaration.NAT_MUL_DECLARATION.value
+    )
+    register_definition(
+        env,
+        NatDeclaration.NAT_DIV_DECLARATION.value
+    )
+    register_definition(
+        env,
+        NatDeclaration.NAT_MOD_DECLARATION.value
+    )
 
     # ------------------------------------------------------------------
     # List

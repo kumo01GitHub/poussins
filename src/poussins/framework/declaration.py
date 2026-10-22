@@ -341,6 +341,7 @@ def declare_quot(env: Environment) -> QuotientDeclaration:
         QuotDeclaration.QUOT_DECLARATION.value,
         QuotDeclaration.QUOT_MK_DECLARATION.value,
         QuotDeclaration.QUOT_LIFT_DECLARATION.value,
+        QuotDeclaration.QUOT_IND_DECLARATION.value,
         QuotDeclaration.QUOT_SOUND_DECLARATION.value
     )
 
