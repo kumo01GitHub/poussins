@@ -11,7 +11,7 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
-    build_lambda_chain,
+    lam,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
@@ -136,7 +136,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         )
         subgoals.append(subgoal)
 
-        branch_terms.append(build_lambda_chain(branch_binders, EMetaVar(subgoal.id)))
+        branch_terms.append(lam(branch_binders, EMetaVar(subgoal.id)))
 
     manager.refine_goal(
         EMatch(

@@ -6,8 +6,8 @@ from ..ast import (
     EPi,
     EVar,
     Expr,
-    build_app_chain,
-    build_lambda_chain,
+    app,
+    lam,
 )
 from ..kernel import Goal, ProofManager
 from .helpers import (
@@ -56,14 +56,14 @@ def have(manager: ProofManager, name: str, term: Expr) -> None:
     )
 
     p_to_g = EPi("_", term, current_goal.statement)
-    cut_fn = build_lambda_chain(
+    cut_fn = lam(
         [("f", p_to_g)],
-        build_app_chain(EVar("f"), EMetaVar(proof_goal.id)),
+        app(EVar("f"), EMetaVar(proof_goal.id)),
     )
-    cut_arg = build_lambda_chain(
+    cut_arg = lam(
         [(bound_name, term)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app_chain(cut_fn, cut_arg)
+    assignment_expr = app(cut_fn, cut_arg)
 
     manager.refine_goal(assignment_expr, [proof_goal, new_goal])

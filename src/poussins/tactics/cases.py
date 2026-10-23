@@ -13,8 +13,8 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
-    build_lambda_chain,
     flatten_app_chain,
+    lam,
     substitute_expr_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
@@ -288,7 +288,7 @@ def cases(
         )
         subgoals.append(branch_goal)
         branch_terms.append(
-            build_lambda_chain(
+            lam(
                 specialized_branch_binders,
                 EMetaVar(branch_goal.id),
             )

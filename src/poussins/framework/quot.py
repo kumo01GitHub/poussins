@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ..ast import EConst, EPi, EVar, Expr, UnivLevelParam, build_app_chain
+from ..ast import EConst, EPi, EVar, Expr, UnivLevelParam, app
 from ..environment.library import QuotDeclaration
 from .definition import Definition
 from .inductive import Inductive
@@ -103,7 +103,7 @@ class Quot:
             def __init__(self, a: Quot | Inductive | Expr) -> None:
                 """Construct (Quot.mk .{u} A rel a) upon instantiation."""
                 decl = QuotDeclaration.QUOT_MK_DECLARATION.declaration
-                expr = build_app_chain(
+                expr = app(
                     EConst(
                         name=decl.name,
                         levels=tuple(
@@ -138,7 +138,7 @@ class Quot:
             ) -> Expr:
                 """Construct (Quot.sound .{u} A r a b h)."""
                 decl = QuotDeclaration.QUOT_SOUND_DECLARATION.declaration
-                return build_app_chain(
+                return app(
                     EConst(
                         name=decl.name,
                         levels=tuple(
@@ -165,7 +165,7 @@ class Quot:
                 """Construct (Quot.lift .{u, v} A r B f compat q)."""
                 decl = QuotDeclaration.QUOT_LIFT_DECLARATION.declaration
                 f_expr = Definition.to_expr(f)
-                return build_app_chain(
+                return app(
                     EConst(
                         name=decl.name,
                         levels=tuple(
@@ -191,7 +191,7 @@ class Quot:
             ) -> Expr:
                 """Construct (Quot.ind .{u} A r motive h q)."""
                 decl = QuotDeclaration.QUOT_IND_DECLARATION.declaration
-                return build_app_chain(
+                return app(
                     EConst(
                         name=decl.name,
                         levels=tuple(

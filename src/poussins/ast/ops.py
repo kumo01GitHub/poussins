@@ -17,11 +17,36 @@ from .expr import (
 from .universe import UnivLevel
 
 
-def build_app_chain(fn: Expr, *args: Expr) -> Expr:
+# ------------------------------------------------------------------
+# Expression Builders
+# ------------------------------------------------------------------
+def app(fn: Expr, *args: Expr) -> Expr:
     """Build a left-associated application chain from a head and arguments."""
     result = fn
     for arg in args:
         result = EApp(result, arg)
+    return result
+
+
+def lam(
+    binders: Sequence[tuple[str, Expr]],
+    body: Expr,
+) -> Expr:
+    """Build nested lambdas from binders, ending in body."""
+    result = body
+    for var_name, domain in reversed(binders):
+        result = ELam(var_name, domain, result)
+    return result
+
+
+def pi(
+    binders: Sequence[tuple[str, Expr]],
+    body: Expr,
+) -> Expr:
+    """Build nested Pi types from binders, ending in body."""
+    result = body
+    for var_name, domain in reversed(binders):
+        result = EPi(var_name, domain, result)
     return result
 
 
@@ -33,28 +58,6 @@ def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
         args.append(head.arg)
         head = head.fn
     return head, tuple(reversed(args))
-
-
-def build_lambda_chain(
-    binders: Sequence[tuple[str, Expr]],
-    body: Expr,
-) -> Expr:
-    """Build nested lambdas from binders, ending in body."""
-    result = body
-    for var_name, domain in reversed(binders):
-        result = ELam(var_name, domain, result)
-    return result
-
-
-def build_pi_chain(
-    binders: Sequence[tuple[str, Expr]],
-    body: Expr,
-) -> Expr:
-    """Build nested Pi types from binders, ending in body."""
-    result = body
-    for var_name, domain in reversed(binders):
-        result = EPi(var_name, domain, result)
-    return result
 
 
 def has_metavar(expr: Expr) -> bool:

@@ -3,7 +3,7 @@ from poussins.ast import (
     EConst,
     ELam,
     EPi,
-    build_app_chain,
+    app,
 )
 from poussins.framework import (
     Definition,
@@ -34,7 +34,7 @@ rel_expr = ELam(
     body=ELam(
         var="y",
         domain=nat_type,
-        body=build_app_chain(
+        body=app(
             eq_const,
             nat_type,
             Nat.to_expr(Nat("x") % Nat(3)),
@@ -51,19 +51,19 @@ four_expr = Nat.to_expr(Nat(4))
 q_one = Quot[rel_def](Nat(1))
 q_four = Quot[rel_def](Nat(4))
 
-quot_type = build_app_chain(
+quot_type = app(
     EConst("Quot", (Nat.sort().level,)),
     nat_type,
     rel_def.value,
 )
 
-eq_refl_term = build_app_chain(
+eq_refl_term = app(
     EConst("Eq.refl", (Nat.sort().level,)),
     nat_type,
     Nat.to_expr(Nat.mod(Nat(1), Nat(3))),
 )
 
-example = Example(build_app_chain(eq_const, quot_type, q_one.value, q_four.value), env)
+example = Example(app(eq_const, quot_type, q_one.value, q_four.value), env)
 example.simpl()
 sound_term = Quot[rel_def].sound(one_expr, four_expr, eq_refl_term)
 example.exact(sound_term)

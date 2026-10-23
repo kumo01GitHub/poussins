@@ -12,7 +12,7 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
-    build_app_chain,
+    app,
     flatten_app_chain,
     substitute_expr_var,
 )
@@ -260,7 +260,7 @@ def _build_recursor(
 
         # Build constructor application instance for the motive conclusion
         ctor_const = EConst(ctor.name, ind_levels)
-        ctor_instance = build_app_chain(ctor_const, *ctor_app_args)
+        ctor_instance = app(ctor_const, *ctor_app_args)
         case_conclusion = EApp(EVar(motive_var), ctor_instance)
 
         # Wrap case conclusion with field and IH binders (from inside out)

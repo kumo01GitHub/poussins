@@ -1,5 +1,5 @@
 """Existential introduction tactic."""
-from ..ast import EApp, EConst, EMetaVar, Expr, build_app_chain
+from ..ast import EApp, EConst, EMetaVar, Expr, app
 from ..environment.library import LogicDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
@@ -35,7 +35,7 @@ def use(manager: ProofManager, term: Expr) -> None:
     )
 
     manager.refine_goal(
-        build_app_chain(
+        app(
             const_from_decl(
                 LogicDeclaration.EXISTS_INTRO_DECLARATION.declaration,
                 manager

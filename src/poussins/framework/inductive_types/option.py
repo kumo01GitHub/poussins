@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import OptionDeclaration
 from ..inductive import Inductive
 
@@ -30,12 +30,12 @@ class Option(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Option.type_expr(), elem_expr)
+                return app(Option.type_expr(), elem_expr)
 
             @classmethod
             def none(cls) -> BoundOption:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=OptionDeclaration.OPTION_NONE_DECLARATION.declaration.name,
                             levels=cls.levels(),
@@ -47,7 +47,7 @@ class Option(Inductive):
             @classmethod
             def some(cls, value: Inductive | Expr) -> BoundOption:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=OptionDeclaration.OPTION_SOME_DECLARATION.declaration.name,
                             levels=cls.levels(),

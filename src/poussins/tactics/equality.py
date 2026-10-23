@@ -1,7 +1,7 @@
 """Equality tactics including reflexivity and symmetry."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, Expr, build_app_chain
+from ..ast import EMetaVar, Expr, app
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, is_def_eq, whnf
@@ -71,12 +71,12 @@ def symmetry(manager: ProofManager) -> None:
     )
 
     new_goal = Goal(
-        statement=build_app_chain(eq_const, type_a, rhs, lhs),
+        statement=app(eq_const, type_a, rhs, lhs),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
     manager.refine_goal(
-        build_app_chain(eq_symm_const, type_a, rhs, lhs, EMetaVar(new_goal.id)),
+        app(eq_symm_const, type_a, rhs, lhs, EMetaVar(new_goal.id)),
         [new_goal]
     )
 
@@ -110,18 +110,18 @@ def transitivity(manager: ProofManager, term: Expr) -> None:
     )
 
     goal1 = Goal(
-        statement=build_app_chain(eq_const, type_a, lhs, term),
+        statement=app(eq_const, type_a, lhs, term),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
     goal2 = Goal(
-        statement=build_app_chain(eq_const, type_a, term, rhs),
+        statement=app(eq_const, type_a, term, rhs),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
-    proof = build_app_chain(
+    proof = app(
         eq_trans_const,
         type_a,
         lhs,

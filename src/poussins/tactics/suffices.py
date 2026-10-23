@@ -1,7 +1,7 @@
 """Tactic for asserting a sufficient hypothesis (suffices h : P)."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, Expr, build_app_chain, build_lambda_chain
+from ..ast import EMetaVar, Expr, app, lam
 from ..kernel import Goal, ProofManager
 from .helpers import (
     fresh_binder_name,
@@ -48,10 +48,10 @@ def suffices(manager: ProofManager, name: str, term: Expr) -> None:
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
 
-    cut_lambda = build_lambda_chain(
+    cut_lambda = lam(
         [(bound_name, term)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = build_app_chain(cut_lambda, EMetaVar(proof_goal.id))
+    assignment_expr = app(cut_lambda, EMetaVar(proof_goal.id))
 
     manager.refine_goal(assignment_expr, [new_goal, proof_goal])

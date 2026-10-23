@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import ProdDeclaration
 from ..inductive import Inductive
 
@@ -40,12 +40,12 @@ class Prod(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Prod.type_expr(), left_expr, right_expr)
+                return app(Prod.type_expr(), left_expr, right_expr)
 
             @classmethod
             def mk(cls, left: Inductive | Expr, right: Inductive | Expr) -> BoundProd:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=ProdDeclaration.PROD_MK_DECLARATION.declaration.name,
                             levels=cls.levels(),

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import FinDeclaration
 from ..inductive import Inductive
 
@@ -27,12 +27,12 @@ class Fin(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Fin.type_expr(), index_expr)
+                return app(Fin.type_expr(), index_expr)
 
             @classmethod
             def zero(cls) -> BoundFin:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=FinDeclaration.FIN_ZERO_DECLARATION.declaration.name,
                             levels=cls.levels(),
@@ -44,7 +44,7 @@ class Fin(Inductive):
             @classmethod
             def succ(cls, value: Inductive | Expr) -> BoundFin:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=FinDeclaration.FIN_SUCC_DECLARATION.declaration.name,
                             levels=cls.levels(),

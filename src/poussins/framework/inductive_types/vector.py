@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import VectorDeclaration
 from ..inductive import Inductive
 
@@ -36,12 +36,12 @@ class Vector(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Vector.type_expr(), elem_expr, length_expr)
+                return app(Vector.type_expr(), elem_expr, length_expr)
 
             @classmethod
             def nil(cls) -> BoundVector:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=VectorDeclaration.VECTOR_NIL_DECLARATION.declaration.name,
                             levels=cls.levels(),
@@ -58,7 +58,7 @@ class Vector(Inductive):
                 tail: BoundVector | Expr,
             ) -> BoundVector:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=VectorDeclaration.VECTOR_CONS_DECLARATION.declaration.name,
                             levels=cls.levels(),

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import ListDeclaration
 from ..inductive import Inductive
 
@@ -31,12 +31,12 @@ class List(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(List.type_expr(), elem_expr)
+                return app(List.type_expr(), elem_expr)
 
             @classmethod
             def nil(cls) -> BoundList:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=ListDeclaration.LIST_NIL_DECLARATION.declaration.name,
                             levels=cls.levels(),
@@ -48,7 +48,7 @@ class List(Inductive):
             @classmethod
             def cons(cls, head: Inductive | Expr, tail: BoundList | Expr) -> BoundList:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=ListDeclaration.LIST_CONS_DECLARATION.declaration.name,
                             levels=cls.levels(),

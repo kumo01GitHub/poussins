@@ -1,8 +1,7 @@
-"""Advanced Rewrite tactic for equality substitution (Lean 4 style)."""
-
+"""Advanced Rewrite tactic for equality substitution."""
 from __future__ import annotations
 
-from ..ast import ELam, EMetaVar, EVar, Expr, build_app_chain, substitute_expr
+from ..ast import ELam, EMetaVar, EVar, Expr, app, substitute_expr
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, infer_type, whnf
@@ -33,7 +32,6 @@ def rewrite(
         state.metavars,
         manager.env,
     )
-
     eq_args = parse_eq_app(whnf(term_type, state.metavars, manager.env))
     if eq_args is None:
         raise TacticError("The provided term is not an equality.")
@@ -81,6 +79,14 @@ def rewrite(
     y_var = "_y"
     h_var = "_h"
 
+    eq_symm_term = app(
+        const_from_decl(EqualityDeclaration.EQ_SYMM_DECLARATION.declaration, manager),
+        eq_type,
+        from_expr,
+        to_expr,
+        term,
+    )
+
     body_with_y = (
         substitute_expr(
             target_expr,
@@ -91,21 +97,21 @@ def rewrite(
         else substitute_expr(target_expr, from_expr, EVar(y_var))
     )
 
-    eq_lhs_y = build_app_chain(
+    eq_lhs_y = app(
         const_from_decl(EqualityDeclaration.EQ_DECLARATION.declaration, manager),
         eq_type,
-        from_expr,
+        to_expr,
         EVar(y_var),
     )
 
-    assignment = build_app_chain(
+    assignment = app(
         const_from_decl(EqualityDeclaration.EQ_REC_DECLARATION.declaration, manager),
         eq_type,
-        from_expr,
+        to_expr,
         ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
         EMetaVar(new_goal.id),
-        to_expr,
-        term,
+        from_expr,
+        eq_symm_term,
     )
 
     manager.refine_goal(assignment, [new_goal])

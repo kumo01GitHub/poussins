@@ -1,15 +1,15 @@
 """Abstract Syntax Tree (AST) module."""
 from .expr import EApp, EConst, ELam, EMatch, EMetaVar, EPi, ESort, EVar, Expr
 from .ops import (
-    build_app_chain,
-    build_lambda_chain,
-    build_pi_chain,
+    app,
     collect_free_vars,
     collect_metavar_ids,
     collect_univ_levels,
     count_pi_binders,
     flatten_app_chain,
     has_metavar,
+    lam,
+    pi,
     substitute_expr,
     substitute_expr_var,
     substitute_metavar,
@@ -45,10 +45,10 @@ __all__ = [
     # Sort classes
     "Sort",
     # Expr operations
+    "app",
+    "lam",
+    "pi",
     "has_metavar",
-    "build_app_chain",
-    "build_lambda_chain",
-    "build_pi_chain",
     "flatten_app_chain",
     "substitute_metavar",
     "collect_metavar_ids",

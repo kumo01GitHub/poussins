@@ -14,7 +14,7 @@ from ..ast import (
     UnivLevelIMax,
     UnivLevelParam,
     UnivLevelSucc,
-    build_app_chain,
+    app,
     collect_metavar_ids,
     flatten_app_chain,
     substitute_expr_var,
@@ -228,7 +228,7 @@ def _infer_match(
             specialized_binders.append((var_name, spec_domain))
             branch_context[var_name] = spec_domain
 
-        constructor_instance = build_app_chain(constructor_const, *constructor_args)
+        constructor_instance = app(constructor_const, *constructor_args)
         for p_name, p_val in param_substitutions.items():
             constructor_instance = substitute_expr_var(
                 constructor_instance,

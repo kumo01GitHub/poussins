@@ -11,7 +11,7 @@ from ..ast import (
     ESort,
     EVar,
     Expr,
-    build_app_chain,
+    app,
     flatten_app_chain,
     substitute_expr_var,
     substitute_metavar,
@@ -149,7 +149,7 @@ def whnf(
                                             rec_args = list(args)
                                             rec_args[discriminee_idx] = ctor_arg
                                             ih = whnf(
-                                                build_app_chain(head, *rec_args),
+                                                app(head, *rec_args),
                                                 metavars,
                                                 env,
                                                 unfolding,

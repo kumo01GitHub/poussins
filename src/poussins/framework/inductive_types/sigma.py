@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import SigmaDeclaration
 from ..inductive import Inductive
 
@@ -40,12 +40,12 @@ class Sigma(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Sigma.type_expr(), left_expr, right_expr)
+                return app(Sigma.type_expr(), left_expr, right_expr)
 
             @classmethod
             def mk(cls, left: Inductive | Expr, right: Inductive | Expr) -> BoundSigma:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=SigmaDeclaration.SIGMA_MK_DECLARATION.declaration.name,
                             levels=cls.levels(),

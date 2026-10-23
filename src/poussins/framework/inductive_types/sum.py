@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, build_app_chain
+from ...ast import EConst, Expr, app
 from ...environment.library import SumDeclaration
 from ..inductive import Inductive
 
@@ -40,12 +40,12 @@ class Sum(Inductive):
             @override
             @classmethod
             def type_expr(cls) -> Expr:
-                return build_app_chain(Sum.type_expr(), left_expr, right_expr)
+                return app(Sum.type_expr(), left_expr, right_expr)
 
             @classmethod
             def inl(cls, value: Inductive | Expr) -> BoundSum:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=SumDeclaration.SUM_INL_DECLARATION.declaration.name,
                             levels=cls.levels(),
@@ -59,7 +59,7 @@ class Sum(Inductive):
             @classmethod
             def inr(cls, value: Inductive | Expr) -> BoundSum:
                 return cls(
-                    build_app_chain(
+                    app(
                         EConst(
                             name=SumDeclaration.SUM_INR_DECLARATION.declaration.name,
                             levels=cls.levels(),
