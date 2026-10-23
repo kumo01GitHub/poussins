@@ -1,7 +1,7 @@
 """Tactic for applying a theorem, hypothesis, or expression."""
 from __future__ import annotations
 
-from ..ast import EApp, EMetaVar, EPi, Expr, substitute_expr_var
+from ..ast import EApp, EMetaVar, EPi, Expr, substitute_var
 from ..kernel import Goal, ProofManager, infer_type, whnf
 from .helpers import require_current_goal, requires_active_goal
 
@@ -31,7 +31,7 @@ def apply(manager: ProofManager, term: Expr) -> None:
         assignment = EApp(assignment, EMetaVar(new_goal.id))
 
         current_type = whnf(
-            substitute_expr_var(
+            substitute_var(
                 expr=current_type.body,
                 var_name=current_type.var,
                 replacement=EMetaVar(new_goal.id)

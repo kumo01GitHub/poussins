@@ -12,7 +12,7 @@ from ..ast import (
     Expr,
     UnivLevelParam,
     lam,
-    substitute_expr_var,
+    substitute_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
@@ -83,28 +83,28 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
             domain = current_type.domain
             body = current_type.body
             for old_name, new_expr in renaming.items():
-                domain = substitute_expr_var(domain, old_name, new_expr)
-                body = substitute_expr_var(body, old_name, new_expr)
+                domain = substitute_var(domain, old_name, new_expr)
+                body = substitute_var(body, old_name, new_expr)
 
             var_name = fresh_binder_name(
                 current_type.var,
                 current_goal.context, used_names=set()
             )
             if var_name != current_type.var:
-                body = substitute_expr_var(body, current_type.var, EVar(var_name))
+                body = substitute_var(body, current_type.var, EVar(var_name))
 
             branch_binders.append((var_name, domain))
             branch_expr = EApp(branch_expr, EVar(var_name))
             renaming[current_type.var] = EVar(var_name)
             current_type = body
 
-        branch_statement = substitute_expr_var(
+        branch_statement = substitute_var(
             current_goal.statement,
             hyp_name,
             branch_expr
         )
         branch_local_context = {
-            name: substitute_expr_var(type_expr, hyp_name, branch_expr)
+            name: substitute_var(type_expr, hyp_name, branch_expr)
             for name, type_expr in current_goal.local_context.items()
             if name != hyp_name
         }
@@ -121,7 +121,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
                     current_goal.global_context | branch_local_context,
                     used_names=set()
                 )
-                ih_expr = substitute_expr_var(
+                ih_expr = substitute_var(
                     current_goal.statement,
                     hyp_name,
                     EVar(var_name)
@@ -145,7 +145,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
             ELam(
                 "_induction",
                 hypothesis_type,
-                substitute_expr_var(
+                substitute_var(
                     current_goal.statement,
                     hyp_name,
                     EVar("_induction")

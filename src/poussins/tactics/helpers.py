@@ -5,7 +5,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from ..ast import EConst, Expr, UnivLevelParam, count_pi_binders, flatten_app_chain
+from ..ast import EConst, Expr, UnivLevelParam, count_pi_binders, decompose_app
 from ..environment import Declaration
 from ..environment.library import EqualityDeclaration
 from ..errors import TacticError
@@ -59,7 +59,7 @@ def fresh_binder_name(
 
 def const_head_name(expr: Expr) -> str | None:
     """Return the head constant name of an application chain, if any."""
-    head, _ = flatten_app_chain(expr)
+    head, _ = decompose_app(expr)
     if not isinstance(head, EConst):
         return None
     return head.name
@@ -67,7 +67,7 @@ def const_head_name(expr: Expr) -> str | None:
 
 def parse_eq_app(expr: Expr) -> tuple[Expr, Expr, Expr] | None:
     """Decode `Eq A lhs rhs` when the expression has that shape."""
-    head, args = flatten_app_chain(expr)
+    head, args = decompose_app(expr)
     if not isinstance(head, EConst):
         return None
     if (

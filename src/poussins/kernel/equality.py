@@ -12,7 +12,7 @@ from ..ast import (
     EVar,
     Expr,
     collect_free_vars,
-    substitute_expr_var,
+    substitute_var,
 )
 from ..environment import Environment
 from .eval import instantiate, whnf
@@ -156,7 +156,7 @@ def _is_def_eq_same_shape(
                 return False
             b2_norm = b2
             if v1 != v2:
-                b2_norm = substitute_expr_var(b2, var_name=v2, replacement=EVar(v1))
+                b2_norm = substitute_var(b2, var_name=v2, replacement=EVar(v1))
             return is_def_eq(b1, b2_norm, context | {v1: d1}, metavars, env)
         case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
             if i1 != i2:

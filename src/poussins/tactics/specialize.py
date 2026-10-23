@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from ..ast import EMetaVar, EPi, EVar, Expr, app, lam
-from ..ast.ops import substitute_expr_var
+from ..ast.ops import substitute_var
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 from .helpers import (
@@ -36,7 +36,7 @@ def specialize(manager: ProofManager, hyp_name: str, term: Expr) -> None:
     specialized_type = (
         hyp_type.body
         if hyp_type.var == "_"
-        else substitute_expr_var(hyp_type.body, hyp_type.var, term)
+        else substitute_var(hyp_type.body, hyp_type.var, term)
     )
 
     new_context = current_goal.context | {hyp_name: specialized_type}

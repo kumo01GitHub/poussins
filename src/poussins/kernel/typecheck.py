@@ -16,8 +16,8 @@ from ..ast import (
     UnivLevelSucc,
     app,
     collect_metavar_ids,
-    flatten_app_chain,
-    substitute_expr_var,
+    decompose_app,
+    substitute_var,
 )
 from ..environment import ConstructorDeclaration, Environment, InductiveDeclaration
 from ..errors import KernelTypeError
@@ -130,7 +130,7 @@ def _infer_app(
             "Argument type mismatch. "
             + f"Expected: {expected_domain}, Found: {actual_arg_type}"
         )
-    return substitute_expr_var(fn_type_whnf.body, fn_type_whnf.var, expr.arg)
+    return substitute_var(fn_type_whnf.body, fn_type_whnf.var, expr.arg)
 
 
 def _infer_match(
@@ -148,7 +148,7 @@ def _infer_match(
         metavars,
         env,
     )
-    discriminee_head, discriminee_args = flatten_app_chain(discriminee_type)
+    discriminee_head, discriminee_args = decompose_app(discriminee_type)
     if not isinstance(discriminee_head, EConst):
         raise KernelTypeError("Match discriminee must have an inductive type head.")
     if discriminee_head.name != expr.inductive_name:
@@ -224,13 +224,13 @@ def _infer_match(
         for var_name, domain in binders:
             spec_domain = domain
             for p_name, p_val in param_substitutions.items():
-                spec_domain = substitute_expr_var(spec_domain, p_name, p_val)
+                spec_domain = substitute_var(spec_domain, p_name, p_val)
             specialized_binders.append((var_name, spec_domain))
             branch_context[var_name] = spec_domain
 
         constructor_instance = app(constructor_const, *constructor_args)
         for p_name, p_val in param_substitutions.items():
-            constructor_instance = substitute_expr_var(
+            constructor_instance = substitute_var(
                 constructor_instance,
                 p_name,
                 p_val

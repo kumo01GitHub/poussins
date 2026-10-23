@@ -113,7 +113,7 @@ class EMatch:
         cases_str = ", ".join(f"branch ↦ {c}" for c in self.cases)
         return (
             f"match ({self.inductive_name}) {self.discriminee} "
-            f"motive {self.motive} with [ {cases_str} ]"
+            + f"motive {self.motive} with [ {cases_str} ]"
         )
 
 

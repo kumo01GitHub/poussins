@@ -14,8 +14,8 @@ from poussins.ast import (
     collect_free_vars,
     collect_metavar_ids,
     has_metavar,
-    substitute_expr_var,
     substitute_metavar,
+    substitute_var,
 )
 
 
@@ -113,24 +113,24 @@ class TestSubstituteMetaVar:
 
 
 class TestSubstituteExprVar:
-    """Test cases for `substitute_expr_var`."""
+    """Test cases for `substitute_var`."""
 
     def test_replaces_target_occurrences(self):
         """Target variable occurrences are replaced structurally."""
         before = EVar("x")
         after = EVar("y")
 
-        assert substitute_expr_var(before, before.name, after) == after
-        assert substitute_expr_var(
+        assert substitute_var(before, before.name, after) == after
+        assert substitute_var(
             EApp(before, before), "x", after
         ) == EApp(after, after)
-        assert substitute_expr_var(
+        assert substitute_var(
             EPi("x", before, EVar("x")), "x", after
         ) == EPi("x", after, EVar("x"))
-        assert substitute_expr_var(
+        assert substitute_var(
             ELam("x", EVar("x"), EVar("x")), "x", after
         ) == ELam("x", after, EVar("x"))
-        assert substitute_expr_var(
+        assert substitute_var(
             EMatch("Nat", EVar("x"), EVar("x"), (EVar("x"),)), "x", after
         ) == EMatch("Nat", after, after, (after,))
 
@@ -141,7 +141,7 @@ class TestSubstituteExprVar:
 
         expr = EApp(before, EVar("z"))
         expected = EApp(after, EVar("z"))
-        assert substitute_expr_var(expr, "x", after) == expected
+        assert substitute_var(expr, "x", after) == expected
 
     def test_replaces_all_occurrences(self):
         """All occurrences of the target variable are replaced."""
@@ -149,45 +149,45 @@ class TestSubstituteExprVar:
         after = EVar("y")
         expr = EApp(before, before)
         expected = EApp(after, after)
-        assert substitute_expr_var(expr, "x", after) == expected
+        assert substitute_var(expr, "x", after) == expected
 
     def test_identity_when_target_absent(self):
         """Substitution is identity when target variable is absent."""
         after = EVar("y")
 
-        assert substitute_expr_var(
+        assert substitute_var(
             ESort(UnivLevelZero()), "x", after
         ) == ESort(UnivLevelZero())
-        assert substitute_expr_var(EConst("nat", ()), "x", after) == EConst("nat", ())
-        assert substitute_expr_var(EMetaVar("g1"), "x", after) == EMetaVar("g1")
-        assert substitute_expr_var(EVar("y"), "x", after) == EVar("y")
-        assert substitute_expr_var(
+        assert substitute_var(EConst("nat", ()), "x", after) == EConst("nat", ())
+        assert substitute_var(EMetaVar("g1"), "x", after) == EMetaVar("g1")
+        assert substitute_var(EVar("y"), "x", after) == EVar("y")
+        assert substitute_var(
             EApp(EVar("f"), EVar("y")), "x", after
         ) == EApp(EVar("f"), EVar("y"))
-        assert substitute_expr_var(
+        assert substitute_var(
             EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),)), "x", after
         ) == EMatch("Nat", EVar("n"), EVar("P"), (EConst("z", ()),))
 
     def test_capture_avoiding_renaming_for_pi(self):
         """Substitution alpha-renames Pi binders to avoid variable capture."""
-        result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("y"))
+        result = substitute_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("y"))
         assert result == EPi("y_", EVar("y"), EVar("y"))
 
     def test_capture_avoiding_renaming_for_lambda(self):
         """Substitution alpha-renames lambda binders to avoid variable capture."""
-        result = substitute_expr_var(ELam("y", EVar("x"), EVar("x")), "x", EVar("y"))
+        result = substitute_var(ELam("y", EVar("x"), EVar("x")), "x", EVar("y"))
         assert result == ELam("y_", EVar("y"), EVar("y"))
 
     def test_capture_renaming_with_collision_chain_for_pi(self):
         """Pi binder renaming keeps extending underscores until fresh."""
         replacement = EApp(EVar("y"), EVar("y_"))
-        result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", replacement)
+        result = substitute_var(EPi("y", EVar("x"), EVar("x")), "x", replacement)
         assert result == EPi("y__", replacement, replacement)
 
     def test_capture_renaming_with_collision_chain_for_lambda(self):
         """Lambda binder renaming keeps extending underscores until fresh."""
         replacement = EApp(EVar("y"), EVar("y_"))
-        result = substitute_expr_var(
+        result = substitute_var(
             ELam("y", EVar("x"), EVar("x")),
             "x",
             replacement,
@@ -196,8 +196,8 @@ class TestSubstituteExprVar:
 
     def test_non_capture_substitution_descends_under_pi_and_lambda(self):
         """Without capture risk, substitution proceeds under binders normally."""
-        pi_result = substitute_expr_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("z"))
-        lam_result = substitute_expr_var(
+        pi_result = substitute_var(EPi("y", EVar("x"), EVar("x")), "x", EVar("z"))
+        lam_result = substitute_var(
             ELam("y", EVar("x"), EVar("x")),
             "x",
             EVar("z"),

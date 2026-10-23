@@ -13,8 +13,8 @@ from ..ast import (
     Expr,
     UnivLevelParam,
     app,
-    flatten_app_chain,
-    substitute_expr_var,
+    decompose_app,
+    substitute_var,
 )
 from ..environment import (
     AxiomDeclaration,
@@ -242,7 +242,7 @@ def _build_recursor(
             # Apply parameter and field substitutions to field domain
             spec_dom = f_dom
             for k, v in local_subst.items():
-                spec_dom = substitute_expr_var(spec_dom, k, v)
+                spec_dom = substitute_var(spec_dom, k, v)
 
             unique_f_name = _fresh_name(f_name, used_names)
             local_subst[f_name] = EVar(unique_f_name)
@@ -300,7 +300,7 @@ def _build_recursor(
 
 def _contains_inductive(expr: Expr, ind_name: str) -> bool:
     """Check if an expression refers to the given inductive type name."""
-    head, _ = flatten_app_chain(expr)
+    head, _ = decompose_app(expr)
     if isinstance(head, EConst) and head.name == ind_name:
         return True
     match expr:

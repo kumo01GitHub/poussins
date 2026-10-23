@@ -14,19 +14,42 @@ from .expr import (
     EVar,
     Expr,
 )
-from .universe import UnivLevel
+from .universe import UnivLevel, UnivLevelParam, UnivLevelSucc, UnivLevelZero
 
 
 # ------------------------------------------------------------------
 # Expression Builders
 # ------------------------------------------------------------------
+def univ_level(level: int | str) -> UnivLevel:
+    """Build a universe level."""
+    if isinstance(level, int):
+        if level < 0:
+            raise ValueError("Universe level must be non-negative.")
+        else:
+            univ_level: UnivLevel = UnivLevelZero()
+            for _ in range(level):
+                univ_level = UnivLevelSucc(univ_level)
+            return univ_level
+    elif isinstance(level, str):
+        return UnivLevelParam(level)
+
+def univ_levels(levels: Sequence[int | str]) -> tuple[UnivLevel, ...]:
+    """Build a tuple of universe levels."""
+    return tuple(univ_level(lv) for lv in levels)
+
+def sort(level: int | str | UnivLevel) -> Expr:
+    """Build a sort expression."""
+    if isinstance(level, UnivLevel):
+        return ESort(level=level)
+    else:
+        return ESort(level=univ_level(level))
+
 def app(fn: Expr, *args: Expr) -> Expr:
     """Build a left-associated application chain from a head and arguments."""
     result = fn
     for arg in args:
         result = EApp(result, arg)
     return result
-
 
 def lam(
     binders: Sequence[tuple[str, Expr]],
@@ -38,7 +61,6 @@ def lam(
         result = ELam(var_name, domain, result)
     return result
 
-
 def pi(
     binders: Sequence[tuple[str, Expr]],
     body: Expr,
@@ -49,9 +71,8 @@ def pi(
         result = EPi(var_name, domain, result)
     return result
 
-
-def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
-    """Return the application head and ordered arguments."""
+def decompose_app(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
+    """Decompose a left-associated application chain into its head and arguments."""
     head = expr
     args: list[Expr] = []
     while isinstance(head, EApp):
@@ -60,6 +81,123 @@ def flatten_app_chain(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
     return head, tuple(reversed(args))
 
 
+# ------------------------------------------------------------------
+# Universe Utilities
+# ------------------------------------------------------------------
+def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
+    """Collect all unique universe levels present in the expression."""
+    ordered_levels: list[UnivLevel] = []
+
+    def _collect(e: Expr) -> None:
+        match e:
+            case ESort(level):
+                if level not in ordered_levels:
+                    ordered_levels.append(level)
+            case EConst(_, levels):
+                for lvl in levels:
+                    if lvl not in ordered_levels:
+                        ordered_levels.append(lvl)
+            case EVar(_) | EMetaVar(_):
+                pass
+            case EPi(_, domain, body) | ELam(_, domain, body):
+                _collect(domain)
+                _collect(body)
+            case EApp(fn, arg):
+                _collect(fn)
+                _collect(arg)
+            case EMatch(_, discriminee, motive, cases):
+                _collect(discriminee)
+                _collect(motive)
+                for case_expr in cases:
+                    _collect(case_expr)
+
+    _collect(expr)
+    return tuple(ordered_levels)
+
+
+# ------------------------------------------------------------------
+# Variable Utilities
+# ------------------------------------------------------------------
+def substitute_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
+    """Substitute all occurrences of the variable."""
+    replacement_fvs = collect_free_vars(replacement)
+
+    def _subst(e: Expr) -> Expr:
+        match e:
+            case EVar(name):
+                return replacement if name == var_name else e
+            case ESort(_) | EConst(_) | EMetaVar(_):
+                return e
+
+            case EPi(var, domain, body):
+                new_domain = _subst(domain)
+                if var == var_name:
+                    return EPi(var, new_domain, body)
+
+                if var in replacement_fvs:
+                    new_var = var + "_"
+                    while new_var in replacement_fvs or new_var == var_name:
+                        new_var += "_"
+                    alpha_body = substitute_var(body, var, EVar(new_var))
+                    return EPi(
+                        new_var,
+                        new_domain,
+                        substitute_var(alpha_body, var_name, replacement)
+                    )
+
+                return EPi(var, new_domain, _subst(body))
+
+            case ELam(var, domain, body):
+                new_domain = _subst(domain)
+                if var == var_name:
+                    return ELam(var, new_domain, body)
+
+                if var in replacement_fvs:
+                    new_var = var + "_"
+                    while new_var in replacement_fvs or new_var == var_name:
+                        new_var += "_"
+                    alpha_body = substitute_var(body, var, EVar(new_var))
+                    return ELam(
+                        new_var,
+                        new_domain,
+                        substitute_var(alpha_body, var_name, replacement)
+                    )
+
+                return ELam(var, new_domain, _subst(body))
+
+            case EApp(fn, arg):
+                return EApp(_subst(fn), _subst(arg))
+            case EMatch(inductive_name, discriminee, motive, cases):
+                return EMatch(
+                    inductive_name,
+                    _subst(discriminee),
+                    _subst(motive),
+                    tuple(_subst(c) for c in cases)
+                )
+
+    return _subst(expr)
+
+def collect_free_vars(expr: Expr) -> set[str]:
+    """Collect all free variable names present in the expression."""
+    match expr:
+        case EVar(name):
+            return {name}
+        case ESort(_) | EConst(_) | EMetaVar(_):
+            return set()
+        case EPi(var, domain, body) | ELam(var, domain, body):
+            return collect_free_vars(domain) | (collect_free_vars(body) - {var})
+        case EApp(fn, arg):
+            return collect_free_vars(fn) | collect_free_vars(arg)
+        case EMatch(_, discriminee, motive, cases):
+            fvs = collect_free_vars(discriminee) | collect_free_vars(motive)
+            for c in cases:
+                fvs |= collect_free_vars(c)
+            return fvs
+
+
+# ------------------------------------------------------------------
+# Meta-variable Utilities
+# ------------------------------------------------------------------
 def has_metavar(expr: Expr) -> bool:
     """Check if the expression contains any meta-variables (holes)."""
     match expr:
@@ -116,67 +254,6 @@ def substitute_metavar(
                 tuple(substitute_metavar(c, target_goal_id, replacement) for c in cases)
             )
 
-
-def substitute_expr_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
-    """Substitute all occurrences of the variable."""
-    replacement_fvs = collect_free_vars(replacement)
-
-    def _subst(e: Expr) -> Expr:
-        match e:
-            case EVar(name):
-                return replacement if name == var_name else e
-            case ESort(_) | EConst(_) | EMetaVar(_):
-                return e
-
-            case EPi(var, domain, body):
-                new_domain = _subst(domain)
-                if var == var_name:
-                    return EPi(var, new_domain, body)
-
-                if var in replacement_fvs:
-                    new_var = var + "_"
-                    while new_var in replacement_fvs or new_var == var_name:
-                        new_var += "_"
-                    alpha_body = substitute_expr_var(body, var, EVar(new_var))
-                    return EPi(
-                        new_var,
-                        new_domain,
-                        substitute_expr_var(alpha_body, var_name, replacement)
-                    )
-
-                return EPi(var, new_domain, _subst(body))
-
-            case ELam(var, domain, body):
-                new_domain = _subst(domain)
-                if var == var_name:
-                    return ELam(var, new_domain, body)
-
-                if var in replacement_fvs:
-                    new_var = var + "_"
-                    while new_var in replacement_fvs or new_var == var_name:
-                        new_var += "_"
-                    alpha_body = substitute_expr_var(body, var, EVar(new_var))
-                    return ELam(
-                        new_var,
-                        new_domain,
-                        substitute_expr_var(alpha_body, var_name, replacement)
-                    )
-
-                return ELam(var, new_domain, _subst(body))
-
-            case EApp(fn, arg):
-                return EApp(_subst(fn), _subst(arg))
-            case EMatch(inductive_name, discriminee, motive, cases):
-                return EMatch(
-                    inductive_name,
-                    _subst(discriminee),
-                    _subst(motive),
-                    tuple(_subst(c) for c in cases)
-                )
-
-    return _subst(expr)
-
-
 def collect_metavar_ids(expr: Expr) -> list[str]:
     """Collect all unique meta-variable goal IDs present in the expression."""
     ordered_ids: list[str] = []
@@ -204,24 +281,9 @@ def collect_metavar_ids(expr: Expr) -> list[str]:
     return ordered_ids
 
 
-def collect_free_vars(expr: Expr) -> set[str]:
-    """Collect all free variable names present in the expression."""
-    match expr:
-        case EVar(name):
-            return {name}
-        case ESort(_) | EConst(_) | EMetaVar(_):
-            return set()
-        case EPi(var, domain, body) | ELam(var, domain, body):
-            return collect_free_vars(domain) | (collect_free_vars(body) - {var})
-        case EApp(fn, arg):
-            return collect_free_vars(fn) | collect_free_vars(arg)
-        case EMatch(_, discriminee, motive, cases):
-            fvs = collect_free_vars(discriminee) | collect_free_vars(motive)
-            for c in cases:
-                fvs |= collect_free_vars(c)
-            return fvs
-
-
+# ------------------------------------------------------------------
+# Expression Utilities
+# ------------------------------------------------------------------
 def substitute_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
     """Recursively replace all occurrences of `target` with `replacement` in `expr`."""
     if expr == target:
@@ -254,38 +316,6 @@ def substitute_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
             )
         case _:
             return expr
-
-
-def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
-    """Collect all unique universe levels present in the expression."""
-    ordered_levels: list[UnivLevel] = []
-
-    def _collect(e: Expr) -> None:
-        match e:
-            case ESort(level):
-                if level not in ordered_levels:
-                    ordered_levels.append(level)
-            case EConst(_, levels):
-                for lvl in levels:
-                    if lvl not in ordered_levels:
-                        ordered_levels.append(lvl)
-            case EVar(_) | EMetaVar(_):
-                pass
-            case EPi(_, domain, body) | ELam(_, domain, body):
-                _collect(domain)
-                _collect(body)
-            case EApp(fn, arg):
-                _collect(fn)
-                _collect(arg)
-            case EMatch(_, discriminee, motive, cases):
-                _collect(discriminee)
-                _collect(motive)
-                for case_expr in cases:
-                    _collect(case_expr)
-
-    _collect(expr)
-    return tuple(ordered_levels)
-
 
 def count_pi_binders(expr: Expr) -> int:
     """Count the number of nested EPi binders (arity) in an expression."""

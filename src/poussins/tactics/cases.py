@@ -13,9 +13,9 @@ from ..ast import (
     EVar,
     Expr,
     UnivLevelParam,
-    flatten_app_chain,
+    decompose_app,
     lam,
-    substitute_expr_var,
+    substitute_var,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
@@ -48,12 +48,12 @@ def _build_constructor_pattern(
         domain = current_type.domain
         body = current_type.body
         for old_name, new_expr in renaming.items():
-            domain = substitute_expr_var(domain, old_name, new_expr)
-            body = substitute_expr_var(body, old_name, new_expr)
+            domain = substitute_var(domain, old_name, new_expr)
+            body = substitute_var(body, old_name, new_expr)
 
         var_name = fresh_binder_name(current_type.var, current_context, used_names)
         if var_name != current_type.var:
-            body = substitute_expr_var(body, current_type.var, EVar(var_name))
+            body = substitute_var(body, current_type.var, EVar(var_name))
 
         current_context[var_name] = domain
         branch_binders.append((var_name, domain))
@@ -103,7 +103,7 @@ def _specialize_with_parameter_substitutions(
     """Specialize an expression by substituting inferred inductive parameters."""
     specialized_expr = expr
     for param_name, param_value in substitutions.items():
-        specialized_expr = substitute_expr_var(
+        specialized_expr = substitute_var(
             specialized_expr, param_name, param_value
         )
 
@@ -126,7 +126,7 @@ def _build_branch_local_context(
         parameter_substitutions,
     ) = branch_alias_spec
     branch_local_context = {
-        name: substitute_expr_var(type_expr, hyp_name, constructor_pattern)
+        name: substitute_var(type_expr, hyp_name, constructor_pattern)
         for name, type_expr in current_goal.local_context.items()
         if name != hyp_name
     }
@@ -148,7 +148,7 @@ def _build_branch_local_context(
             binder_type, parameter_substitutions
         )
 
-    branch_local_context[hyp_name] = substitute_expr_var(
+    branch_local_context[hyp_name] = substitute_var(
         current_goal.local_context[hyp_name],
         hyp_name,
         constructor_pattern
@@ -188,7 +188,7 @@ def cases(
     if not inductive_decl.constructor_names:
         raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
-    _, hypothesis_args = flatten_app_chain(hypothesis_type)
+    _, hypothesis_args = decompose_app(hypothesis_type)
 
     inductive_param_count = 0
     curr_t = inductive_decl.type
@@ -249,7 +249,7 @@ def cases(
                 old_name, old_type = final_branch_binders[target_idx]
                 new_name = names_for_branch[i]
                 final_branch_binders[target_idx] = (new_name, old_type)
-                constructor_pattern = substitute_expr_var(
+                constructor_pattern = substitute_var(
                     constructor_pattern, old_name, EVar(new_name)
                 )
 
@@ -264,7 +264,7 @@ def cases(
             for b_name, b_type in final_branch_binders
         ]
 
-        branch_goal_statement = substitute_expr_var(
+        branch_goal_statement = substitute_var(
             current_goal.statement,
             hyp_name,
             constructor_pattern
@@ -297,7 +297,7 @@ def cases(
     motive = ELam(
         "_case",
         hypothesis_type,
-        substitute_expr_var(current_goal.statement, hyp_name, EVar("_case")),
+        substitute_var(current_goal.statement, hyp_name, EVar("_case")),
     )
     assignment = EMatch(head_name, EVar(hyp_name), motive, tuple(branch_terms))
     manager.refine_goal(assignment, subgoals)

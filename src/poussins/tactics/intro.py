@@ -1,7 +1,7 @@
 """Tactics for introducing local variables into the current goal."""
 from __future__ import annotations
 
-from ..ast import ELam, EMetaVar, EPi, EVar, substitute_expr_var
+from ..ast import ELam, EMetaVar, EPi, EVar, substitute_var
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import require_current_goal, requires_active_goal
@@ -24,7 +24,7 @@ def intro(manager: ProofManager, name: str) -> None:
             f"Identifier '{name}' already exists in the local context."
         )
 
-    new_subgoal_statement = substitute_expr_var(
+    new_subgoal_statement = substitute_var(
         expr=goal_expr.body,
         var_name=goal_expr.var,
         replacement=EVar(name)

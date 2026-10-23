@@ -12,9 +12,9 @@ from ..ast import (
     EVar,
     Expr,
     app,
-    flatten_app_chain,
-    substitute_expr_var,
+    decompose_app,
     substitute_metavar,
+    substitute_var,
 )
 from ..environment import (
     ConstructorDeclaration,
@@ -85,7 +85,7 @@ def whnf(
             return expr
 
         case EApp(fn, arg) as app_expr:
-            head, args = flatten_app_chain(app_expr)
+            head, args = decompose_app(app_expr)
 
             # 1. Check if head is a Recursor and arguments are sufficient to reduce
             if isinstance(head, EConst) and env is not None:
@@ -105,7 +105,7 @@ def whnf(
                         discriminee = args[discriminee_idx]
                         discriminee_whnf = whnf(discriminee, metavars, env, unfolding)
 
-                        d_head, d_args = flatten_app_chain(discriminee_whnf)
+                        d_head, d_args = decompose_app(discriminee_whnf)
                         ind_decl = env.get(decl.inductive_name)
                         if (
                             isinstance(d_head, EConst)
@@ -169,7 +169,7 @@ def whnf(
             # 2. Standard Application beta-reduction
             fn_whnf = whnf(fn, metavars, env, unfolding)
             if isinstance(fn_whnf, ELam):
-                new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
+                new_expr = substitute_var(fn_whnf.body, fn_whnf.var, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
 
@@ -179,7 +179,7 @@ def whnf(
             if env is not None:
                 decl = env.get(inductive_name)
                 if isinstance(decl, InductiveDeclaration):
-                    discriminee_head, discriminee_args = flatten_app_chain(
+                    discriminee_head, discriminee_args = decompose_app(
                         discriminee_whnf
                     )
                     if isinstance(discriminee_head, EConst):
@@ -202,7 +202,7 @@ def whnf(
                                     unfolding,
                                 )
                                 if isinstance(reduced_head, ELam):
-                                    reduced_branch = substitute_expr_var(
+                                    reduced_branch = substitute_var(
                                         reduced_head.body,
                                         reduced_head.var,
                                         constructor_arg,

@@ -13,7 +13,7 @@ from ..ast import (
     ESort,
     EVar,
     Expr,
-    flatten_app_chain,
+    decompose_app,
 )
 from ..environment import (
     AxiomDeclaration,
@@ -326,7 +326,7 @@ def _validate_constructor(
         curr = whnf(curr.body, {}, env)
 
     # C. Check if target head matches the inductive type being defined.
-    head, _ = flatten_app_chain(curr)
+    head, _ = decompose_app(curr)
     if not isinstance(head, EConst) or head.name != decl.name:
         raise KernelTypeError(
             f"Constructor '{ctor.name}' target type must be "

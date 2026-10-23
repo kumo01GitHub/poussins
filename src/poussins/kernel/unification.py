@@ -13,7 +13,7 @@ from ..ast import (
     Expr,
     UnivLevel,
     collect_metavar_ids,
-    substitute_expr_var,
+    substitute_var,
 )
 from ..environment import Environment
 from ..errors import KernelTypeError
@@ -130,7 +130,7 @@ def unify(
             b1_inst = instantiate(b1, current_metavars)
             b2_inst = instantiate(b2, current_metavars)
             if v1 != v2:
-                b2_inst = substitute_expr_var(
+                b2_inst = substitute_var(
                     b2_inst,
                     var_name=v2,
                     replacement=EVar(v1),

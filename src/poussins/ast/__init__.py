@@ -6,13 +6,16 @@ from .ops import (
     collect_metavar_ids,
     collect_univ_levels,
     count_pi_binders,
-    flatten_app_chain,
+    decompose_app,
     has_metavar,
     lam,
     pi,
+    sort,
     substitute_expr,
-    substitute_expr_var,
     substitute_metavar,
+    substitute_var,
+    univ_level,
+    univ_levels,
 )
 from .sort import Sort
 from .universe import (
@@ -45,16 +48,19 @@ __all__ = [
     # Sort classes
     "Sort",
     # Expr operations
+    "univ_level",
+    "univ_levels",
+    "sort",
     "app",
     "lam",
     "pi",
+    "decompose_app",
+    "substitute_var",
+    "collect_univ_levels",
+    "collect_free_vars",
     "has_metavar",
-    "flatten_app_chain",
     "substitute_metavar",
     "collect_metavar_ids",
-    "substitute_expr_var",
-    "collect_free_vars",
     "substitute_expr",
-    "collect_univ_levels",
     "count_pi_binders",
 ]
