@@ -11,11 +11,18 @@ from ..ast import (
     ESort,
     EVar,
     Expr,
+    build_app_chain,
     flatten_app_chain,
     substitute_expr_var,
     substitute_metavar,
 )
-from ..environment import DefinitionDeclaration, Environment, InductiveDeclaration
+from ..environment import (
+    ConstructorDeclaration,
+    DefinitionDeclaration,
+    Environment,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 from .proof_state import MetaVar
 
 
@@ -46,9 +53,28 @@ def whnf(
     unfolding: frozenset[str] | None = None,
 ) -> Expr:
     """Reduce an expression to weak head normal form."""
+    def occurs_in(target_name: str, expr: Expr) -> bool:
+        """Recursively check if `target_name` (as EConst) occurs in `expr`."""
+        match expr:
+            case EConst(name=name) if name == target_name:
+                return True
+            case EPi(_, domain, body) | ELam(_, domain, body):
+                return occurs_in(target_name, domain) or occurs_in(target_name, body)
+            case EApp(fn, arg):
+                return occurs_in(target_name, fn) or occurs_in(target_name, arg)
+            case EMatch(_, discriminee, motive, cases):
+                return (
+                    occurs_in(target_name, discriminee)
+                    or occurs_in(target_name, motive)
+                    or any(occurs_in(target_name, c) for c in cases)
+                )
+            case ESort(_) | EVar(_) | EMetaVar(_) | EConst(_):
+                return False
+            case _:
+                return False
+
     if unfolding is None:
         unfolding = frozenset()
-
     expr = instantiate_metavar(expr, metavars)
     match expr:
         case EConst(name, _):
@@ -57,12 +83,96 @@ def whnf(
                 if isinstance(decl, DefinitionDeclaration):
                     return whnf(decl.value, metavars, env, unfolding | {name})
             return expr
-        case EApp(fn, arg):
+
+        case EApp(fn, arg) as app_expr:
+            head, args = flatten_app_chain(app_expr)
+
+            # 1. Check if head is a Recursor and arguments are sufficient to reduce
+            if isinstance(head, EConst) and env is not None:
+                decl = env.get(head.name)
+                if isinstance(decl, RecursorDeclaration):
+                    total_fixed = (
+                        decl.num_params + 1
+                        + decl.num_minors
+                        + decl.num_indices + 1
+                    )
+                    if len(args) >= total_fixed:
+                        discriminee_idx = (
+                            decl.num_params + 1
+                            + decl.num_minors
+                            + decl.num_indices
+                        )
+                        discriminee = args[discriminee_idx]
+                        discriminee_whnf = whnf(discriminee, metavars, env, unfolding)
+
+                        d_head, d_args = flatten_app_chain(discriminee_whnf)
+                        ind_decl = env.get(decl.inductive_name)
+                        if (
+                            isinstance(d_head, EConst)
+                            and isinstance(ind_decl, InductiveDeclaration)
+                        ):
+                            ctor_names = ind_decl.constructor_names
+                            if d_head.name in ctor_names:
+                                ctor_idx = ctor_names.index(d_head.name)
+                                minor_start = decl.num_params + 1
+                                minor_expr = args[minor_start + ctor_idx]
+
+                                current_val = minor_expr
+
+                                # Dynamically inspect constructor signature
+                                # to handle parameters and recursive fields generically
+                                ctor_decl = env.get(d_head.name)
+                                if isinstance(ctor_decl, ConstructorDeclaration):
+                                    ctor_type_curr = ctor_decl.type
+                                    # Skip parameters
+                                    for _ in range(decl.num_params):
+                                        if isinstance(ctor_type_curr, EPi):
+                                            ctor_type_curr = ctor_type_curr.body
+
+                                    # Inspect constructor argument binders
+                                    arg_idx = 0
+                                    while (
+                                        isinstance(ctor_type_curr, EPi)
+                                        and arg_idx < len(d_args)
+                                    ):
+                                        param_domain = ctor_type_curr.domain
+                                        is_recursive = occurs_in(
+                                            decl.inductive_name,
+                                            param_domain
+                                        )
+
+                                        ctor_arg = d_args[arg_idx]
+                                        current_val = EApp(current_val, ctor_arg)
+
+                                        if is_recursive:
+                                            # Compute inductive hypothesis (IH)
+                                            rec_args = list(args)
+                                            rec_args[discriminee_idx] = ctor_arg
+                                            ih = whnf(
+                                                build_app_chain(head, *rec_args),
+                                                metavars,
+                                                env,
+                                                unfolding,
+                                            )
+                                            current_val = EApp(current_val, ih)
+
+                                        ctor_type_curr = ctor_type_curr.body
+                                        arg_idx += 1
+
+                                # Apply any remaining extra arguments
+                                extra_args = args[discriminee_idx + 1:]
+                                for extra in extra_args:
+                                    current_val = EApp(current_val, extra)
+
+                                return whnf(current_val, metavars, env, unfolding)
+
+            # 2. Standard Application beta-reduction
             fn_whnf = whnf(fn, metavars, env, unfolding)
             if isinstance(fn_whnf, ELam):
                 new_expr = substitute_expr_var(fn_whnf.body, fn_whnf.var, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
+
         case EMatch(inductive_name, discriminee, motive, cases):
             discriminee_whnf = whnf(discriminee, metavars, env, unfolding)
 
@@ -106,13 +216,8 @@ def whnf(
                             return whnf(reduced_branch, metavars, env, unfolding)
 
             return EMatch(inductive_name, discriminee_whnf, motive, cases)
-        case (
-            ESort(_)
-            | EVar(_)
-            | ELam(_, _, _)
-            | EPi(_, _, _)
-            | EMetaVar(_)
-        ):
+
+        case (ESort(_) | EVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMetaVar(_)):
             return expr
 
 

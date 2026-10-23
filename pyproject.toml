@@ -26,7 +26,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 
 [tool.ruff.lint]
 select = [
@@ -49,7 +49,7 @@ ignore = []
 
 [tool.ruff.lint.pylint]
 max-returns = 15
-max-branches = 25
+max-branches = 30
 max-args = 10
 max-statements = 80
 

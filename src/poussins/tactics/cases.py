@@ -337,10 +337,7 @@ def _apply_rcases_pattern(
             bound_names.append(tmp_sub_name)
             nested_targets.append((tmp_sub_name, sub))
 
-    if constructor_name:
-        branch_pattern = (constructor_name, *bound_names)
-    else:
-        branch_pattern = tuple(bound_names)
+    branch_pattern = (constructor_name, *bound_names) if constructor_name else tuple(bound_names)
 
     cases(manager, hyp_name=hyp_name, patterns=(branch_pattern,))
 

@@ -7,11 +7,14 @@ from ...ast import (
     EApp,
     EConst,
     ELam,
+    EMatch,
     EPi,
     ESort,
     EVar,
     Sort,
     UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
 )
 from ..declaration import (
     ConstructorDeclaration,
@@ -25,7 +28,6 @@ from ..declaration import (
 class NatDeclaration(Enum):
     """Inductive declaration for natural numbers."""
 
-    """Nat inductive declaration for natural numbers."""
     NAT_DECLARATION = InductiveDeclaration(
         name="Nat",
         level_params=(),
@@ -33,7 +35,6 @@ class NatDeclaration(Enum):
         constructor_names=("Nat.zero", "Nat.succ"),
     )
 
-    """Nat.zero constructor declaration for natural numbers."""
     NAT_ZERO_DECLARATION = ConstructorDeclaration(
         name="Nat.zero",
         level_params=(),
@@ -41,7 +42,6 @@ class NatDeclaration(Enum):
         type=EConst("Nat", ()),
     )
 
-    """Nat.succ constructor declaration for natural numbers."""
     NAT_SUCC_DECLARATION = ConstructorDeclaration(
         name="Nat.succ",
         level_params=(),
@@ -49,7 +49,6 @@ class NatDeclaration(Enum):
         type=EPi("n", EConst("Nat", ()), EConst("Nat", ())),
     )
 
-    """Nat.rec recursor declaration for natural numbers."""
     NAT_REC_DECLARATION = RecursorDeclaration(
         name="Nat.rec",
         level_params=("u",),
@@ -57,85 +56,359 @@ class NatDeclaration(Enum):
         num_params=0,
         num_indices=0,
         num_minors=2,
-        type=EPi("motive", EPi("_", EConst("Nat", ()), ESort(UnivLevelParam("u"))),
-            EPi("zero_case", EApp(EVar("motive"), EConst("Nat.zero", ())),
-                EPi("succ_case", EPi("n", EConst("Nat", ()),
-                    EPi("ih", EApp(EVar("motive"), EVar("n")), EApp(EVar("motive"),
-                        EApp(EConst("Nat.succ", ()), EVar("n"))))),
-                    EPi("k", EConst("Nat", ()),
-                        EApp(EVar("motive"), EVar("k"))
-                    )
-                )
-            )
-        )
+        type=EPi(
+            "motive",
+            EPi("_", EConst("Nat", ()), ESort(UnivLevelParam("u"))),
+            EPi(
+                "zero_case",
+                EApp(EVar("motive"), EConst("Nat.zero", ())),
+                EPi(
+                    "succ_case",
+                    EPi(
+                        "n",
+                        EConst("Nat", ()),
+                        EPi(
+                            "ih",
+                            EApp(EVar("motive"), EVar("n")),
+                            EApp(
+                                EVar("motive"),
+                                EApp(EConst("Nat.succ", ()), EVar("n")),
+                            ),
+                        ),
+                    ),
+                    EPi(
+                        "k",
+                        EConst("Nat", ()),
+                        EApp(EVar("motive"), EVar("k")),
+                    ),
+                ),
+            ),
+        ),
     )
 
-    """Nat.add definition declaration for natural numbers."""
+    # Nat.add: n + m を Nat.rec による n に関する再帰で定義
     NAT_ADD_DECLARATION = DefinitionDeclaration(
         name="Nat.add",
         level_params=(),
-        type=EPi("n", EConst("Nat", ()), EPi("m", EConst("Nat", ()),
-            EConst("Nat", ()))),
-        value=ELam("n", EConst("Nat", ()), ELam("m", EConst("Nat", ()), EVar("m"))),
+        type=EPi(
+            "n",
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ())),
+        ),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam(
+                "m",
+                EConst("Nat", ()),
+                EApp(
+                    EApp(
+                        EApp(
+                            EApp(
+                                EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                            ),
+                            EVar("m"),
+                        ),
+                        ELam(
+                            "n",
+                            EConst("Nat", ()),
+                            ELam(
+                                "ih",
+                                EConst("Nat", ()),
+                                EApp(EConst("Nat.succ", ()), EVar("ih")),
+                            ),
+                        ),
+                    ),
+                    EVar("n"),
+                ),
+            ),
+        ),
     )
 
-    """Nat.sub definition declaration for natural numbers."""
+    # Nat.sub: n - m を m に関する再帰と predecessor を用いて定義
     NAT_SUB_DECLARATION = DefinitionDeclaration(
         name="Nat.sub",
         level_params=(),
         type=EPi(
             "n",
             EConst("Nat", ()),
-            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
+            EPi("m", EConst("Nat", ()), EConst("Nat", ())),
         ),
-        value=ELam("n", EConst("Nat", ()), ELam("m", EConst("Nat", ()), EVar("n"))),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam(
+                "m",
+                EConst("Nat", ()),
+                EApp(
+                    EApp(
+                        EApp(
+                            EApp(
+                                EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                            ),
+                            EVar("n"),
+                        ),
+                        ELam(
+                            "m",
+                            EConst("Nat", ()),
+                            ELam(
+                                "ih",
+                                EConst("Nat", ()),
+                                EApp(
+                                    EApp(
+                                        EApp(
+                                            EApp(
+                                                EConst(
+                                                    "Nat.rec",
+                                                    (UnivLevelSucc(UnivLevelZero(),),),
+                                                ),
+                                                ELam(
+                                                    "_",
+                                                    EConst("Nat", ()),
+                                                    EConst("Nat", ()),
+                                                ),
+                                            ),
+                                            EConst("Nat.zero", ()),
+                                        ),
+                                        ELam(
+                                            "k",
+                                            EConst("Nat", ()),
+                                            ELam(
+                                                "_",
+                                                EConst("Nat", ()),
+                                                EVar("k"),
+                                            ),
+                                        ),
+                                    ),
+                                    EVar("ih"),
+                                ),
+                            ),
+                        ),
+                    ),
+                    EVar("m"),
+                ),
+            ),
+        ),
     )
 
-    """Nat.mul definition declaration for natural numbers."""
+    # Nat.mul: n * m を Nat.rec による n に関する再帰と Nat.add を用いて定義
     NAT_MUL_DECLARATION = DefinitionDeclaration(
         name="Nat.mul",
         level_params=(),
         type=EPi(
             "n",
-            EConst("Nat", ()), EPi("m", EConst("Nat", ()),
-                EConst("Nat", ()))
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ())),
         ),
         value=ELam(
             "n",
             EConst("Nat", ()),
-            ELam("m", EConst("Nat", ()), EConst("Nat.zero", ()))
+            ELam(
+                "m",
+                EConst("Nat", ()),
+                EApp(
+                    EApp(
+                        EApp(
+                            EApp(
+                                EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                            ),
+                            EConst("Nat.zero", ()),
+                        ),
+                        ELam(
+                            "n",
+                            EConst("Nat", ()),
+                            ELam(
+                                "ih",
+                                EConst("Nat", ()),
+                                EApp(
+                                    EApp(
+                                        EConst("Nat.add", ()),
+                                        EVar("ih"),
+                                    ),
+                                    EVar("m"),
+                                ),
+                            ),
+                        ),
+                    ),
+                    EVar("n"),
+                ),
+            ),
         ),
     )
 
-    """Nat.div definition declaration for natural numbers."""
-    NAT_DIV_DECLARATION = DefinitionDeclaration(
-        name="Nat.div",
-        level_params=(),
-        type=EPi(
-            "n",
-            EConst("Nat", ()),
-            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
-        ),
-        value=ELam(
-            "n",
-            EConst("Nat", ()),
-            ELam("m", EConst("Nat", ()), EConst("Nat.zero", ()))
-        ),
-    )
-
-    """Nat.mod definition declaration for natural numbers."""
+    # Nat.mod: Nat.rec と EMatch を用いた剰余の帰納的定義
     NAT_MOD_DECLARATION = DefinitionDeclaration(
         name="Nat.mod",
         level_params=(),
         type=EPi(
             "n",
             EConst("Nat", ()),
-            EPi("m", EConst("Nat", ()), EConst("Nat", ()))
+            EPi("m", EConst("Nat", ()), EConst("Nat", ())),
         ),
         value=ELam(
             "n",
             EConst("Nat", ()),
-            ELam("m", EConst("Nat", ()), EVar("n"))
+            ELam(
+                "m",
+                EConst("Nat", ()),
+                EApp(
+                    EApp(
+                        EApp(
+                            EApp(
+                                EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                            ),
+                            EConst("Nat.zero", ()),
+                        ),
+                        ELam(
+                            "n_ih",
+                            EConst("Nat", ()),
+                            ELam(
+                                "ih",
+                                EConst("Nat", ()),
+                                EMatch(
+                                    inductive_name="Nat",
+                                    discriminee=EApp(
+                                        EApp(
+                                            EConst("Nat.sub", ()),
+                                            EVar("m"),
+                                        ),
+                                        EApp(EConst("Nat.succ", ()), EVar("ih")),
+                                    ),
+                                    motive=ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                                    cases=(
+                                        EConst("Nat.zero", ()),
+                                        ELam(
+                                            "k",
+                                            EConst("Nat", ()),
+                                            EApp(EConst("Nat.succ", ()), EVar("ih")),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                    EVar("n"),
+                ),
+            ),
+        ),
+    )
+
+    # Nat.div: Nat.rec と EMatch を用いた除算の定義（各 Nat.succ ケースに ELam を完備）
+    NAT_DIV_DECLARATION = DefinitionDeclaration(
+        name="Nat.div",
+        level_params=(),
+        type=EPi(
+            "n",
+            EConst("Nat", ()),
+            EPi("m", EConst("Nat", ()), EConst("Nat", ())),
+        ),
+        value=ELam(
+            "n",
+            EConst("Nat", ()),
+            ELam(
+                "m",
+                EConst("Nat", ()),
+                EApp(
+                    EApp(
+                        EApp(
+                            EApp(
+                                EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                            ),
+                            EConst("Nat.zero", ()),
+                        ),
+                        ELam(
+                            "n_ih",
+                            EConst("Nat", ()),
+                            ELam(
+                                "ih",
+                                EConst("Nat", ()),
+                                EMatch(
+                                    inductive_name="Nat",
+                                    discriminee=EApp(
+                                        EApp(
+                                            EConst("Nat.sub", ()),
+                                            EVar("m"),
+                                        ),
+                                        EApp(
+                                            EConst("Nat.succ", ()),
+                                            EApp(
+                                                EApp(
+                                                    EApp(
+                                                        EApp(
+                                                            EConst("Nat.rec", (UnivLevelSucc(UnivLevelZero()),)),
+                                                            ELam("_", EConst("Nat", ()), EConst("Nat", ())),
+                                                        ),
+                                                        EConst("Nat.zero", ()),
+                                                    ),
+                                                    ELam(
+                                                        "n_ih2",
+                                                        EConst("Nat", ()),
+                                                        ELam(
+                                                            "ih2",
+                                                            EConst("Nat", ()),
+                                                            EMatch(
+                                                                inductive_name="Nat",
+                                                                discriminee=EApp(
+                                                                    EApp(
+                                                                        EConst(
+                                                                            "Nat.sub",
+                                                                            ()
+                                                                        ),
+                                                                        EVar("m"),
+                                                                    ),
+                                                                    EApp(
+                                                                        EConst("Nat.succ", ()),
+                                                                        EVar("ih2"),
+                                                                    ),
+                                                                ),
+                                                                motive=ELam(
+                                                                    "_",
+                                                                    EConst("Nat", ()),
+                                                                    EConst("Nat", ())
+                                                                ),
+                                                                cases=(
+                                                                    EConst(
+                                                                        "Nat.zero",
+                                                                        ()
+                                                                    ),
+                                                                    ELam(
+                                                                        "k",
+                                                                        EConst("Nat", ()),
+                                                                        EApp(
+                                                                            EConst("Nat.succ", ()),
+                                                                            EVar("ih2"),
+                                                                        )
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    ),
+                                                ),
+                                                EVar("n_ih"),
+                                            ),
+                                        ),
+                                    ),
+                                    motive=ELam(
+                                        "_",
+                                        EConst("Nat", ()),
+                                        EConst("Nat", ())
+                                    ),
+                                    cases=(
+                                        EApp(EConst("Nat.succ", ()), EVar("ih")),
+                                        ELam("k", EConst("Nat", ()), EVar("ih")),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                    EVar("n"),
+                ),
+            ),
         ),
     )
 

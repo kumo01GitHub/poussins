@@ -87,10 +87,7 @@ def is_alpha_eq(
                 or not is_alpha_eq(d1, d2, bvars1, bvars2)
                 or not is_alpha_eq(m1, m2, bvars1, bvars2)
             )
-            if not result:
-                result = _alpha_eq_match_cases(c1, c2, bvars1, bvars2)
-            else:
-                result = False
+            result = _alpha_eq_match_cases(c1, c2, bvars1, bvars2) if not result else False
         case _:
             result = False
 
