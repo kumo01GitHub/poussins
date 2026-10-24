@@ -24,6 +24,7 @@ class VectorDeclaration(Enum):
             EPi("n", EConst("Nat", ()), ESort(UnivLevelParam("u"))),
         ),
         constructor_names=("Vector.nil", "Vector.cons"),
+        recursor_names=("Vector.rec",),
     )
 
     VECTOR_NIL_DECLARATION = ConstructorDeclaration(

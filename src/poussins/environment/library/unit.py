@@ -20,6 +20,7 @@ class UnitDeclaration(Enum):
         level_params=(),
         type=Sort.TYPE.sort,
         constructor_names=("Unit.unit",),
+        recursor_names=("Unit.rec",),
     )
 
     UNIT_UNIT_DECLARATION = ConstructorDeclaration(

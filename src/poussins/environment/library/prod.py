@@ -24,6 +24,7 @@ class ProdDeclaration(Enum):
             EPi("B", ESort(UnivLevelParam("u")), ESort(UnivLevelParam("u"))),
         ),
         constructor_names=("Prod.mk",),
+        recursor_names=("Prod.rec",),
     )
 
     PROD_MK_DECLARATION = ConstructorDeclaration(

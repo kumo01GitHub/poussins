@@ -28,6 +28,7 @@ class SigmaDeclaration(Enum):
             ),
         ),
         constructor_names=("Sigma.mk",),
+        recursor_names=("Sigma.rec",),
     )
 
     SIGMA_MK_DECLARATION = ConstructorDeclaration(

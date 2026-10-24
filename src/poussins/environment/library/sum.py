@@ -24,6 +24,7 @@ class SumDeclaration(Enum):
             EPi("B", ESort(UnivLevelParam("u")), ESort(UnivLevelParam("u"))),
         ),
         constructor_names=("Sum.inl", "Sum.inr"),
+        recursor_names=("Sum.rec",),
     )
 
     SUM_INL_DECLARATION = ConstructorDeclaration(

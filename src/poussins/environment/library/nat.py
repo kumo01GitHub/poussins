@@ -33,6 +33,7 @@ class NatDeclaration(Enum):
         level_params=(),
         type=Sort.TYPE.sort,
         constructor_names=("Nat.zero", "Nat.succ"),
+        recursor_names=("Nat.rec",),
     )
 
     NAT_ZERO_DECLARATION = ConstructorDeclaration(
@@ -86,7 +87,6 @@ class NatDeclaration(Enum):
         ),
     )
 
-    # Nat.add: n + m を Nat.rec による n に関する再帰で定義
     NAT_ADD_DECLARATION = DefinitionDeclaration(
         name="Nat.add",
         level_params=(),
@@ -126,7 +126,6 @@ class NatDeclaration(Enum):
         ),
     )
 
-    # Nat.sub: n - m を m に関する再帰と predecessor を用いて定義
     NAT_SUB_DECLARATION = DefinitionDeclaration(
         name="Nat.sub",
         level_params=(),
@@ -193,7 +192,6 @@ class NatDeclaration(Enum):
         ),
     )
 
-    # Nat.mul: n * m を Nat.rec による n に関する再帰と Nat.add を用いて定義
     NAT_MUL_DECLARATION = DefinitionDeclaration(
         name="Nat.mul",
         level_params=(),
@@ -239,7 +237,6 @@ class NatDeclaration(Enum):
         ),
     )
 
-    # Nat.mod: Nat.rec と EMatch を用いた剰余の帰納的定義
     NAT_MOD_DECLARATION = DefinitionDeclaration(
         name="Nat.mod",
         level_params=(),
@@ -297,7 +294,6 @@ class NatDeclaration(Enum):
         ),
     )
 
-    # Nat.div: Nat.rec と EMatch を用いた除算の定義（各 Nat.succ ケースに ELam を完備）
     NAT_DIV_DECLARATION = DefinitionDeclaration(
         name="Nat.div",
         level_params=(),

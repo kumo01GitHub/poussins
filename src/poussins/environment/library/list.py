@@ -20,6 +20,7 @@ class ListDeclaration(Enum):
         level_params=("u",),
         type=EPi("A", ESort(UnivLevelParam("u")), ESort(UnivLevelParam("u"))),
         constructor_names=("List.nil", "List.cons"),
+        recursor_names=("List.rec",)
     )
 
     LIST_NIL_DECLARATION = ConstructorDeclaration(

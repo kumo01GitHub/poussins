@@ -35,6 +35,7 @@ class EqualityDeclaration(Enum):
             EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort)),
         ),
         constructor_names=("Eq.refl",),
+        recursor_names=("Eq.rec",)
     )
 
     EQ_REFL_DECLARATION = ConstructorDeclaration(

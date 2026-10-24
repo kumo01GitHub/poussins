@@ -360,21 +360,32 @@ def _validate_recursor(
     rec: RecursorDeclaration,
 ) -> None:
     """Validate the recursor declaration."""
-    # 1. Check that the recursor's type evaluates to a Sort.
+    # 1. Check that the recursor is listed in the inductive declaration's recursor names.
+    if rec.name not in decl.recursor_names:
+        raise KernelTypeError(
+            f"Recursor '{rec.name}' is not listed in the inductive declaration's recursor names: {decl.recursor_names}"
+        )
+    if rec.inductive_name != decl.name:
+        raise KernelTypeError(
+            f"Recursor '{rec.name}' inductive name '{rec.inductive_name}' "
+            f"does not match the inductive declaration name '{decl.name}'"
+        )
+
+    # 2. Check that the recursor's type evaluates to a Sort.
     rec_sort = infer_type(rec.type, {}, {}, env)
     if not isinstance(whnf(rec_sort, {}, env), ESort):
         raise KernelTypeError(
             f"Recursor '{rec.name}' type must evaluate to a Sort, got: {rec_sort}"
         )
 
-    # 2. Check that the recursor's type contains the target Inductive type.
+    # 3. Check that the recursor's type contains the target Inductive type.
     if not _occurs_in(decl.name, rec.type):
         raise KernelTypeError(
             f"Recursor '{rec.name}' type does not target "
             + f"the inductive type '{decl.name}'"
         )
 
-    # 3. Strict Structural Validation
+    # 4. Strict Structural Validation
     curr = whnf(rec.type, {}, env)
 
     pi_binders = []

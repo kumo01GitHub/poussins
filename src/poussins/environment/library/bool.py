@@ -21,6 +21,7 @@ class BoolDeclaration(Enum):
         level_params=(),
         type=Sort.TYPE.sort,
         constructor_names=("Bool.true", "Bool.false"),
+        recursor_names=("Bool.rec",)
     )
 
     """Bool.true constructor declaration for booleans."""

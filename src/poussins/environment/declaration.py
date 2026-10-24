@@ -36,7 +36,7 @@ class DefinitionDeclaration(Declaration):
 
     @override
     def __str__(self) -> str:
-        return f"{self.name} : {self.type} := {self.value}"
+        return f"Definition {self.name} : {self.type} := {self.value}"
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ class TheoremDeclaration(Declaration):
 
     @override
     def __str__(self) -> str:
-        return f"{self.name} : {self.type} := {self.value}"
+        return f"Theorem {self.name} : {self.type} := {self.value}"
 
 
 @dataclass(frozen=True)
@@ -66,14 +66,11 @@ class InductiveDeclaration(Declaration):
     """
 
     constructor_names: tuple[str, ...]
+    recursor_names: tuple[str, ...]
 
     @override
     def __str__(self) -> str:
-        constructors = (
-            ", ".join(self.constructor_names)
-            if self.constructor_names else "[]"
-        )
-        return f"{self.name} : {self.type} [{constructors}]"
+        return f"Inductive {self.name} : {self.type}"
 
 
 @dataclass(frozen=True)
@@ -84,7 +81,7 @@ class ConstructorDeclaration(Declaration):
 
     @override
     def __str__(self) -> str:
-        return f"{self.name} : {self.type} (constructor for {self.inductive_name})"
+        return f"Constructor {self.name} : {self.type} (for {self.inductive_name})"
 
 
 @dataclass(frozen=True)
@@ -99,11 +96,7 @@ class RecursorDeclaration(Declaration):
     @override
     def __str__(self) -> str:
         return (
-            f"{self.name} : {self.type} "
-            + f"(recursor for {self.inductive_name}, "
-            + f"params={self.num_params}, "
-            + f"indices={self.num_indices}, "
-            + f"minors={self.num_minors})"
+            f"Recursor {self.name} : {self.type} (for {self.inductive_name})"
         )
 
 
@@ -115,4 +108,4 @@ class QuotientDeclaration(Declaration):
 
     @override
     def __str__(self) -> str:
-        return f"{self.name} : {self.type} (quotient kind={self.kind})"
+        return f"Quotient {self.name} : {self.type} ({self.kind})"

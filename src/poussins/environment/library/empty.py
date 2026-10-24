@@ -15,6 +15,7 @@ class EmptyDeclaration(Enum):
         level_params=(),
         type=Sort.TYPE.sort,
         constructor_names=(),
+        recursor_names=("Empty.rec",)
     )
 
     """Empty.rec recursor declaration (Principle of Explosion)."""

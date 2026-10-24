@@ -20,6 +20,7 @@ class OptionDeclaration(Enum):
         level_params=("u",),
         type=EPi("A", ESort(UnivLevelParam("u")), ESort(UnivLevelParam("u"))),
         constructor_names=("Option.none", "Option.some"),
+        recursor_names=("Option.rec",)
     )
 
     OPTION_NONE_DECLARATION = ConstructorDeclaration(

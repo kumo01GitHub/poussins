@@ -139,6 +139,7 @@ def declare_inductive(
         level_params=level_params,
         type=type,
         constructor_names=tuple(c_name for c_name, _ in constructors),
+        recursor_names=(f"{name}.rec",)
     )
 
     constructor_decls = [
@@ -163,7 +164,7 @@ def _build_recursor(
 ) -> RecursorDeclaration:
     """Build the recursor declaration."""
     ind_name = inductive_decl.name
-    rec_name = f"{ind_name}.rec"
+    rec_name = inductive_decl.recursor_names[0]
 
     # 0. Collect used names to avoid collisions
     used_names: set[str] = set(inductive_decl.level_params)

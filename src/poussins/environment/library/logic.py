@@ -22,6 +22,7 @@ class LogicDeclaration(Enum):
         level_params=(),
         type=Sort.PROP.sort,
         constructor_names=("True.intro",),
+        recursor_names=("True.rec",),
     )
 
     """True.intro constructor declaration for logical truth."""
@@ -55,6 +56,7 @@ class LogicDeclaration(Enum):
         level_params=(),
         type=Sort.PROP.sort,
         constructor_names=(),
+        recursor_names=("False.rec",),
     )
 
     """False.rec recursor declaration for logical falsehood (Principle of Explosion)."""
@@ -78,6 +80,7 @@ class LogicDeclaration(Enum):
         level_params=(),
         type=EPi("A", Sort.PROP.sort, EPi("B", Sort.PROP.sort, Sort.PROP.sort)),
         constructor_names=("And.intro",),
+        recursor_names=("And.rec",),
     )
 
     """And.intro constructor declaration for logical conjunction."""
@@ -121,6 +124,7 @@ class LogicDeclaration(Enum):
         level_params=(),
         type=EPi("A", Sort.PROP.sort, EPi("B", Sort.PROP.sort, Sort.PROP.sort)),
         constructor_names=("Or.inl", "Or.inr"),
+        recursor_names=("Or.rec",),
     )
 
     """Or.inl constructor declaration for logical disjunction."""
@@ -195,6 +199,7 @@ class LogicDeclaration(Enum):
             ),
         ),
         constructor_names=("Exists.intro",),
+        recursor_names=("Exists.rec",),
     )
 
     """Exists.intro constructor declaration."""

@@ -20,6 +20,7 @@ class FinDeclaration(Enum):
         level_params=(),
         type=EPi("n", EConst("Nat", ()), Sort.TYPE.sort),
         constructor_names=("Fin.zero", "Fin.succ"),
+        recursor_names=("Fin.rec",)
     )
 
     FIN_ZERO_DECLARATION = ConstructorDeclaration(
