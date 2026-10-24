@@ -368,7 +368,7 @@ def _validate_recursor(
     if rec.inductive_name != decl.name:
         raise KernelTypeError(
             f"Recursor '{rec.name}' inductive name '{rec.inductive_name}' "
-            f"does not match the inductive declaration name '{decl.name}'"
+            + f"does not match the inductive declaration name '{decl.name}'"
         )
 
     # 2. Check that the recursor's type evaluates to a Sort.
