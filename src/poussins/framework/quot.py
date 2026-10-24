@@ -28,6 +28,27 @@ class Quot:
         raise NotImplementedError
 
     @classmethod
+    def levels(cls) -> tuple[UnivLevelParam, ...]:
+        """Return the universe levels of this quotient type."""
+        return tuple(
+            UnivLevelParam(param) for param
+            in QuotDeclaration.QUOT_DECLARATION.declaration.level_params
+        )
+
+    @classmethod
+    def type_expr(cls) -> Expr:
+        """Return the type expression of the quotient type."""
+        return EConst(
+            name=QuotDeclaration.QUOT_DECLARATION.declaration.name,
+            levels=cls.levels()
+        )
+
+    @property
+    def type(self) -> Expr:
+        """Return the type expression of the quotient type."""
+        return self.type_expr()
+
+    @classmethod
     def rel(cls) -> Expr:
         """Return the equivalence relation associated with this quotient type."""
         raise NotImplementedError
@@ -42,7 +63,7 @@ class Quot:
         cls,
         a: Quot | Inductive | Expr,
         b: Quot | Inductive | Expr,
-        h: Expr | str,
+        h: Expr | str | None = None,
     ) -> Expr:
         """Construct (Quot.sound .{u} A r a b h)."""
         raise NotImplementedError
@@ -111,11 +132,28 @@ class Quot:
                             in decl.level_params
                         )
                     ),
-                    type_a,
+                    BoundQuot.TYPE_A,
                     rel_expr,
                     self._to_expr(a),
                 )
                 object.__setattr__(self, "value", expr)
+
+            @override
+            @classmethod
+            def type_expr(cls) -> Expr:
+                """Return the type expression of the quotient type."""
+                decl = QuotDeclaration.QUOT_DECLARATION.declaration
+                return app(
+                    EConst(
+                        name=decl.name,
+                        levels=tuple(
+                            UnivLevelParam(param) for param
+                            in decl.level_params
+                        )
+                    ),
+                    BoundQuot.TYPE_A,
+                    rel_expr,
+                )
 
             @override
             @classmethod
@@ -134,24 +172,39 @@ class Quot:
                 cls,
                 a: Quot | Inductive | Expr,
                 b: Quot | Inductive | Expr,
-                h: Expr | str,
+                h: Expr | str | None = None,
             ) -> Expr:
                 """Construct (Quot.sound .{u} A r a b h)."""
                 decl = QuotDeclaration.QUOT_SOUND_DECLARATION.declaration
-                return app(
-                    EConst(
-                        name=decl.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param
-                            in decl.level_params
-                        )
-                    ),
-                    type_a,
-                    rel_expr,
-                    cls._to_expr(a),
-                    cls._to_expr(b),
-                    h if isinstance(h, Expr) else EVar(h)
-                )
+                if h is None:
+                    return app(
+                        EConst(
+                            name=decl.name,
+                            levels=tuple(
+                                UnivLevelParam(param) for param
+                                in decl.level_params
+                            )
+                        ),
+                        type_a,
+                        rel_expr,
+                        cls._to_expr(a),
+                        cls._to_expr(b),
+                    )
+                else:
+                    return app(
+                        EConst(
+                            name=decl.name,
+                            levels=tuple(
+                                UnivLevelParam(param) for param
+                                in decl.level_params
+                            )
+                        ),
+                        type_a,
+                        rel_expr,
+                        cls._to_expr(a),
+                        cls._to_expr(b),
+                        h if isinstance(h, Expr) else EVar(h)
+                    )
 
             @classmethod
             @override

@@ -93,7 +93,7 @@ def unify(
         case (EConst(n1, lv1), EConst(n2, lv2)):
             if n1 != n2 or len(lv1) != len(lv2):
                 raise KernelTypeError(
-                    f"Unification failed: constant mismatch: {n1} vs {n2}"
+                    f"Unification failed: constant mismatch: {t1_whnf} vs {t2_whnf}"
                 )
             param_assignment: dict[str, UnivLevel] = {}
             for l1, l2 in zip(lv1, lv2, strict=False):
