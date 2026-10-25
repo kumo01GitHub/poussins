@@ -130,43 +130,38 @@ flowchart TD
         end
     end
 
-    UserApp -->|"1. register_task()"| Registry
-    Registry -->|"2. build_dag()"| DAG
-    UserApp -->|"3. run(registry, env)"| Runner
-    Runner -->|"4. delegates to"| Orchestrator
-    Orchestrator -->|"5. compute_execution_stages()"| DAG
-
-    Orchestrator -->|"Broadcast Environment"| Workers
-    Orchestrator -->|"Parallelize Stage Tasks (RDD)"| Master
-    Master -->|"Distribute tasks"| Workers
-
-    Exec1 -->|"instantiates"| Script1
-    Script1 -->|"validates via qed()"| Kernel1
-    Exec2 -->|"instantiates"| Script2
-    Script2 -->|"validates via qed()"| Kernel2
-    Exec3 -->|"instantiates"| Script3
-    Script3 -->|"validates via qed()"| Kernel3
-
-    Workers -->|"Collect TaskExecutionResult"| Orchestrator
-    Orchestrator -->|"Add TheoremDeclarations"| DriverEnv
-    Orchestrator -->|"Return final Environment"| Runner
-    Runner -->|"Return verified Environment"| UserApp
+    UserApp -->|1. Register Tasks| Registry
+    Registry -->|2. Build DAG| DAG
+    UserApp -->|3. Run| Runner
+    Runner -->|4. Coordinate Stages| Orchestrator
+    Orchestrator -->|5. Broadcast Env| Workers
+    Orchestrator -->|6. Submit Stage Tasks| Master
+    Master -->|7. Schedule Partitions| Workers
+    Worker1 -->|Execute| Script1
+    Worker2 -->|Execute| Script2
+    Worker3 -->|Execute| Script3
+    Script1 -->|Validate| Kernel1
+    Script2 -->|Validate| Kernel2
+    Script3 -->|Validate| Kernel3
+    Workers -->|8. Return Declarations| Orchestrator
+    Orchestrator -->|9. Register in Env| DriverEnv
 ```
 
-### Distributed Execution Lifecycle
+### End-to-End Execution Sequence
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Driver as Driver Script
+    actor Driver as User / Driver Script
     participant Runner as ProofRunner
-    participant Orch as ProofOrchestrator
     participant DAG as ProofTaskDAG
+    participant Orch as ProofOrchestrator
     participant SC as SparkContext
-    participant Worker as Spark Workers
-    participant Kernel as Poussins Kernel
+    participant Worker as ProofTaskExecutor (Worker)
+    participant Kernel as SparkProofScript / Kernel
 
     Driver->>Runner: run(registry, env, main_theorem_name)
+    Runner->>DAG: validate()
     Runner->>DAG: compute_execution_stages()
     DAG-->>Runner: stages: list[list[ProofTaskNode]]
     Runner->>Orch: run(dag, main_theorem_name)
@@ -180,7 +175,7 @@ sequenceDiagram
         Worker-->>SC: TaskExecutionResult
         SC-->>Orch: collect()
         Orch->>SC: broadcast_env.unpersist()
-        Orch->>Orch: env.add(TheoremDeclaration)
+        Orch->>Orch: register_theorem(self.env, decl)
     end
 
     Orch-->>Runner: final Environment
@@ -201,7 +196,7 @@ The integration code resides under `src/poussins/integration/spark/`. The table 
 | `ProofRunner` | `runner.py` | Driver | High-level facade managing `SparkSession` lifecycle and execution invocation. |
 | `ProofOrchestrator` | `orchestrator.py` | Driver | Coordinates staged broadcast, task dispatch, error collection, and environment staging. |
 | `ProofTaskExecutor` | `task_executor.py` | Worker | Isolated worker task harness returning structured `TaskExecutionResult` objects. |
-| `SparkProofScript` | `proof_script.py` | Worker | Specialized `ProofScript` executing serialized tactic plans and yielding `TheoremDeclaration` terms. |
+| `SparkProofScript` | `proof_script.py` | Worker | Specialized `Theorem` subclass executing serialized tactic plans and yielding `TheoremDeclaration` terms. |
 
 ### 1. `ProofTaskNode`
 - **Location**: [`src/poussins/integration/spark/task.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/task.py)
@@ -245,15 +240,15 @@ The integration code resides under `src/poussins/integration/spark/`. The table 
   4. Collects results back to the driver with `.collect()`.
   5. Unpersists the broadcast variable from memory (`broadcast_env.unpersist()`).
   6. Checks every `TaskExecutionResult`: if any task failed, raises `SparkIntegrationError`.
-  7. Inserts completed `TheoremDeclaration` objects into the local `Environment`.
+  7. Inserts completed `TheoremDeclaration` objects into the local `Environment` via `register_theorem`.
 
 ### 6. `ProofTaskExecutor` & `SparkProofScript`
 - **Location**: [`src/poussins/integration/spark/task_executor.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/task_executor.py) & [`proof_script.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/proof_script.py)
 - **Role**: Worker-side execution engine.
 - **Workflow**:
   1. Instantiates `SparkProofScript(node, env)`.
-  2. Invokes `execute_plan()`, which maps each tuple in `tactic_plan` to its corresponding method on `ProofScript` (e.g. `rfl`, `exact`, `intro`).
-  3. Invokes `qed()`, verifying that all goals are closed and extracting the kernel `proof_term`.
+  2. Invokes `execute_plan()`, which maps each tuple in `tactic_plan` to its corresponding method on `SparkProofScript` (inherited via `TacticMixin`, e.g. `rfl`, `exact`, `intro`).
+  3. Invokes `qed()`, which validates the proof term using `validate_theorem` and returns the verified `TheoremDeclaration`.
   4. Returns a `TaskExecutionResult` containing the verified `TheoremDeclaration`.
 
 ---
@@ -266,7 +261,8 @@ The following example demonstrates how to set up an environment, register depend
 from __future__ import annotations
 
 from pyspark.sql import SparkSession
-from poussins import Nat, Prop, create_standard_environment
+from poussins.framework import Prop, create_standard_environment
+from poussins.framework.inductive_types import Nat
 from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 
 def main() -> None:
@@ -287,7 +283,7 @@ def main() -> None:
         # 4. Formulate the proposition statement: 0 + 0 = 0
         zero_eq_zero = Prop(
             Nat.eq(Nat.add(Nat.zero(), Nat.zero()), Nat.zero())
-        ).expr
+        ).statement
 
         # 5. Register an independent base lemma (Stage 1)
         registry.register_task(
@@ -303,7 +299,7 @@ def main() -> None:
             name="main_theorem",
             statement=zero_eq_zero,
             tactic_plan=[
-                ("exact", {"expr_or_name": "lemma_base"})
+                ("exact", {"via": "lemma_base"})
             ],
             depends_on=["lemma_base"],
         )
@@ -355,23 +351,23 @@ registry = ProofTaskRegistry()
 # Independent lemmas execute in parallel in Stage 1
 registry.register_task(
     name="lemma1",
-    statement=lemma1_prop.expr,
+    statement=lemma1_prop.statement,
     tactic_plan=[("rfl", {})],
 )
 registry.register_task(
     name="lemma2",
-    statement=lemma2_prop.expr,
+    statement=lemma2_prop.statement,
     tactic_plan=[("rfl", {})],
 )
 
 # Conjunction theorem executes in Stage 2
 registry.register_task(
     name="theorem",
-    statement=(lemma1_prop & lemma2_prop).expr,
+    statement=(lemma1_prop & lemma2_prop).statement,
     tactic_plan=[
         ("constructor", {}),
-        ("exact", {"expr_or_name": "lemma1"}),
-        ("exact", {"expr_or_name": "lemma2"}),
+        ("exact", {"via": "lemma1"}),
+        ("exact", {"via": "lemma2"}),
     ],
     depends_on=["lemma1", "lemma2"],
 )
@@ -382,7 +378,7 @@ verified_env = runner.run(registry, env, main_theorem_name="theorem")
 When `runner.run()` executes:
 1. `compute_execution_stages()` outputs `[['lemma1', 'lemma2'], ['theorem']]`.
 2. Stage 1 distributes `lemma1` and `lemma2` across workers concurrently.
-3. Upon completion, both declarations are merged into the driver's `Environment`.
+3. Upon completion, both declarations are merged into the driver's `Environment` via `register_theorem`.
 4. Stage 2 distributes `theorem` with the enriched environment, enabling `exact("lemma1")` and `exact("lemma2")` to succeed.
 
 ---
