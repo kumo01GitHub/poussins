@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import ClassVar, override
 
 from ..ast import (
-    EApp,
     EConst,
     ESort,
     EVar,
@@ -15,9 +14,11 @@ from ..ast import (
     UnivLevel,
     UnivLevelMax,
     UnivLevelParam,
+    app,
+    univ_levels,
 )
 from ..environment.library import EqualityDeclaration
-from .bindable_mixin import BindableMixin
+from .binding import BindableMixin
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ class Inductive(BindableMixin, ABC):
     @classmethod
     def levels(cls) -> tuple[UnivLevel, ...]:
         """Return the universe levels of this inductive type."""
-        return tuple(UnivLevelParam(param) for param in cls.LEVEL_PARAMS)
+        return univ_levels(cls.LEVEL_PARAMS)
 
     @classmethod
     def sort(cls) -> ESort:
@@ -75,17 +76,13 @@ class Inductive(BindableMixin, ABC):
         right: Inductive | Expr,
     ) -> Expr:
         """Return the equality proposition between two inductive values."""
-        return EApp(
-            EApp(
-                EApp(
-                    EConst(
-                        EqualityDeclaration.EQ_DECLARATION.declaration.name,
-                        (cls.sort().level,),
-                    ),
-                    cls.type_expr()
-                ),
-                cls.to_expr(left)
+        return app(
+            EConst(
+                EqualityDeclaration.EQ_DECLARATION.declaration.name,
+                univ_levels(EqualityDeclaration.EQ_DECLARATION.declaration.level_params),
             ),
+            cls.type_expr(),
+            cls.to_expr(left),
             cls.to_expr(right),
         )
 

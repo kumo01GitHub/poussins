@@ -4,7 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ..ast import EConst, EPi, EVar, Expr, UnivLevelParam, app
+from poussins.environment.library.equality import EqualityDeclaration
+
+from ..ast import EConst, EPi, EVar, Expr, UnivLevelParam, app, univ_levels
 from ..environment.library import QuotDeclaration
 from .definition import Definition
 from .inductive import Inductive
@@ -89,12 +91,27 @@ class Quot:
         """Construct (Quot.ind .{u} A r motive h q)."""
         raise NotImplementedError
 
+    @classmethod
+    def eq(
+        cls,
+        left: Quot | Expr,
+        right: Quot | Expr,
+    ) -> Expr:
+        """Construct (Quot.eq .{u} A r left right)."""
+        raise NotImplementedError
+
+    @classmethod
+    def to_expr(cls, obj: Quot | Expr) -> Expr:
+        """Return the underlying expression of a Quot instance or raw Expr."""
+        return obj.value if isinstance(obj, Quot) else obj
+
     @staticmethod
     def _to_expr(obj: Quot | Inductive | Expr) -> Expr:
         """Extract underlying Expr from Quot instance, Inductive, or Expr."""
-        if isinstance(obj, Quot):
+        if isinstance(obj, (Quot, Inductive)):
             return obj.value
-        return Inductive.to_expr(obj)
+        else:
+            return obj
 
     @staticmethod
     def _extract_type_a(relation: Definition | Expr) -> Expr:
@@ -127,10 +144,7 @@ class Quot:
                 expr = app(
                     EConst(
                         name=decl.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param
-                            in decl.level_params
-                        )
+                        levels=univ_levels(decl.level_params),
                     ),
                     BoundQuot.TYPE_A,
                     rel_expr,
@@ -146,10 +160,7 @@ class Quot:
                 return app(
                     EConst(
                         name=decl.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param
-                            in decl.level_params
-                        )
+                        levels=univ_levels(decl.level_params),
                     ),
                     BoundQuot.TYPE_A,
                     rel_expr,
@@ -257,6 +268,25 @@ class Quot:
                     motive,
                     h,
                     cls._to_expr(q),
+                )
+
+            @classmethod
+            @override
+            def eq(
+                cls,
+                left: Quot | Expr,
+                right: Quot | Expr,
+            ) -> Expr:
+                """Construct (Quot.eq .{u} A r left right)."""
+                decl = EqualityDeclaration.EQ_DECLARATION.declaration
+                return app(
+                    EConst(
+                        name=decl.name,
+                        levels=univ_levels(decl.level_params)
+                    ),
+                    cls.type_expr(),
+                    cls.to_expr(left),
+                    cls.to_expr(right),
                 )
 
         return BoundQuot

@@ -1,6 +1,7 @@
 """Spark ProofScript implementation for distributed proof execution."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Final, override
 
 from ...environment import Environment, TheoremDeclaration
@@ -24,7 +25,7 @@ class SparkProofScript(Theorem):
         self,
         node: ProofTaskNode,
         env: Environment,
-        level_params: tuple[str, ...] = (),
+        level_params: Sequence[str] = (),
     ) -> None:
         """Initialize the SparkProofScript with a ProofTaskNode and environment."""
         self.plan: Final[list[TacticPlan]] = node.tactic_plan

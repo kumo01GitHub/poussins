@@ -38,10 +38,10 @@ class Environment:
         )
         return decl
 
-    def get_ctors(self, of: str | InductiveDeclaration) -> tuple[ConstructorDeclaration]:
+    def get_ctors(self, for_: str | InductiveDeclaration) -> tuple[ConstructorDeclaration]:
         """Return all constructor declarations for a given inductive type."""
-        self.logger.debug(f"Retrieving constructors for: {of}")
-        inductive = self.get(of) if isinstance(of, str) else of
+        self.logger.debug(f"Retrieving constructors for: {for_}")
+        inductive = self.get(for_) if isinstance(for_, str) else for_
         if isinstance(inductive, InductiveDeclaration):
             self.logger.debug(f"Found inductive declaration: {inductive}")
             ctors = []
@@ -53,17 +53,17 @@ class Environment:
                     ctors.append(ctor_decl)
                 else:
                     raise ValueError(
-                        f"Constructor '{ctor_name}' for inductive '{of}' is not a valid ConstructorDeclaration."
+                        f"Constructor '{ctor_name}' for inductive '{for_}' is not a valid ConstructorDeclaration."
                     )
             self.logger.debug(f"Retrieved constructors: {ctors}")
             return tuple(ctors)
         else:
-            raise ValueError(f"'{of}' is not a valid InductiveDeclaration.")
+            raise ValueError(f"'{for_}' is not a valid InductiveDeclaration.")
 
-    def get_recs(self, of: str | InductiveDeclaration) -> tuple[RecursorDeclaration]:
+    def get_recs(self, for_: str | InductiveDeclaration) -> tuple[RecursorDeclaration]:
         """Return all recursor declarations for a given inductive type."""
-        self.logger.debug(f"Retrieving recursors for: {of}")
-        inductive = self.get(of) if isinstance(of, str) else of
+        self.logger.debug(f"Retrieving recursors for: {for_}")
+        inductive = self.get(for_) if isinstance(for_, str) else for_
         if isinstance(inductive, InductiveDeclaration):
             self.logger.debug(f"Found inductive declaration: {inductive}")
             recs = []
@@ -74,12 +74,12 @@ class Environment:
                     recs.append(rec_decl)
                 else:
                     raise ValueError(
-                        f"Recursor '{rec_name}' for inductive '{of}' is not a valid RecursorDeclaration."
+                        f"Recursor '{rec_name}' for inductive '{for_}' is not a valid RecursorDeclaration."
                     )
             self.logger.debug(f"Retrieved recursors: {recs}")
             return tuple(recs)
         else:
-            raise ValueError(f"'{of}' is not a valid InductiveDeclaration.")
+            raise ValueError(f"'{for_}' is not a valid InductiveDeclaration.")
 
     def has(self, name: str) -> bool:
         """Check if a declaration with the given name exists in the environment."""

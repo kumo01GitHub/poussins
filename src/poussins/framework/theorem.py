@@ -1,6 +1,7 @@
 """Theorem, Lemma, Example: proof-carrying DSL objects."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Final, override
 from uuid import uuid4
 
@@ -32,12 +33,12 @@ class Theorem(TacticMixin):
         name: str,
         statement: Prop | Expr,
         env: Environment,
-        level_params: tuple[str, ...] = (),
+        level_params: Sequence[str] = (),
     ) -> None:
         """Create a theorem."""
         self.name: Final[str] = name
         self.statement: Final[Expr] = Prop.to_expr(statement)
-        self.level_params: Final[tuple[str, ...]] = level_params
+        self.level_params: Final[tuple[str, ...]] = tuple(level_params)
         self.env: Final[Environment] = env
 
         TacticMixin.__init__(
@@ -104,7 +105,7 @@ class Example(Theorem):
         self,
         statement: Prop | Expr,
         env: Environment,
-        level_params: tuple[str, ...] = (),
+        level_params: Sequence[str] = (),
     ) -> None:
         """Create a anonymous theorem."""
         Theorem.__init__(

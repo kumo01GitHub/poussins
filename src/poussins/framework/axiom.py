@@ -1,6 +1,7 @@
 """Module for defining axioms in the framework."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ..ast import Expr
@@ -23,13 +24,13 @@ class Axiom:
         env: Environment,
         name: str,
         statement: Prop | Expr,
-        level_params: tuple[str, ...] = (),
+        level_params: Sequence[str] = (),
     ) -> None:
         """Create an axiom."""
         object.__setattr__(self, "env", env)
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "statement", Prop.to_expr(statement))
-        object.__setattr__(self, "level_params", level_params)
+        object.__setattr__(self, "level_params", tuple(level_params))
 
     def declare(self) -> AxiomDeclaration:
         """Declare the axiom in the environment."""

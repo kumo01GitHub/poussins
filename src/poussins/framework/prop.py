@@ -15,24 +15,22 @@ Prop is immutable. The underlying Expr is accessible via .statement.
 """
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import ClassVar, cast, override
+from typing import override
 
 from ..ast import (
-    EApp,
     EConst,
     ELam,
     EPi,
     EVar,
     Expr,
     Sort,
-    UnivLevelParam,
+    app,
+    pi,
+    univ_levels,
 )
 from ..environment.library import LogicDeclaration
-from .bindable_mixin import BindableMixin, Binding
-
-type BindingLike = Sequence[Binding | BindableMixin] | Binding | BindableMixin
+from .binding import BindableMixin, BindingLike, normalize_bindings
 
 
 @dataclass(frozen=True)
@@ -40,7 +38,6 @@ class Prop(BindableMixin):
     """Immutable wrapper for proposition expressions with operator syntax."""
 
     statement: Expr
-    BINDING_LEN: ClassVar[int] = 2
 
     def __init__(
         self,
@@ -112,50 +109,19 @@ class Prop(BindableMixin):
         )
 
     @classmethod
-    def _normalize_bindings(cls, bindings: BindingLike) -> Sequence[Binding]:
-        def is_binding(obj: object) -> bool:
-            return (
-                isinstance(obj, tuple)
-                and len(obj) == cls.BINDING_LEN
-                and isinstance(obj[0], str)
-                and isinstance(obj[1], Expr)
-            )
-
-        if not bindings:
-            raise TypeError("bindings requires at least one binding")
-
-        if is_binding(bindings):
-            return (cast(Binding, bindings),)
-        elif isinstance(bindings, BindableMixin):
-            return (bindings.to_binding(),)
-        else:
-            normalized: Sequence[Binding] = []
-            for binding in bindings:
-                if is_binding(binding):
-                    normalized.append(cast(Binding, binding))
-                elif isinstance(binding, BindableMixin):
-                    normalized.append(binding.to_binding())
-                else:
-                    raise TypeError(
-                        "bindings must be a Binding or BindableMixin instance"
-                    )
-
-            return normalized
-
-    @classmethod
-    def forall(cls, bindings: BindingLike, body: Prop | Expr) -> Prop:
+    def forall(cls, bindings: BindingLike, body: Prop | Expr | None) -> Prop:
         """Construct a universal quantifier proposition.
 
         The interface is intentionally explicit: a tuple of ``(name, type)``
-        bindings and a single body expression.
+        bindings and a single body expression. If `body` is omitted (None),
+        it defaults to the proposition sort (`Prop`).
         """
-        normalized_bindings = cls._normalize_bindings(bindings)
-        expr = cls.to_expr(body)
-
-        for name, type_ in reversed(normalized_bindings):
-            expr = EPi(name, cls.to_expr(type_), expr)
-
-        return cls(expr)
+        return cls(
+            pi(
+                normalize_bindings(bindings),
+                cls.to_expr(body if body is not None else cls.sort())
+            )
+        )
 
     @classmethod
     def exists(cls, bindings: BindingLike, body: Prop | Expr) -> Prop:
@@ -164,22 +130,17 @@ class Prop(BindableMixin):
         Accepts a single Inductive variable, a single (name, type) tuple,
         or a Sequence of bindings.
         """
-        normalized_bindings = cls._normalize_bindings(bindings)
+        normalized_bindings = normalize_bindings(bindings)
         expr = cls.to_expr(body)
 
         for name, type_ in reversed(normalized_bindings):
-            expr = EApp(
-                EApp(
-                    EConst(
-                        name=LogicDeclaration.EXISTS_DECLARATION.declaration.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param in
-                            LogicDeclaration.EXISTS_DECLARATION.declaration.level_params
-                        )
-                    ),
-                    type_,
+            expr = app(
+                EConst(
+                    name=LogicDeclaration.EXISTS_DECLARATION.declaration.name,
+                    levels=univ_levels(LogicDeclaration.EXISTS_DECLARATION.declaration.level_params)
                 ),
-                ELam(name, type_, expr)
+                type_,
+                ELam(var=name, domain=type_, body=expr),
             )
 
         return cls(expr)
@@ -195,14 +156,25 @@ class Prop(BindableMixin):
     def __and__(self, other: Prop | Expr) -> Prop:
         """P & Q  →  P ∧ Q  (conjunction)."""
         return Prop(
-            EApp(EApp(EConst("And", levels=()), self.statement), self.to_expr(other))
+            app(
+                EConst(
+                    name=LogicDeclaration.AND_DECLARATION.declaration.name,
+                    levels=(),
+                ),
+                self.statement,
+                self.to_expr(other)
+            )
         )
 
     def __or__(self, other: Prop | Expr) -> Prop:
         """P | Q  →  P ∨ Q  (disjunction)."""
         return Prop(
-            EApp(
-                EApp(EConst("Or", levels=()), self.statement),
+            app(
+                EConst(
+                    name=LogicDeclaration.OR_DECLARATION.declaration.name,
+                    levels=(),
+                ),
+                self.statement,
                 self.to_expr(other)
             )
         )

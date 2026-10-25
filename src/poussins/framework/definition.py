@@ -1,6 +1,7 @@
 """Definition in the framework."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ..ast import Expr
@@ -24,14 +25,14 @@ class Definition:
         name: str,
         type: Expr,
         value: Expr,
-        level_params: tuple[str, ...] = (),
+        level_params: Sequence[str] = (),
     ) -> None:
         """Create a definition."""
         object.__setattr__(self, "env", env)
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "type", type)
         object.__setattr__(self, "value", value)
-        object.__setattr__(self, "level_params", level_params)
+        object.__setattr__(self, "level_params", tuple(level_params))
 
     @staticmethod
     def to_expr(value: Definition | Expr) -> Expr:

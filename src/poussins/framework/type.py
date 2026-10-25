@@ -7,7 +7,7 @@ from typing import override
 from poussins.ast.universe import UnivLevelZero
 
 from ..ast import ESort, EVar, Expr, Sort, UnivLevel, UnivLevelParam, UnivLevelSucc
-from .bindable_mixin import BindableMixin
+from .binding import BindableMixin
 
 
 @dataclass(frozen=True, init=False)
