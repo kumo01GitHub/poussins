@@ -10,9 +10,9 @@ from ..ast import (
     EPi,
     EVar,
     Expr,
-    UnivLevelParam,
     lam,
     substitute_var,
+    univ_levels,
 )
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..errors import TacticError
@@ -69,9 +69,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
 
         constructor = EConst(
             name=constructor_name,
-            levels=tuple(
-                UnivLevelParam(param) for param in constructor_decl.level_params
-            )
+            levels=univ_levels(constructor_decl.level_params)
         )
         constructor_type = constructor_decl.type
 

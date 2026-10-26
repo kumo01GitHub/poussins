@@ -1,7 +1,7 @@
 """Tactics for simplifying expressions in the current goal or hypothesis."""
 from __future__ import annotations
 
-from ..ast import EConst, UnivLevelParam, substitute_expr
+from ..ast import EConst, substitute_expr, univ_levels
 from ..environment import DefinitionDeclaration
 from ..errors import TacticError
 from ..kernel import ProofManager, normalize
@@ -64,7 +64,7 @@ def unfold(
     if not isinstance(decl, DefinitionDeclaration):
         raise TacticError(f"'{def_name}' is not a valid definition in the environment.")
 
-    target_const = EConst(def_name, tuple(UnivLevelParam(p) for p in decl.level_params))
+    target_const = EConst(def_name, univ_levels(decl.level_params))
     replacement_value = decl.value
 
     if hyp_name is None:
