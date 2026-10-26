@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from poussins import Nat, Prop, create_standard_environment
+from poussins.framework import Prop, create_standard_environment
+from poussins.framework.inductive_types import Nat
 from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 from poussins.utils.logging import get_logger
 
@@ -28,7 +29,7 @@ def main() -> None:
 
     stmt_lemma = Prop(
         Nat.eq(Nat.add(Nat.zero(), Nat.zero()), Nat.zero())
-    ).expr
+    ).statement
 
     registry.register_task(
         name="lemma_base",

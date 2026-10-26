@@ -100,19 +100,19 @@ class Environment:
     def stage(
         self,
         declarations: Sequence[Declaration],
-        id: str | None = None,
+        id_: str | None = None,
     ) -> str:
         """Stage a list of declarations under a given or auto-generated stage ID.
 
         Args:
-            id: Optional stage identifier. If None, a UUID is automatically generated.
+            id_: Optional stage identifier. If None, a UUID is automatically generated.
             declarations: Sequence of declarations to put into this stage.
 
         Returns:
             The stage identifier (str).
 
         """
-        stage_id = id if id is not None else str(uuid.uuid4())
+        stage_id = id_ if id_ is not None else str(uuid.uuid4())
 
         if stage_id not in self.stages:
             self.logger.debug(f"Creating new stage with ID: {stage_id}")
@@ -131,32 +131,37 @@ class Environment:
         self.logger.debug(f"Staged declarations under ID '{stage_id}': {self.stages[stage_id]}")
         return stage_id
 
-    def commit(self, id: str):
-        """Commit a staging area's declarations into the main environment."""
-        if id not in self.stages:
-            raise KeyError(f"Stage ID '{id}' does not exist.")
+    def commit(self, id_: str):
+        """Commit a staging area's declarations into the main environment.
 
-        staged_decls = self.stages.pop(id)
+        Args:
+            id_: The stage identifier.
+
+        """
+        if id_ not in self.stages:
+            raise KeyError(f"Stage ID '{id_}' does not exist.")
+
+        staged_decls = self.stages.pop(id_)
         for name, decl in staged_decls.items():
-            self.logger.debug(f"Committing declaration '{name}' from stage '{id}' to main environment.: {decl}")
+            self.logger.debug(f"Committing declaration '{name}' from stage '{id_}' to main environment.: {decl}")
             if name in self.declarations:
                 raise ValueError(
                     f"Declaration with name '{name}' already exists"
                     + " in environment during commit."
                 )
-            self.logger.debug(f"Committing declaration '{name}' from stage '{id}' to main environment.")
+            self.logger.debug(f"Committing declaration '{name}' from stage '{id_}' to main environment.")
             self.declarations[name] = decl
 
-    def rollback(self, id: str):
+    def rollback(self, id_: str):
         """Discard a staging area without affecting the main environment."""
-        self.logger.debug(f"Rolling back stage with ID {id}: {self.stages.get(id)}")
-        self.stages.pop(id, None)
+        self.logger.debug(f"Rolling back stage with ID {id_}: {self.stages.get(id_)}")
+        self.stages.pop(id_, None)
 
-    def get_staging(self, id: str) -> Environment:
+    def get_staging(self, id_: str) -> Environment:
         """Return a new Environment containing main and staging declarations."""
-        if id not in self.stages:
-            raise KeyError(f"Stage ID '{id}' does not exist.")
+        if id_ not in self.stages:
+            raise KeyError(f"Stage ID '{id_}' does not exist.")
         new_env = Environment()
         new_env.declarations = self.declarations.copy()
-        new_env.declarations.update(self.stages[id])
+        new_env.declarations.update(self.stages[id_])
         return new_env

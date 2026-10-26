@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pyspark.sql import SparkSession
 
-from poussins import Nat, Prop, create_standard_environment
+from poussins.framework import Prop, create_standard_environment
+from poussins.framework.inductive_types import Nat
 from poussins.integration.spark import ProofRunner, ProofTaskRegistry
 from poussins.utils.logging import get_logger
 
@@ -39,17 +40,17 @@ def main() -> None:
 
     registry.register_task(
         name="lemma1",
-        statement=lemma1_prop.expr,
+        statement=lemma1_prop.statement,
         tactic_plan=[("rfl", {})],
     )
     registry.register_task(
         name="lemma2",
-        statement=lemma2_prop.expr,
+        statement=lemma2_prop.statement,
         tactic_plan=[("rfl", {})],
     )
     registry.register_task(
         name="theorem",
-        statement=theorem_prop.expr,
+        statement=theorem_prop.statement,
         tactic_plan=[
             ("constructor", {}),
             ("exact", {"via": "lemma1"}),

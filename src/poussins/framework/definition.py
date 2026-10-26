@@ -23,14 +23,14 @@ class Definition:
         self,
         env: Environment,
         name: str,
-        type: Expr,
+        type_: Expr,
         value: Expr,
         level_params: Sequence[str] = (),
     ) -> None:
         """Create a definition."""
         object.__setattr__(self, "env", env)
         object.__setattr__(self, "name", name)
-        object.__setattr__(self, "type", type)
+        object.__setattr__(self, "type", type_)
         object.__setattr__(self, "value", value)
         object.__setattr__(self, "level_params", tuple(level_params))
 
@@ -44,7 +44,7 @@ class Definition:
         return declare_definition(
             env=self.env,
             name=self.name,
-            type=self.type,
+            type_=self.type,
             value=self.value,
             level_params=self.level_params,
         )

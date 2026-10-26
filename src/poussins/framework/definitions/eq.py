@@ -31,7 +31,7 @@ class Eq(Definition):
         super().__init__(
             env=env,
             name=name,
-            type=pi(normalized, Sort.PROP.sort,),
+            type_=pi(normalized, Sort.PROP.sort,),
             value=lam(
                 normalized,
                 app(

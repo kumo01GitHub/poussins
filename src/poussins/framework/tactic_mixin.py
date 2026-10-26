@@ -156,9 +156,9 @@ class TacticMixin(ABC):
         intros(self.manager, as_)
 
     @log_tactic
-    def have(self, as_: str, type: ExprLike) -> None:
+    def have(self, as_: str, type_: ExprLike) -> None:
         """Introduce an intermediate assertion (have h : P)."""
-        have(self.manager, as_, self._to_expr(type))
+        have(self.manager, as_, self._to_expr(type_))
 
     @log_tactic
     def obtain(self, pattern: RCasesPattern, via: ExprLike) -> None:
@@ -205,9 +205,9 @@ class TacticMixin(ABC):
         assumption(self.manager)
 
     @log_tactic
-    def suffices(self, as_: str, type: ExprLike) -> None:
+    def suffices(self, as_: str, type_: ExprLike) -> None:
         """Introduce an intermediate assertion (suffices h : P)."""
-        suffices(self.manager, as_, self._to_expr(type))
+        suffices(self.manager, as_, self._to_expr(type_))
 
     @log_tactic
     def constructor(self, index: int | None = None) -> None:

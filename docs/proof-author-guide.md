@@ -86,7 +86,7 @@ You can call tactics as methods on `Example`/`Theorem`. Tactic arguments accepti
 | **1. Forward Reasoning & Context** | | |
 | `intro(as_)` | Introduce one binder or hypothesis | Use when the goal is a Pi or implication. `as_` specifies the hypothesis name. |
 | `intros(as_)` | Introduce multiple binders/hypotheses | Convenient for chained implication or quantifier goals. Accepts a list of names for `as_`. |
-| `have(as_, type)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement and introduces it as `as_`. Accepts `ExprLike` for `type`. |
+| `have(as_, type_)` | Prove an intermediate fact before continuing | Creates a subgoal for the intermediate statement and introduces it as `as_`. Accepts `ExprLike` for `type_`. |
 | `obtain(pattern, via)` | Introduce a witness/proof and immediately destructure it | Handy for structured witness extraction from proof term `via`. |
 | `specialize(at, via)` | Instantiate a dependent hypothesis with an argument | Produces the specialized form of local hypothesis `at` using argument `via`. |
 | `revert(at)` | Move hypotheses back into the goal as Pi binders | Useful when preparing a proof by generalization. Accepts name or list of names. |
@@ -96,7 +96,7 @@ You can call tactics as methods on `Example`/`Theorem`. Tactic arguments accepti
 | `exact(via)` | Close the current goal with a term or local hypothesis | Equivalent to a direct proof term. Accepts `ExprLike`. |
 | `refine(via)` | Refine the current goal with an expression containing metavariables | Useful when the shape is known but some terms are still placeholders. |
 | `assumption()` | Solve the goal from a matching local hypothesis | Common finishing step for simple goals. |
-| `suffices(as_, type)` | Assert a sufficient intermediate fact | Creates goals for the main proof using the fact and the fact itself. |
+| `suffices(as_, type_)` | Assert a sufficient intermediate fact | Creates goals for the main proof using the fact and the fact itself. |
 | `constructor(index=None)` | Apply a matching constructor | Optionally choose a specific constructor by index. |
 | `left()` | Select the left branch of a disjunction goal | Target goal must be a disjunction (`A ∨ B`). |
 | `right()` | Select the right branch of a disjunction goal | Target goal must be a disjunction (`A ∨ B`). |

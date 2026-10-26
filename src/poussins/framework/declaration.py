@@ -76,7 +76,7 @@ def declare_axiom(
 def declare_definition(
     env: Environment,
     name: str,
-    type: Expr,
+    type_: Expr,
     value: Expr,
     level_params: Sequence[str] = (),
 ) -> DefinitionDeclaration:
@@ -85,7 +85,7 @@ def declare_definition(
     Args:
         env: The environment to which the definition will be added.
         name: The name of the definition.
-        type: The type of the definition.
+        type_: The type of the definition.
         value: The value of the definition.
         level_params: Optional tuple of universe level parameters for the definition.
 
@@ -95,7 +95,7 @@ def declare_definition(
     """
     decl = DefinitionDeclaration(
         name=name,
-        type=type,
+        type=type_,
         value=value,
         level_params=tuple(level_params),
     )
@@ -230,7 +230,7 @@ def _is_prop(
 def declare_inductive(
     env: Environment,
     name: str,
-    type: Expr,
+    type_: Expr,
     constructors: Sequence[tuple[str, Expr]],
     level_params: Sequence[str] = (),
 ) -> InductiveDeclaration:
@@ -239,7 +239,7 @@ def declare_inductive(
     Args:
         env: The environment to which the inductive type will be added.
         name: The name of the inductive type.
-        type: The type of the inductive.
+        type_: The type of the inductive.
         constructors: A sequence of constructor names and their types.
         level_params: A sequence of level parameters.
 
@@ -249,7 +249,7 @@ def declare_inductive(
     """
     if not level_params:
         inferred_levels: list[str] = []
-        _collect_univ_params_from_expr(type, inferred_levels)
+        _collect_univ_params_from_expr(type_, inferred_levels)
         for _, c_type in constructors:
             _collect_univ_params_from_expr(c_type, inferred_levels)
         level_params = tuple(inferred_levels)
@@ -257,7 +257,7 @@ def declare_inductive(
     inductive_decl = InductiveDeclaration(
         name=name,
         level_params=tuple(level_params),
-        type=type,
+        type=type_,
         constructor_names=tuple(c_name for c_name, _ in constructors),
         recursor_names=(f"{name}.rec",),
     )
