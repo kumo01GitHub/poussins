@@ -17,8 +17,8 @@ def _build_false_elim(
     return EApp(
         EApp(
             const_from_decl(
-                LogicDeclaration.FALSE_REC_DECLARATION.declaration,
-                manager
+                manager.env.get_recs(LogicDeclaration.FALSE_DECLARATION.declaration.name)[0],
+                manager,
             ),
             ELam(
                 "_",

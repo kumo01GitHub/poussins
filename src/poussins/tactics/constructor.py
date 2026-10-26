@@ -1,7 +1,7 @@
 """Tactic for applying inductive constructors."""
 from __future__ import annotations
 
-from ..ast import EConst, EPi, UnivLevelParam
+from ..ast import EConst, EPi, univ_levels
 from ..environment import ConstructorDeclaration, InductiveDeclaration
 from ..environment.library import LogicDeclaration
 from ..errors import TacticError
@@ -45,7 +45,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
             manager,
             EConst(
                 name=target_name,
-                levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+                levels=univ_levels(decl.level_params)
             )
         )
         return
@@ -59,7 +59,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
 
         const = EConst(
             name=name,
-            levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+            levels=univ_levels(decl.level_params),
         )
 
         c_type = whnf(
@@ -147,7 +147,7 @@ def _apply_named_constructor(
 
     apply(manager, EConst(
         name=constructor_name,
-        levels=tuple(UnivLevelParam(param) for param in decl.level_params)
+        levels=univ_levels(decl.level_params),
     ))
 
 

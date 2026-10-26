@@ -105,7 +105,10 @@ def rewrite(
     )
 
     assignment = app(
-        const_from_decl(EqualityDeclaration.EQ_REC_DECLARATION.declaration, manager),
+        const_from_decl(
+            manager.env.get_recs(EqualityDeclaration.EQ_DECLARATION.declaration.name)[0],
+            manager
+        ),
         eq_type,
         to_expr,
         ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
