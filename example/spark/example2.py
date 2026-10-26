@@ -39,18 +39,15 @@ def main() -> None:
     theorem_prop = lemma1_prop & lemma2_prop
 
     registry.register_task(
-        name="lemma1",
-        statement=lemma1_prop.statement,
+        ("lemma1", lemma1_prop),
         tactic_plan=[("rfl", {})],
     )
     registry.register_task(
-        name="lemma2",
-        statement=lemma2_prop.statement,
+        ("lemma2", lemma2_prop),
         tactic_plan=[("rfl", {})],
     )
     registry.register_task(
-        name="theorem",
-        statement=theorem_prop.statement,
+        ("theorem", theorem_prop),
         tactic_plan=[
             ("constructor", {}),
             ("exact", {"via": "lemma1"}),

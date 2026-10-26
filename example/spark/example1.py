@@ -29,19 +29,17 @@ def main() -> None:
 
     stmt_lemma = Prop(
         Nat.eq(Nat.add(Nat.zero(), Nat.zero()), Nat.zero())
-    ).statement
+    )
 
     registry.register_task(
-        name="lemma_base",
-        statement=stmt_lemma,
+        ("lemma_base", stmt_lemma),
         tactic_plan=[
             ("rfl", {})
         ]
     )
 
     registry.register_task(
-        name="main_theorem",
-        statement=stmt_lemma,
+        ("main_theorem", stmt_lemma),
         tactic_plan=[
             ("exact", {"via": "lemma_base"})
         ],

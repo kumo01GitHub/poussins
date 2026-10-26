@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from ...ast import Expr
 from ...errors import SparkIntegrationError
+from ...framework import Prop, Theorem
 from .task import (
     ProofTaskDAG,
     ProofTaskNode,
@@ -19,12 +20,16 @@ class ProofTaskRegistry:
 
     def register_task(
         self,
-        name: str,
-        statement: Expr,
+        theorem: Theorem | tuple[str, Prop | Expr],
         tactic_plan: list[TacticPlan],
         depends_on: list[str] | None = None,
     ) -> ProofTaskNode:
         """Register a proof task (lemma/theorem) into the registry."""
+        if isinstance(theorem, Theorem):
+            name = theorem.name
+            statement = theorem.statement
+        else:
+            name, statement = theorem
         if name in self._tasks:
             raise SparkIntegrationError(
                 f"Proof task with name '{name}' is already registered."
@@ -40,7 +45,7 @@ class ProofTaskRegistry:
 
         node = ProofTaskNode(
             name=name,
-            statement=statement,
+            statement=Prop.to_expr(statement),
             tactic_plan=tactic_plan,
             depends_on=deps,
         )

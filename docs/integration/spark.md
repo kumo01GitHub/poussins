@@ -283,12 +283,11 @@ def main() -> None:
         # 4. Formulate the proposition statement: 0 + 0 = 0
         zero_eq_zero = Prop(
             Nat.eq(Nat.add(Nat.zero(), Nat.zero()), Nat.zero())
-        ).statement
+        )
 
         # 5. Register an independent base lemma (Stage 1)
         registry.register_task(
-            name="lemma_base",
-            statement=zero_eq_zero,
+            ("lemma_base", zero_eq_zero),
             tactic_plan=[
                 ("rfl", {})
             ],
@@ -296,8 +295,7 @@ def main() -> None:
 
         # 6. Register the main theorem dependent on lemma_base (Stage 2)
         registry.register_task(
-            name="main_theorem",
-            statement=zero_eq_zero,
+            ("main_theorem", zero_eq_zero),
             tactic_plan=[
                 ("exact", {"via": "lemma_base"})
             ],
@@ -350,20 +348,17 @@ registry = ProofTaskRegistry()
 
 # Independent lemmas execute in parallel in Stage 1
 registry.register_task(
-    name="lemma1",
-    statement=lemma1_prop.statement,
+    ("lemma1", lemma1_prop),
     tactic_plan=[("rfl", {})],
 )
 registry.register_task(
-    name="lemma2",
-    statement=lemma2_prop.statement,
+    ("lemma2", lemma2_prop),
     tactic_plan=[("rfl", {})],
 )
 
 # Conjunction theorem executes in Stage 2
 registry.register_task(
-    name="theorem",
-    statement=(lemma1_prop & lemma2_prop).statement,
+    ("theorem", (lemma1_prop & lemma2_prop)),
     tactic_plan=[
         ("constructor", {}),
         ("exact", {"via": "lemma1"}),
