@@ -7,11 +7,17 @@ from ..ast import (
     EApp,
     EConst,
     ELam,
+    EMatch,
     EPi,
     ESort,
     EVar,
     Expr,
+    UnivLevel,
+    UnivLevelIMax,
+    UnivLevelMax,
     UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
     app,
     decompose_app,
     substitute_var,
@@ -28,12 +34,15 @@ from ..environment import (
 )
 from ..environment.library import QuotDeclaration
 from ..kernel import (
+    infer_type,
     register_axiom,
     register_definition,
     register_inductive,
     register_quotient,
     register_theorem,
+    whnf,
 )
+from ..kernel.univ import normalize_univ_level
 
 
 def declare_axiom(
@@ -126,14 +135,120 @@ def declare_theorem(
     return decl
 
 
+def _collect_univ_params_from_level(level: UnivLevel, result: list[str]) -> None:
+    """Collect parameter names from a UnivLevel instance."""
+    match level:
+        case UnivLevelParam(name):
+            if name not in result:
+                result.append(name)
+        case UnivLevelSucc(pred):
+            _collect_univ_params_from_level(pred, result)
+        case UnivLevelMax(left, right) | UnivLevelIMax(left, right):
+            _collect_univ_params_from_level(left, result)
+            _collect_univ_params_from_level(right, result)
+        case _:
+            pass
+
+
+def _collect_univ_params_from_expr(expr: Expr, result: list[str]) -> None:
+    """Collect all UnivLevelParam names present in an expression."""
+    match expr:
+        case ESort(level):
+            _collect_univ_params_from_level(level, result)
+        case EConst(_, levels):
+            for lvl in levels:
+                _collect_univ_params_from_level(lvl, result)
+        case EPi(_, domain, body) | ELam(_, domain, body):
+            _collect_univ_params_from_expr(domain, result)
+            _collect_univ_params_from_expr(body, result)
+        case EApp(fn, arg):
+            _collect_univ_params_from_expr(fn, result)
+            _collect_univ_params_from_expr(arg, result)
+        case EMatch(_, discriminee, motive, cases):
+            _collect_univ_params_from_expr(discriminee, result)
+            _collect_univ_params_from_expr(motive, result)
+            for c in cases:
+                _collect_univ_params_from_expr(c, result)
+        case _:
+            pass
+
+
+def _is_prop(
+    expr: Expr,
+    ctx: dict[str, Expr],
+    env: Environment | None,
+    ind_name: str,
+    ind_is_prop: bool,
+) -> bool:
+    """Check if the given expression represents a proposition (i.e. has sort Prop / Sort 0)."""
+    if env is not None:
+        try:
+            t = infer_type(expr, ctx, {}, env)
+            s = whnf(t, {}, env)
+            if isinstance(s, ESort):
+                norm = normalize_univ_level(s.level)
+                return isinstance(norm, UnivLevelZero)
+        except Exception:  # noqa: S110
+            pass
+
+    match expr:
+        case ESort(_):
+            return False
+        case EVar(name):
+            if name in ctx:
+                var_type = ctx[name]
+                if isinstance(var_type, ESort):
+                    norm = normalize_univ_level(var_type.level)
+                    return isinstance(norm, UnivLevelZero)
+                return False
+        case EApp():
+            head, _ = decompose_app(expr)
+            if isinstance(head, EVar) and head.name in ctx:
+                fn_type = ctx[head.name]
+                curr = fn_type
+                while isinstance(curr, EPi):
+                    curr = curr.body
+                if isinstance(curr, ESort):
+                    norm = normalize_univ_level(curr.level)
+                    return isinstance(norm, UnivLevelZero)
+            if isinstance(head, EConst):
+                if head.name == ind_name and ind_is_prop:
+                    return True
+                if env is not None:
+                    decl = env.get(head.name)
+                    if decl is not None:
+                        curr = decl.type
+                        while isinstance(curr, EPi):
+                            curr = curr.body
+                        if isinstance(curr, ESort):
+                            norm = normalize_univ_level(curr.level)
+                            return isinstance(norm, UnivLevelZero)
+        case EPi(_, _, body):
+            return _is_prop(body, ctx, env, ind_name, ind_is_prop)
+    return False
+
+
 def declare_inductive(
     env: Environment,
     name: str,
     type: Expr,
     constructors: Sequence[tuple[str, Expr]],
     level_params: tuple[str, ...] = (),
+    num_params: int | None = None,
 ) -> InductiveDeclaration:
-    """Declare a new inductive type in the given environment."""
+    """Declare a new inductive type in the given environment.
+
+    Derives universe level parameters from the inductive type and constructors
+    if not explicitly specified, and synthesizes the recursor with full support
+    for large vs. small elimination (subsingleton elimination).
+    """
+    if not level_params:
+        inferred_levels: list[str] = []
+        _collect_univ_params_from_expr(type, inferred_levels)
+        for _, c_type in constructors:
+            _collect_univ_params_from_expr(c_type, inferred_levels)
+        level_params = tuple(inferred_levels)
+
     inductive_decl = InductiveDeclaration(
         name=name,
         level_params=level_params,
@@ -152,95 +267,214 @@ def declare_inductive(
         for c_name, c_type in constructors
     ]
 
-    recursor_decl = _build_recursor(inductive_decl, constructor_decls)
+    recursor_decl = _build_recursor(
+        inductive_decl,
+        constructor_decls,
+        num_params=num_params,
+        env=env,
+    )
 
     register_inductive(env, inductive_decl, constructor_decls, recursor_decl)
 
     return inductive_decl
 
-def _build_recursor(
+
+def _build_recursor(  # noqa: PLR0912, PLR0915
     inductive_decl: InductiveDeclaration,
     constructor_decls: Sequence[ConstructorDeclaration],
+    num_params: int | None = None,
+    env: Environment | None = None,
 ) -> RecursorDeclaration:
-    """Build the recursor declaration."""
+    """Build the recursor declaration for an inductive type following Lean rules.
+
+    Universe levels and elimination behavior:
+    1. Base universe level parameters are gathered from the inductive declaration
+       and constructors.
+    2. Large vs. Small Elimination:
+       - If the inductive type target sort is not Prop (Sort 0), large elimination
+         is always allowed into an arbitrary universe Sort v (fresh motive level parameter).
+       - If the inductive type is in Prop (Sort 0):
+         * Subsingleton elimination (large elimination into Sort v) is allowed if:
+           - The type has 0 constructors (e.g., False, Empty), OR
+           - The type has 1 constructor, and all non-parameter fields are either
+             propositions (in Prop) or occur as indices in the return type (e.g., True, And, Eq).
+         * Otherwise (e.g. Or with >1 constructors, or Exists with a data witness),
+           large elimination is restricted: the recursor only eliminates into Prop
+           (Sort 0) and NO motive universe level parameter is introduced.
+    """
     ind_name = inductive_decl.name
     rec_name = inductive_decl.recursor_names[0]
 
-    # 0. Collect used names to avoid collisions
-    used_names: set[str] = set(inductive_decl.level_params)
+    # 0. Collect base universe level parameters from inductive and constructor declarations
+    base_level_params: list[str] = list(inductive_decl.level_params)
+    _collect_univ_params_from_expr(inductive_decl.type, base_level_params)
+    for ctor in constructor_decls:
+        for lp in ctor.level_params:
+            if lp not in base_level_params:
+                base_level_params.append(lp)
+        _collect_univ_params_from_expr(ctor.type, base_level_params)
 
-    # 1. Generate a fresh name for the motive level parameter
-    motive_level = _fresh_name("v", used_names)
-    level_params = tuple(list(inductive_decl.level_params) + [motive_level])
+    used_names: set[str] = set(base_level_params)
 
-    # 2. Extract parameters from the inductive type and count total Pis for indices
-    num_params = 0
-    total_pis = 0
-    param_binders: list[tuple[str, Expr]] = []
+    # 1. Extract binders from the inductive type former
+    ind_binders: list[tuple[str, Expr]] = []
     curr = inductive_decl.type
     while isinstance(curr, EPi):
-        total_pis += 1
-        p_name = _fresh_name(curr.var, used_names)
-        param_binders.append((p_name, curr.domain))
+        ind_binders.append((curr.var, curr.domain))
         curr = curr.body
-        num_params += 1
+    target_sort = curr
 
-    # Number of indices is total binders in type minus parameters
-    num_indices = max(0, total_pis - num_params)
+    # 2. Determine number of parameters vs indices
+    if num_params is None:
+        if not constructor_decls:
+            num_params = len(ind_binders)
+        else:
+            match_count = len(ind_binders)
+            for ctor in constructor_decls:
+                c_curr = ctor.type
+                c_binders: list[tuple[str, Expr]] = []
+                while isinstance(c_curr, EPi):
+                    c_binders.append((c_curr.var, c_curr.domain))
+                    c_curr = c_curr.body
+                _, c_args = decompose_app(c_curr)
 
-    # 3. Construct the target expression: InductiveType applied to parameters
-    ind_levels = tuple(UnivLevelParam(lp) for lp in inductive_decl.level_params)
-    target_expr = EConst(ind_name, ind_levels)
+                k = 0
+                while k < len(ind_binders) and k < len(c_binders) and k < len(c_args):
+                    arg = c_args[k]
+                    if isinstance(arg, EVar) and arg.name == c_binders[k][0]:
+                        k += 1
+                    else:
+                        break
+                match_count = min(match_count, k)
+            num_params = match_count
+
+    num_indices = max(0, len(ind_binders) - num_params)
+
+    # 3. Check whether the inductive type is in Prop (Sort 0)
+    is_prop = False
+    if isinstance(target_sort, ESort):
+        norm_level = normalize_univ_level(target_sort.level)
+        if isinstance(norm_level, UnivLevelZero):
+            is_prop = True
+    elif env is not None:
+        try:
+            inferred = infer_type(target_sort, {}, {}, env)
+            whnf_sort = whnf(inferred, {}, env)
+            if isinstance(whnf_sort, ESort) and isinstance(
+                normalize_univ_level(whnf_sort.level), UnivLevelZero
+            ):
+                is_prop = True
+        except Exception:  # noqa: S110
+            pass
+
+    # 4. Large elimination check (subsingleton elimination when in Prop)
+    has_large_elim = True
+    if is_prop:
+        if len(constructor_decls) == 0:
+            has_large_elim = True
+        elif len(constructor_decls) > 1:
+            has_large_elim = False
+        else:
+            ctor = constructor_decls[0]
+            c_curr = ctor.type
+            c_binders = []
+            while isinstance(c_curr, EPi):
+                c_binders.append((c_curr.var, c_curr.domain))
+                c_curr = c_curr.body
+            _, c_args = decompose_app(c_curr)
+            index_args = c_args[num_params:]
+            field_binders = c_binders[num_params:]
+
+            ctor_ctx: dict[str, Expr] = dict(c_binders)
+
+            all_subsingleton = True
+            for f_name, f_dom in field_binders:
+                is_index = any(
+                    isinstance(idx_arg, EVar) and idx_arg.name == f_name
+                    for idx_arg in index_args
+                )
+                if not is_index and not _is_prop(f_dom, ctor_ctx, env, ind_name, is_prop):
+                    all_subsingleton = False
+                    break
+            has_large_elim = all_subsingleton
+
+    # 5. Formulate motive universe sort and recursor universe parameters
+    if has_large_elim:
+        motive_level = _fresh_name("v", used_names)
+        level_params = tuple(base_level_params + [motive_level])
+        motive_sort = ESort(UnivLevelParam(motive_level))
+    else:
+        level_params = tuple(base_level_params)
+        motive_sort = ESort(UnivLevelZero())
+
+    # 6. Parameter and Index binders
+    param_binders: list[tuple[str, Expr]] = []
+    for p_var, p_dom in ind_binders[:num_params]:
+        p_name = _fresh_name(p_var, used_names)
+        param_binders.append((p_name, p_dom))
+
+    index_binders: list[tuple[str, Expr]] = []
+    for i_var, i_dom in ind_binders[num_params:]:
+        i_name = _fresh_name(i_var, used_names)
+        index_binders.append((i_name, i_dom))
+
+    # Construct the target expression: InductiveType applied to parameters and indices
+    ind_levels = tuple(
+        UnivLevelParam(lp)
+        for lp in (inductive_decl.level_params if inductive_decl.level_params else base_level_params)
+    )
+    ind_param_expr = EConst(ind_name, ind_levels)
     for p_name, _ in param_binders:
-        target_expr = EApp(target_expr, EVar(p_name))
+        ind_param_expr = EApp(ind_param_expr, EVar(p_name))
 
-    # 4. Construct the motive type: (t : target_expr) -> Sort v
-    motive_domain = target_expr
-    motive_sort = ESort(UnivLevelParam(motive_level))
+    target_expr = ind_param_expr
+    for i_name, _ in index_binders:
+        target_expr = EApp(target_expr, EVar(i_name))
 
     motive_var = _fresh_name("motive", used_names)
     t_var = _fresh_name("t", used_names)
 
-    # Type of motive: (t : target_expr) -> Sort v
-    motive_type = EPi(var=t_var, domain=motive_domain, body=motive_sort)
+    # Motive type: (i_1 : I_1) -> ... -> (i_k : I_k) -> (t : target_expr) -> motive_sort
+    motive_body = EPi(var=t_var, domain=target_expr, body=motive_sort)
+    for i_name, i_dom in reversed(index_binders):
+        motive_body = EPi(var=i_name, domain=i_dom, body=motive_body)
+    motive_type = motive_body
 
     num_minors = len(constructor_decls)
 
-    # 5. Build minor premises for each constructor
+    # 7. Build minor premises for each constructor
     minor_premises: list[tuple[str, Expr]] = []
 
     for i, ctor in enumerate(constructor_decls):
-        # Extract constructor raw binders (skipping parameters)
+        ctor_levels = tuple(
+            UnivLevelParam(lp)
+            for lp in (ctor.level_params if ctor.level_params else base_level_params)
+        )
+
         ctor_curr = ctor.type
-        for _ in range(num_params):
-            if isinstance(ctor_curr, EPi):
-                ctor_curr = ctor_curr.body
-
-        raw_binders: list[tuple[str, Expr]] = []
+        raw_ctor_binders: list[tuple[str, Expr]] = []
         while isinstance(ctor_curr, EPi):
-            raw_binders.append((ctor_curr.var, ctor_curr.domain))
+            raw_ctor_binders.append((ctor_curr.var, ctor_curr.domain))
             ctor_curr = ctor_curr.body
+        ctor_target = ctor_curr
 
-        # Map constructor's parameter names to the current parameterized binders
-        curr_t = ctor.type
-        ctor_param_names = []
-        for _ in range(num_params):
-            if isinstance(curr_t, EPi):
-                ctor_param_names.append(curr_t.var)
-                curr_t = curr_t.body
+        _, ctor_target_args = decompose_app(ctor_target)
+        ctor_indices = ctor_target_args[num_params:]
+
+        raw_param_names = [name for name, _ in raw_ctor_binders[:num_params]]
+        raw_field_binders = raw_ctor_binders[num_params:]
 
         param_subst: dict[str, Expr] = {
             c_p_name: EVar(p_name)
             for c_p_name, (p_name, _)
-            in zip(ctor_param_names, param_binders, strict=False)
+            in zip(raw_param_names, param_binders, strict=False)
         }
 
         field_binders: list[tuple[str, Expr]] = []
         local_subst: dict[str, Expr] = dict(param_subst)
         ctor_app_args = [EVar(p_name) for p_name, _ in param_binders]
 
-        for f_name, f_dom in raw_binders:
-            # Apply parameter and field substitutions to field domain
+        for f_name, f_dom in raw_field_binders:
             spec_dom = f_dom
             for k, v in local_subst.items():
                 spec_dom = substitute_var(spec_dom, k, v)
@@ -251,18 +485,27 @@ def _build_recursor(
             field_binders.append((unique_f_name, spec_dom))
             ctor_app_args.append(EVar(unique_f_name))
 
-            # If field is recursive (contains inductive type)
-            # add an induction hypothesis
+            # If field is recursive (contains inductive type), add induction hypothesis
             if _contains_inductive(spec_dom, ind_name):
                 ih_base = f"ih_{f_name}"
                 unique_ih_name = _fresh_name(ih_base, used_names)
-                ih_dom = EApp(EVar(motive_var), EVar(unique_f_name))
+                _, rec_args = decompose_app(spec_dom)
+                rec_indices = rec_args[num_params:]
+                ih_dom = app(EVar(motive_var), *rec_indices, EVar(unique_f_name))
                 field_binders.append((unique_ih_name, ih_dom))
 
-        # Build constructor application instance for the motive conclusion
-        ctor_const = EConst(ctor.name, ind_levels)
+        # Build constructor application instance
+        ctor_const = EConst(ctor.name, ctor_levels)
         ctor_instance = app(ctor_const, *ctor_app_args)
-        case_conclusion = EApp(EVar(motive_var), ctor_instance)
+
+        spec_ctor_indices = []
+        for idx_expr in ctor_indices:
+            spec_idx = idx_expr
+            for k, v in local_subst.items():
+                spec_idx = substitute_var(spec_idx, k, v)
+            spec_ctor_indices.append(spec_idx)
+
+        case_conclusion = app(EVar(motive_var), *spec_ctor_indices, ctor_instance)
 
         # Wrap case conclusion with field and IH binders (from inside out)
         current_case_type = case_conclusion
@@ -273,18 +516,24 @@ def _build_recursor(
         case_name = _fresh_name(base_case_name, used_names)
         minor_premises.append((case_name, current_case_type))
 
-    # 6. Terminal type: motive t
-    body_expr = EApp(EVar(motive_var), EVar(t_var))
+    # 8. Terminal type: motive indices t
+    body_expr = app(
+        EVar(motive_var),
+        *[EVar(i_name) for i_name, _ in index_binders],
+        EVar(t_var),
+    )
     built_type = EPi(var=t_var, domain=target_expr, body=body_expr)
+    for i_name, i_dom in reversed(index_binders):
+        built_type = EPi(var=i_name, domain=i_dom, body=built_type)
 
-    # 7. Wrap the type with minor premises for each constructor (reversed)
+    # 9. Wrap the type with minor premises for each constructor (reversed)
     for case_name, case_type in reversed(minor_premises):
         built_type = EPi(var=case_name, domain=case_type, body=built_type)
 
-    # 8. Wrap the motive binder around the entire type
+    # 10. Wrap the motive binder around the entire type
     built_type = EPi(var=motive_var, domain=motive_type, body=built_type)
 
-    # 9. Wrap the parameter binders around the entire type
+    # 11. Wrap the parameter binders around the entire type
     for p_name, p_dom in reversed(param_binders):
         built_type = EPi(var=p_name, domain=p_dom, body=built_type)
 
