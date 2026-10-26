@@ -238,10 +238,10 @@ def declare_inductive(
 ) -> InductiveDeclaration:
     """Declare a new inductive type in the given environment.
 
-    Derives universe level parameters from the inductive type and constructors
-    if not explicitly specified, and synthesizes the recursor with full support
-    for large vs. small elimination (subsingleton elimination).
+    Derives universe level parameters from the inductive type and constructors if not explicitly specified,
+    and synthesizes both constructor declarations and the recursor with full support for large vs. small elimination.
     """
+    # 0. Collect all universe level parameters if not provided
     if not level_params:
         inferred_levels: list[str] = []
         _collect_univ_params_from_expr(type, inferred_levels)
@@ -254,19 +254,16 @@ def declare_inductive(
         level_params=level_params,
         type=type,
         constructor_names=tuple(c_name for c_name, _ in constructors),
-        recursor_names=(f"{name}.rec",)
+        recursor_names=(f"{name}.rec",),
     )
 
+    # 1. Build individual ConstructorDeclarations using _build_constructor
     constructor_decls = [
-        ConstructorDeclaration(
-            name=c_name,
-            level_params=level_params,
-            type=c_type,
-            inductive_name=name,
-        )
+        _build_constructor(c_name, c_type, name, level_params)
         for c_name, c_type in constructors
     ]
 
+    # 2. Build the recursor declaration with robust error checking and elimination rules
     recursor_decl = _build_recursor(
         inductive_decl,
         constructor_decls,
@@ -274,12 +271,33 @@ def declare_inductive(
         env=env,
     )
 
+    # 3. Register into environment
     register_inductive(env, inductive_decl, constructor_decls, recursor_decl)
-
     return inductive_decl
 
+def _build_constructor(
+    c_name: str,
+    c_type: Expr,
+    inductive_name: str,
+    inductive_level_params: tuple[str, ...],
+) -> ConstructorDeclaration:
+    """Build an individual ConstructorDeclaration with its specific universe level parameters."""
+    ctor_levels: list[str] = []
+    _collect_univ_params_from_expr(c_type, ctor_levels)
 
-def _build_recursor(  # noqa: PLR0912, PLR0915
+    # Merge base universe level parameters with constructor-specific ones while preserving order
+    merged_ctor_levels = tuple(
+        dict.fromkeys(list(inductive_level_params) + ctor_levels)
+    )
+
+    return ConstructorDeclaration(
+        name=c_name,
+        level_params=merged_ctor_levels,
+        type=c_type,
+        inductive_name=inductive_name,
+    )
+
+def _build_recursor(
     inductive_decl: InductiveDeclaration,
     constructor_decls: Sequence[ConstructorDeclaration],
     num_params: int | None = None,
@@ -288,19 +306,17 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
     """Build the recursor declaration for an inductive type following Lean rules.
 
     Universe levels and elimination behavior:
-    1. Base universe level parameters are gathered from the inductive declaration
-       and constructors.
+    1. Base universe level parameters are gathered from the inductive declaration and constructors.
     2. Large vs. Small Elimination:
-       - If the inductive type target sort is not Prop (Sort 0), large elimination
-         is always allowed into an arbitrary universe Sort v (fresh motive level parameter).
+       - If the inductive type target sort is not Prop (Sort 0), large elimination is always allowed
+         into an arbitrary universe Sort v (fresh motive level parameter).
        - If the inductive type is in Prop (Sort 0):
          * Subsingleton elimination (large elimination into Sort v) is allowed if:
            - The type has 0 constructors (e.g., False, Empty), OR
-           - The type has 1 constructor, and all non-parameter fields are either
-             propositions (in Prop) or occur as indices in the return type (e.g., True, And, Eq).
-         * Otherwise (e.g. Or with >1 constructors, or Exists with a data witness),
-           large elimination is restricted: the recursor only eliminates into Prop
-           (Sort 0) and NO motive universe level parameter is introduced.
+           - The type has 1 constructor, and all non-parameter fields are either propositions (in Prop)
+             or occur as indices in the return type (e.g., True, And, Eq).
+         * Otherwise (e.g. Or with >1 constructors, or Exists with a data witness), large elimination is restricted:
+             the recursor only eliminates into Prop (Sort 0) and NO motive universe level parameter is introduced.
     """
     ind_name = inductive_decl.name
     rec_name = inductive_decl.recursor_names[0]
@@ -324,7 +340,7 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
         curr = curr.body
     target_sort = curr
 
-    # 2. Determine number of parameters vs indices
+    # 2. Determine number of parameters vs indices (robust structural check)
     if num_params is None:
         if not constructor_decls:
             num_params = len(ind_binders)
@@ -337,17 +353,22 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
                     c_binders.append((c_curr.var, c_curr.domain))
                     c_curr = c_curr.body
                 _, c_args = decompose_app(c_curr)
-
                 k = 0
-                while k < len(ind_binders) and k < len(c_binders) and k < len(c_args):
+                # Check structural argument matching against inductive binders
+                while (
+                    k < len(ind_binders)
+                    and k < len(c_binders)
+                    and k < len(c_args)
+                ):
                     arg = c_args[k]
-                    if isinstance(arg, EVar) and arg.name == c_binders[k][0]:
+                    # Ensure the constructor argument strictly matches the corresponding parameter variable
+                    expected_var = c_binders[k][0]
+                    if isinstance(arg, EVar) and arg.name == expected_var:
                         k += 1
                     else:
                         break
                 match_count = min(match_count, k)
             num_params = match_count
-
     num_indices = max(0, len(ind_binders) - num_params)
 
     # 3. Check whether the inductive type is in Prop (Sort 0)
@@ -384,27 +405,29 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
             _, c_args = decompose_app(c_curr)
             index_args = c_args[num_params:]
             field_binders = c_binders[num_params:]
-
             ctor_ctx: dict[str, Expr] = dict(c_binders)
 
             all_subsingleton = True
             for f_name, f_dom in field_binders:
+                # Check if field variable is directly used in index arguments
                 is_index = any(
                     isinstance(idx_arg, EVar) and idx_arg.name == f_name
                     for idx_arg in index_args
                 )
-                if not is_index and not _is_prop(f_dom, ctor_ctx, env, ind_name, is_prop):
+                if not is_index and not _is_prop(
+                    f_dom, ctor_ctx, env, ind_name, is_prop
+                ):
                     all_subsingleton = False
                     break
             has_large_elim = all_subsingleton
 
-    # 5. Formulate motive universe sort and recursor universe parameters
+    # 5. Formulate motive universe sort and recursor universe parameters (using rec_level_params)
     if has_large_elim:
         motive_level = _fresh_name("v", used_names)
-        level_params = tuple(base_level_params + [motive_level])
+        rec_level_params = tuple(base_level_params + [motive_level])
         motive_sort = ESort(UnivLevelParam(motive_level))
     else:
-        level_params = tuple(base_level_params)
+        rec_level_params = tuple(base_level_params)
         motive_sort = ESort(UnivLevelZero())
 
     # 6. Parameter and Index binders
@@ -421,7 +444,11 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
     # Construct the target expression: InductiveType applied to parameters and indices
     ind_levels = tuple(
         UnivLevelParam(lp)
-        for lp in (inductive_decl.level_params if inductive_decl.level_params else base_level_params)
+        for lp in (
+            inductive_decl.level_params
+            if inductive_decl.level_params
+            else base_level_params
+        )
     )
     ind_param_expr = EConst(ind_name, ind_levels)
     for p_name, _ in param_binders:
@@ -444,20 +471,19 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
 
     # 7. Build minor premises for each constructor
     minor_premises: list[tuple[str, Expr]] = []
-
     for i, ctor in enumerate(constructor_decls):
         ctor_levels = tuple(
             UnivLevelParam(lp)
-            for lp in (ctor.level_params if ctor.level_params else base_level_params)
+            for lp in (
+                ctor.level_params if ctor.level_params else base_level_params
+            )
         )
-
         ctor_curr = ctor.type
         raw_ctor_binders: list[tuple[str, Expr]] = []
         while isinstance(ctor_curr, EPi):
             raw_ctor_binders.append((ctor_curr.var, ctor_curr.domain))
             ctor_curr = ctor_curr.body
         ctor_target = ctor_curr
-
         _, ctor_target_args = decompose_app(ctor_target)
         ctor_indices = ctor_target_args[num_params:]
 
@@ -466,8 +492,9 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
 
         param_subst: dict[str, Expr] = {
             c_p_name: EVar(p_name)
-            for c_p_name, (p_name, _)
-            in zip(raw_param_names, param_binders, strict=False)
+            for c_p_name, (p_name, _) in zip(
+                raw_param_names, param_binders, strict=False
+            )
         }
 
         field_binders: list[tuple[str, Expr]] = []
@@ -481,7 +508,6 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
 
             unique_f_name = _fresh_name(f_name, used_names)
             local_subst[f_name] = EVar(unique_f_name)
-
             field_binders.append((unique_f_name, spec_dom))
             ctor_app_args.append(EVar(unique_f_name))
 
@@ -489,9 +515,15 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
             if _contains_inductive(spec_dom, ind_name):
                 ih_base = f"ih_{f_name}"
                 unique_ih_name = _fresh_name(ih_base, used_names)
+
+                # Robust argument extraction for recursive arguments/indices
                 _, rec_args = decompose_app(spec_dom)
-                rec_indices = rec_args[num_params:]
-                ih_dom = app(EVar(motive_var), *rec_indices, EVar(unique_f_name))
+                rec_indices = rec_args[num_params:] if len(rec_args) >= num_params else []
+
+                # Construct IH domain: motive applied to recursive target's indices and the recursive field instance
+                ih_dom = app(
+                    EVar(motive_var), *rec_indices, EVar(unique_f_name)
+                )
                 field_binders.append((unique_ih_name, ih_dom))
 
         # Build constructor application instance
@@ -505,14 +537,18 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
                 spec_idx = substitute_var(spec_idx, k, v)
             spec_ctor_indices.append(spec_idx)
 
-        case_conclusion = app(EVar(motive_var), *spec_ctor_indices, ctor_instance)
+        case_conclusion = app(
+            EVar(motive_var), *spec_ctor_indices, ctor_instance
+        )
 
         # Wrap case conclusion with field and IH binders (from inside out)
         current_case_type = case_conclusion
         for b_name, b_dom in reversed(field_binders):
             current_case_type = EPi(var=b_name, domain=b_dom, body=current_case_type)
 
-        base_case_name = ctor.name.split(".")[-1] if "." in ctor.name else f"case_{i}"
+        base_case_name = (
+            ctor.name.split(".")[-1] if "." in ctor.name else f"case_{i}"
+        )
         case_name = _fresh_name(base_case_name, used_names)
         minor_premises.append((case_name, current_case_type))
 
@@ -539,14 +575,13 @@ def _build_recursor(  # noqa: PLR0912, PLR0915
 
     return RecursorDeclaration(
         name=rec_name,
-        level_params=level_params,
+        level_params=rec_level_params,  # Return the explicitly separated recursor level parameters
         type=built_type,
         inductive_name=ind_name,
         num_params=num_params,
         num_indices=num_indices,
         num_minors=num_minors,
     )
-
 
 def _contains_inductive(expr: Expr, ind_name: str) -> bool:
     """Check if an expression refers to the given inductive type name."""
