@@ -4,26 +4,26 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ...ast import EConst
-from ...environment.library import UnitDeclaration
-from ..inductive import Inductive
+from ...environment import const
+from ...environment.library import UNIT_IND_SPEC
+from ..environment import STANDARD_ENV
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=UNIT_IND_SPEC)
 class Unit(Inductive):
     """Immutable wrapper for unit expressions."""
 
-    TYPE_NAME: ClassVar[str] = UnitDeclaration.UNIT_DECLARATION.declaration.name
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        UnitDeclaration.UNIT_DECLARATION.declaration.level_params
-    )
+    UNIT_IDX: ClassVar[int] = 0
 
     @classmethod
     def unit(cls) -> Unit:
         """Construct the unique unit value."""
+        env = cls.env()
         return cls(
-            EConst(
-                name=UnitDeclaration.UNIT_UNIT_DECLARATION.declaration.name,
-                levels=cls.levels()
+            const(
+                env=env if env is not None else STANDARD_ENV,
+                name=cls.CONSTRUCTORS[cls.UNIT_IDX][0],
             )
         )

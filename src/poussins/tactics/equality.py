@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from ..ast import EMetaVar, Expr, app
-from ..environment.library import EqualityDeclaration
+from ..environment import const
+from ..environment.library import EQ_IND_SPEC, EQ_SYMM_DEF_SPEC, EQ_TRANS_DEF_SPEC
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, is_def_eq, whnf
 from .apply import apply
 from .helpers import (
-    const_from_decl,
     parse_eq_app,
     require_current_goal,
     requires_active_goal,
@@ -35,10 +35,7 @@ def reflexivity(manager: ProofManager) -> None:
 
     apply(
         manager,
-        const_from_decl(
-            EqualityDeclaration.EQ_REFL_DECLARATION.declaration,
-            manager
-        )
+        const(env=manager.env, name=EQ_IND_SPEC.constructors[0][0])
     )
 
 # Alias for reflexivity tactic
@@ -63,12 +60,8 @@ def symmetry(manager: ProofManager) -> None:
 
     type_a, lhs, rhs = eq_args
 
-    eq_const = const_from_decl(
-        EqualityDeclaration.EQ_DECLARATION.declaration, manager
-    )
-    eq_symm_const = const_from_decl(
-        EqualityDeclaration.EQ_SYMM_DECLARATION.declaration, manager
-    )
+    eq_const = const(env=manager.env, name=EQ_IND_SPEC.name)
+    eq_symm_const = const(env=manager.env, name=EQ_SYMM_DEF_SPEC.name)
 
     new_goal = Goal(
         statement=app(eq_const, type_a, rhs, lhs),
@@ -102,12 +95,8 @@ def transitivity(manager: ProofManager, term: Expr) -> None:
 
     type_a, lhs, rhs = eq_args
 
-    eq_const = const_from_decl(
-        EqualityDeclaration.EQ_DECLARATION.declaration, manager
-    )
-    eq_trans_const = const_from_decl(
-        EqualityDeclaration.EQ_TRANS_DECLARATION.declaration, manager
-    )
+    eq_const = const(env=manager.env, name=EQ_IND_SPEC.name)
+    eq_trans_const = const(env=manager.env, name=EQ_TRANS_DEF_SPEC.name)
 
     goal1 = Goal(
         statement=app(eq_const, type_a, lhs, term),

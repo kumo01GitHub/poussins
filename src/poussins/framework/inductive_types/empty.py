@@ -2,17 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar
 
-from ...environment.library import EmptyDeclaration
-from ..inductive import Inductive
+from ...environment.library import EMPTY_IND_SPEC
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=EMPTY_IND_SPEC)
 class Empty(Inductive):
     """Immutable wrapper for empty-type expressions."""
-
-    TYPE_NAME: ClassVar[str] = EmptyDeclaration.EMPTY_DECLARATION.declaration.name
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        EmptyDeclaration.EMPTY_DECLARATION.declaration.level_params
-    )

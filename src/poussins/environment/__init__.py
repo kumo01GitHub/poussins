@@ -10,9 +10,18 @@ from .declaration import (
     TheoremDeclaration,
 )
 from .environment import Environment
+from .ops import const
+from .spec import (
+    AxiomSpec,
+    DefinitionSpec,
+    InductiveSpec,
+    TheoremSpec,
+)
 
 __all__ = [
+    # Environment
     "Environment",
+    # Declarations
     "Declaration",
     "AxiomDeclaration",
     "DefinitionDeclaration",
@@ -21,4 +30,11 @@ __all__ = [
     "ConstructorDeclaration",
     "RecursorDeclaration",
     "QuotientDeclaration",
+    # Specs
+    "AxiomSpec",
+    "DefinitionSpec",
+    "InductiveSpec",
+    "TheoremSpec",
+    # Operations
+    "const",
 ]

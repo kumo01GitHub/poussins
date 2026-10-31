@@ -4,6 +4,7 @@ from .ops import (
     app,
     collect_free_vars,
     collect_metavar_ids,
+    collect_univ_level_params,
     collect_univ_levels,
     count_pi_binders,
     decompose_app,
@@ -17,7 +18,7 @@ from .ops import (
     univ_level,
     univ_levels,
 )
-from .sort import Sort
+from .sorts import Sort
 from .universe import (
     UnivLevel,
     UnivLevelIMax,
@@ -57,6 +58,7 @@ __all__ = [
     "decompose_app",
     "substitute_var",
     "collect_univ_levels",
+    "collect_univ_level_params",
     "collect_free_vars",
     "has_metavar",
     "substitute_metavar",

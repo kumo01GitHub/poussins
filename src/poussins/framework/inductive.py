@@ -2,31 +2,30 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar, override
 
 from ..ast import (
-    EConst,
-    ESort,
     EVar,
     Expr,
     Sort,
-    UnivLevel,
-    UnivLevelMax,
-    UnivLevelParam,
     app,
-    univ_levels,
 )
-from ..environment.library import EqualityDeclaration
+from ..environment import Environment, InductiveDeclaration, InductiveSpec, const
+from ..environment.library import EQ_IND_SPEC
 from .binding import BindableMixin
+from .declaration import declare_inductive
+from .environment import STANDARD_ENV
 
 
 @dataclass(frozen=True)
 class Inductive(BindableMixin, ABC):
     """Immutable wrapper for inductive type expressions."""
 
-    TYPE_NAME: ClassVar[str] = "__undefined__"
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = ()
+    NAME: ClassVar[str] = "__undefined__"
+    TYPE: ClassVar[Expr] = Sort.TYPE.sort
+    CONSTRUCTORS: ClassVar[Sequence[tuple[str, Expr]]] = ()
 
     value: Expr
 
@@ -37,37 +36,31 @@ class Inductive(BindableMixin, ABC):
         else:
             object.__setattr__(self, "value", EVar(value))
 
+    @classmethod
+    def declare(cls, env: Environment) -> InductiveDeclaration:
+        """Declare the inductive type in the environment."""
+        raise NotImplementedError
+
+    @classmethod
+    def env(cls) -> Environment | None:
+        """Return the environment in which this inductive type is declared."""
+        return getattr(cls, "_env", None)
+
     @staticmethod
     def to_expr(value: Inductive | Expr) -> Expr:
         """Return the underlying expression."""
         return value.value if isinstance(value, Inductive) else value
 
     @classmethod
-    def levels(cls) -> tuple[UnivLevel, ...]:
-        """Return the universe levels of this inductive type."""
-        return univ_levels(cls.LEVEL_PARAMS)
-
-    @classmethod
-    def sort(cls) -> ESort:
-        """Return the sort of this inductive type."""
-        if not cls.LEVEL_PARAMS:
-            return Sort.TYPE.sort
-
-        level: UnivLevel = UnivLevelParam(cls.LEVEL_PARAMS[0])
-        for param in cls.LEVEL_PARAMS[1:]:
-            level = UnivLevelMax(level, UnivLevelParam(param))
-
-        return ESort(level)
-
-    @classmethod
-    def type_expr(cls) -> Expr:
+    def type_ref(cls) -> Expr:
         """Return the type expression of this inductive type."""
-        return EConst(name=cls.TYPE_NAME, levels=cls.levels())
+        env = cls.env()
+        return const(env if env is not None else STANDARD_ENV, cls.NAME)
 
     @property
     def type(self) -> Expr:
         """Return the type expression of this inductive type instance."""
-        return self.type_expr()
+        return self.type_ref()
 
     @classmethod
     def eq(
@@ -76,12 +69,13 @@ class Inductive(BindableMixin, ABC):
         right: Inductive | Expr,
     ) -> Expr:
         """Return the equality proposition between two inductive values."""
+        env = cls.env()
         return app(
-            EConst(
-                EqualityDeclaration.EQ_DECLARATION.declaration.name,
-                univ_levels(EqualityDeclaration.EQ_DECLARATION.declaration.level_params),
+            const(
+                env if env is not None else STANDARD_ENV,
+                EQ_IND_SPEC.name
             ),
-            cls.type_expr(),
+            cls.type_ref(),
             cls.to_expr(left),
             cls.to_expr(right),
         )
@@ -97,3 +91,30 @@ class Inductive(BindableMixin, ABC):
     def bound_value(self) -> Expr:
         """Return the value of the bound variable."""
         return self.value
+
+
+def inductive_type[T: Inductive](spec: InductiveSpec):
+    """Define an inductive type class with the given specification."""
+
+    def decorator(cls: type[T]) -> type[T]:
+        cls.NAME = spec.name
+        cls.TYPE = spec.type
+        cls.CONSTRUCTORS = spec.constructors
+
+        _env: Environment | None = None
+
+        @override
+        @classmethod
+        def declare(cls, env: Environment) -> InductiveDeclaration:
+            declaration = declare_inductive(env, spec)
+            cls._env = env
+            return declaration
+
+        @override
+        @classmethod
+        def env(cls) -> Environment | None:
+            return cls._env
+
+        return cls
+
+    return decorator

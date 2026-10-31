@@ -1,9 +1,9 @@
 """Tactic for applying inductive constructors."""
 from __future__ import annotations
 
-from ..ast import EConst, EPi, univ_levels
-from ..environment import ConstructorDeclaration, InductiveDeclaration
-from ..environment.library import LogicDeclaration
+from ..ast import EConst, EPi
+from ..environment import ConstructorDeclaration, InductiveDeclaration, const
+from ..environment.library import AND_IND_SPEC, OR_IND_SPEC
 from ..errors import TacticError
 from ..kernel import ProofManager, infer_type, whnf
 from .apply import apply
@@ -37,17 +37,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
                 + f"Expected 1..{len(inductive_decl.constructor_names)}."
             )
         target_name = inductive_decl.constructor_names[index - 1]
-        decl = manager.env.get(target_name)
-        if not isinstance(decl, ConstructorDeclaration):
-            raise TacticError(f"'{target_name}' is not a constructor declaration.")
-
-        apply(
-            manager,
-            EConst(
-                name=target_name,
-                levels=univ_levels(decl.level_params)
-            )
-        )
+        apply(manager, const(env=manager.env, name=target_name))
         return
 
     matched_constructor_const: EConst | None = None
@@ -57,13 +47,10 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
         if not isinstance(decl, ConstructorDeclaration):
             raise TacticError(f"'{name}' is not a constructor declaration.")
 
-        const = EConst(
-            name=name,
-            levels=univ_levels(decl.level_params),
-        )
+        ctor = const(env=manager.env, name=name)
 
         c_type = whnf(
-            infer_type(const, current_goal.context, state.metavars, manager.env),
+            infer_type(ctor, current_goal.context, state.metavars, manager.env),
             state.metavars,
             manager.env,
         )
@@ -74,7 +61,7 @@ def constructor(manager: ProofManager, index: int | None = None) -> None:
 
         c_head_name = const_head_name(c_conclusion)
         if c_head_name == head_name:
-            matched_constructor_const = const
+            matched_constructor_const = ctor
             break
 
     if matched_constructor_const is None:
@@ -145,10 +132,7 @@ def _apply_named_constructor(
             + f"'{constructor_name}' is not a constructor declaration."
         )
 
-    apply(manager, EConst(
-        name=constructor_name,
-        levels=univ_levels(decl.level_params),
-    ))
+    apply(manager, const(env=env, name=constructor_name))
 
 
 @requires_active_goal
@@ -156,8 +140,8 @@ def left(manager: ProofManager) -> None:
     """Prove an `Or` goal by selecting the left constructor (`Or.inl`)."""
     _apply_named_constructor(
         manager,
-        inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
-        constructor_name=LogicDeclaration.OR_INL_DECLARATION.declaration.name,
+        inductive_name=OR_IND_SPEC.name,
+        constructor_name=OR_IND_SPEC.constructors[0][0],
         tactic_name="left",
     )
 
@@ -167,8 +151,8 @@ def right(manager: ProofManager) -> None:
     """Prove an `Or` goal by selecting the right constructor (`Or.inr`)."""
     _apply_named_constructor(
         manager,
-        inductive_name=LogicDeclaration.OR_DECLARATION.declaration.name,
-        constructor_name=LogicDeclaration.OR_INR_DECLARATION.declaration.name,
+        inductive_name=OR_IND_SPEC.name,
+        constructor_name=OR_IND_SPEC.constructors[1][0],
         tactic_name="right",
     )
 
@@ -178,7 +162,7 @@ def split(manager: ProofManager) -> None:
     """Prove an `And` goal by applying `And.intro`."""
     _apply_named_constructor(
         manager,
-        inductive_name=LogicDeclaration.AND_DECLARATION.declaration.name,
-        constructor_name=LogicDeclaration.AND_INTRO_DECLARATION.declaration.name,
+        inductive_name=AND_IND_SPEC.name,
+        constructor_name=AND_IND_SPEC.constructors[0][0],
         tactic_name="split",
     )

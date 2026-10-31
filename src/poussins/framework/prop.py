@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from typing import override
 
 from ..ast import (
-    EConst,
     ELam,
     EPi,
     EVar,
@@ -27,10 +26,11 @@ from ..ast import (
     Sort,
     app,
     pi,
-    univ_levels,
 )
-from ..environment.library import LogicDeclaration
+from ..environment import const
+from ..environment.library import AND_IND_SPEC, EXISTS_IND_SPEC, FALSE_IND_SPEC, OR_IND_SPEC, TRUE_IND_SPEC
 from .binding import BindableMixin, BindingLike, normalize_bindings
+from .environment import STANDARD_ENV
 
 
 @dataclass(frozen=True)
@@ -58,25 +58,20 @@ class Prop(BindableMixin):
             return prop_or_expr
 
     @classmethod
-    def sort(cls) -> Expr:
-        """Return the sort of propositions (Prop)."""
-        return Sort.PROP.sort
-
-    @classmethod
-    def type_expr(cls) -> Expr:
+    def type_ref(cls) -> Expr:
         """Return the type expression of propositions (Prop)."""
-        return cls.sort()
+        return Sort.PROP.sort
 
     @property
     def type(self) -> Expr:
         """Return the type expression of this proposition instance."""
-        return self.__class__.type_expr()
+        return self.__class__.type_ref()
 
     @property
     @override
     def bound_type(self) -> Expr:
         """Return the type of the bound variable (Prop)."""
-        return self.type_expr()
+        return self.type_ref()
 
     @property
     @override
@@ -92,9 +87,9 @@ class Prop(BindableMixin):
     def top(cls) -> Prop:
         """⊤ (True)."""
         return cls(
-            EConst(
-                name=LogicDeclaration.TRUE_DECLARATION.declaration.name,
-                levels=()
+            const(
+                env=STANDARD_ENV,
+                name=TRUE_IND_SPEC.name,
             )
         )
 
@@ -102,9 +97,9 @@ class Prop(BindableMixin):
     def bottom(cls) -> Prop:
         """⊥ (False)."""
         return cls(
-            EConst(
-                name=LogicDeclaration.FALSE_DECLARATION.declaration.name,
-                levels=()
+            const(
+                env=STANDARD_ENV,
+                name=FALSE_IND_SPEC.name,
             )
         )
 
@@ -119,25 +114,25 @@ class Prop(BindableMixin):
         return cls(
             pi(
                 normalize_bindings(bindings),
-                cls.to_expr(body if body is not None else cls.sort())
+                cls.to_expr(body if body is not None else Sort.PROP.sort)
             )
         )
 
     @classmethod
-    def exists(cls, bindings: BindingLike, body: Prop | Expr) -> Prop:
+    def exists(cls, bindings: BindingLike, body: Prop | Expr | None) -> Prop:
         """Construct an existential quantifier proposition.
 
         Accepts a single Inductive variable, a single (name, type) tuple,
         or a Sequence of bindings.
         """
         normalized_bindings = normalize_bindings(bindings)
-        expr = cls.to_expr(body)
+        expr = cls.to_expr(body if body is not None else Sort.PROP.sort)
 
         for name, type_ in reversed(normalized_bindings):
             expr = app(
-                EConst(
-                    name=LogicDeclaration.EXISTS_DECLARATION.declaration.name,
-                    levels=univ_levels(LogicDeclaration.EXISTS_DECLARATION.declaration.level_params)
+                const(
+                    env=STANDARD_ENV,
+                    name=EXISTS_IND_SPEC.name,
                 ),
                 type_,
                 ELam(var=name, domain=type_, body=expr),
@@ -157,9 +152,9 @@ class Prop(BindableMixin):
         """P & Q  →  P ∧ Q  (conjunction)."""
         return Prop(
             app(
-                EConst(
-                    name=LogicDeclaration.AND_DECLARATION.declaration.name,
-                    levels=(),
+                const(
+                    env=STANDARD_ENV,
+                    name=AND_IND_SPEC.name,
                 ),
                 self.statement,
                 self.to_expr(other)
@@ -170,9 +165,9 @@ class Prop(BindableMixin):
         """P | Q  →  P ∨ Q  (disjunction)."""
         return Prop(
             app(
-                EConst(
-                    name=LogicDeclaration.OR_DECLARATION.declaration.name,
-                    levels=(),
+                const(
+                    env=STANDARD_ENV,
+                    name=OR_IND_SPEC.name,
                 ),
                 self.statement,
                 self.to_expr(other)

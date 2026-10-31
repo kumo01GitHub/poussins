@@ -11,8 +11,8 @@ env = create_standard_environment()
 
 x = Nat("x")
 y = Nat("y")
-rel_def = Eq(env, "NMod3", (x, y), Nat.type_expr(), x % Nat(3), y % Nat(3))
-rel_def.declare()
+rel_def = Eq("NMod3", (x, y), Nat, x % Nat(3), y % Nat(3))
+rel_def.declare(env)
 
 q_four = Quot[rel_def](Nat(4))
 q_seven = Quot[rel_def](Nat(7))

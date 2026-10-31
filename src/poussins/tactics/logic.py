@@ -1,11 +1,12 @@
 """Tactics for basic logical transformations."""
 from __future__ import annotations
 
-from ..ast import EApp, ELam, EMetaVar, EPi, EVar, Expr
-from ..environment.library import LogicDeclaration
+from ..ast import ELam, EMetaVar, EPi, EVar, Expr, app
+from ..environment import const
+from ..environment.library import FALSE_IND_SPEC
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, is_def_eq, whnf
-from .helpers import const_from_decl, require_current_goal, requires_active_goal
+from .helpers import require_current_goal, requires_active_goal
 
 
 def _build_false_elim(
@@ -14,20 +15,13 @@ def _build_false_elim(
     false_proof: Expr
 ) -> Expr:
     """Construct the expression to eliminate False and derive the current goal."""
-    return EApp(
-        EApp(
-            const_from_decl(
-                manager.env.get_recs(LogicDeclaration.FALSE_DECLARATION.declaration.name)[0],
-                manager,
-            ),
-            ELam(
-                "_",
-                const_from_decl(
-                    LogicDeclaration.FALSE_DECLARATION.declaration,
-                    manager
-                ),
-                current_goal.statement
-            ),
+    env = manager.env
+    return app(
+        const(env=env, name=env.get_recs(FALSE_IND_SPEC.name)[0].name),
+        ELam(
+            "_",
+            const(env=env, name=FALSE_IND_SPEC.name),
+            current_goal.statement
         ),
         false_proof,
     )
@@ -39,10 +33,7 @@ def exfalso(manager: ProofManager) -> None:
     current_goal = require_current_goal(manager)
 
     false_goal = Goal(
-        statement=const_from_decl(
-            LogicDeclaration.FALSE_DECLARATION.declaration,
-            manager
-        ),
+        statement=const(env=manager.env, name=FALSE_IND_SPEC.name),
         context=current_goal.context,
         local_hypothesis_names=current_goal.local_hypothesis_names,
     )
@@ -61,10 +52,7 @@ def contradiction(manager: ProofManager) -> None:
     env = manager.env
     metavars = manager.current_state.metavars
 
-    false_type = const_from_decl(
-        LogicDeclaration.FALSE_DECLARATION.declaration,
-        manager
-    )
+    false_type = const(env=env, name=FALSE_IND_SPEC.name)
 
     # Check for a direct contradiction in the local context
     for name, hyp_type in local_ctx.items():
@@ -91,7 +79,7 @@ def contradiction(manager: ProofManager) -> None:
                         metavars=metavars,
                         env=env,
                     ):
-                        false_proof = EApp(EVar(name2), EVar(name1))
+                        false_proof = app(name2, name1)
                         proof = _build_false_elim(manager, current_goal, false_proof)
                         manager.close_goal(proof)
                         return

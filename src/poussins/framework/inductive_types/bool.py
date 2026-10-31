@@ -8,38 +8,38 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ...ast import EConst
-from ...environment.library import BoolDeclaration
-from ..inductive import Inductive
+from ...environment import const
+from ...environment.library import BOOL_IND_SPEC
+from ..environment import STANDARD_ENV
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=BOOL_IND_SPEC)
 class Bool(Inductive):
     """Immutable wrapper for boolean expressions."""
 
-    TYPE_NAME: ClassVar[str] = (
-        BoolDeclaration.BOOL_DECLARATION.declaration.name
-    )
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        BoolDeclaration.BOOL_DECLARATION.declaration.level_params
-    )
+    TRUE_IDX: ClassVar[int] = 0
+    FALSE_IDX: ClassVar[int] = 1
 
     @classmethod
     def true(cls) -> Bool:
         """Construct the true boolean value."""
+        env = cls.env()
         return cls(
-            EConst(
-                name=BoolDeclaration.BOOL_TRUE_DECLARATION.declaration.name,
-                levels=cls.levels()
+            const(
+                env=env if env is not None else STANDARD_ENV,
+                name=cls.CONSTRUCTORS[cls.TRUE_IDX][0],
             )
         )
 
     @classmethod
     def false(cls) -> Bool:
         """Construct the false boolean value."""
+        env = cls.env()
         return cls(
-            EConst(
-                name=BoolDeclaration.BOOL_FALSE_DECLARATION.declaration.name,
-                levels=cls.levels()
+            const(
+                env=env if env is not None else STANDARD_ENV,
+                name=cls.CONSTRUCTORS[cls.FALSE_IDX][0],
             )
         )

@@ -4,19 +4,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, app
-from ...environment.library import SumDeclaration
-from ..inductive import Inductive
+from ...ast import Expr, app
+from ...environment import const
+from ...environment.library import SUM_IND_SPEC
+from ..environment import STANDARD_ENV
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=SUM_IND_SPEC)
 class Sum(Inductive):
     """Immutable wrapper for sum-type expressions."""
 
-    TYPE_NAME: ClassVar[str] = SumDeclaration.SUM_DECLARATION.declaration.name
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        SumDeclaration.SUM_DECLARATION.declaration.level_params
-    )
+    INL_IDX: ClassVar[int] = 0
+    INR_IDX: ClassVar[int] = 1
 
     def __class_getitem__(
         cls,
@@ -25,12 +26,12 @@ class Sum(Inductive):
         """Return a new class representing a sum of two types."""
         left_item, right_item = item
         left_expr = (
-            left_item.type_expr()
+            left_item.type_ref()
             if isinstance(left_item, type) and issubclass(left_item, Inductive)
             else left_item
         )
         right_expr = (
-            right_item.type_expr()
+            right_item.type_ref()
             if isinstance(right_item, type) and issubclass(right_item, Inductive)
             else right_item
         )
@@ -39,16 +40,17 @@ class Sum(Inductive):
         class BoundSum(cls):
             @override
             @classmethod
-            def type_expr(cls) -> Expr:
-                return app(Sum.type_expr(), left_expr, right_expr)
+            def type_ref(cls) -> Expr:
+                return app(Sum.type_ref(), left_expr, right_expr)
 
             @classmethod
             def inl(cls, value: Inductive | Expr) -> BoundSum:
+                env = cls.env()
                 return cls(
                     app(
-                        EConst(
-                            name=SumDeclaration.SUM_INL_DECLARATION.declaration.name,
-                            levels=cls.levels(),
+                        const(
+                            env=env if env is not None else STANDARD_ENV,
+                            name=SUM_IND_SPEC.constructors[cls.INL_IDX][0],
                         ),
                         left_expr,
                         right_expr,
@@ -58,11 +60,12 @@ class Sum(Inductive):
 
             @classmethod
             def inr(cls, value: Inductive | Expr) -> BoundSum:
+                env = cls.env()
                 return cls(
                     app(
-                        EConst(
-                            name=SumDeclaration.SUM_INR_DECLARATION.declaration.name,
-                            levels=cls.levels(),
+                        const(
+                            env=env if env is not None else STANDARD_ENV,
+                            name=SUM_IND_SPEC.constructors[cls.INR_IDX][0],
                         ),
                         left_expr,
                         right_expr,

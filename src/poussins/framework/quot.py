@@ -4,11 +4,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from poussins.environment.library.equality import EqualityDeclaration
-
-from ..ast import EConst, EPi, EVar, Expr, UnivLevelParam, app, univ_levels
-from ..environment.library import QuotDeclaration
+from ..ast import EPi, EVar, Expr, app
+from ..environment import Environment, QuotientDeclaration, const
+from ..environment.library import (
+    EQ_IND_SPEC,
+    QUOT_DECLARATION,
+    QUOT_IND_DECLARATION,
+    QUOT_LIFT_DECLARATION,
+    QUOT_MK_DECLARATION,
+    QUOT_SOUND_DECLARATION,
+)
+from .declaration import declare_quot
 from .definition import Definition
+from .environment import STANDARD_ENV
 from .inductive import Inductive
 
 
@@ -23,6 +31,7 @@ class Quot:
         Quot[rel].ind(motive, h, q)
     """
 
+    env: ClassVar[Environment | None] = None
     value: Expr
 
     def __init__(self, a: Quot | Inductive | Expr) -> None:
@@ -30,25 +39,21 @@ class Quot:
         raise NotImplementedError
 
     @classmethod
-    def levels(cls) -> tuple[UnivLevelParam, ...]:
-        """Return the universe levels of this quotient type."""
-        return tuple(
-            UnivLevelParam(param) for param
-            in QuotDeclaration.QUOT_DECLARATION.declaration.level_params
-        )
-
-    @classmethod
-    def type_expr(cls) -> Expr:
+    def type_ref(cls) -> Expr:
         """Return the type expression of the quotient type."""
-        return EConst(
-            name=QuotDeclaration.QUOT_DECLARATION.declaration.name,
-            levels=cls.levels()
-        )
+        return const(STANDARD_ENV, QUOT_DECLARATION.name)
 
     @property
     def type(self) -> Expr:
         """Return the type expression of the quotient type."""
-        return self.type_expr()
+        return self.type_ref()
+
+    @classmethod
+    def declare(cls, env: Environment) -> QuotientDeclaration:
+        """Declare the quotient type in the environment."""
+        declaration = declare_quot(env)
+        cls.env = env
+        return declaration
 
     @classmethod
     def rel(cls) -> Expr:
@@ -140,12 +145,8 @@ class Quot:
 
             def __init__(self, a: Quot | Inductive | Expr) -> None:
                 """Construct (Quot.mk .{u} A rel a) upon instantiation."""
-                decl = QuotDeclaration.QUOT_MK_DECLARATION.declaration
                 expr = app(
-                    EConst(
-                        name=decl.name,
-                        levels=univ_levels(decl.level_params),
-                    ),
+                    const(STANDARD_ENV, QUOT_MK_DECLARATION.name),
                     BoundQuot.TYPE_A,
                     rel_expr,
                     self._to_expr(a),
@@ -154,14 +155,10 @@ class Quot:
 
             @override
             @classmethod
-            def type_expr(cls) -> Expr:
+            def type_ref(cls) -> Expr:
                 """Return the type expression of the quotient type."""
-                decl = QuotDeclaration.QUOT_DECLARATION.declaration
                 return app(
-                    EConst(
-                        name=decl.name,
-                        levels=univ_levels(decl.level_params),
-                    ),
+                    const(STANDARD_ENV, QUOT_DECLARATION.name),
                     BoundQuot.TYPE_A,
                     rel_expr,
                 )
@@ -186,16 +183,10 @@ class Quot:
                 h: Expr | str | None = None,
             ) -> Expr:
                 """Construct (Quot.sound .{u} A r a b h)."""
-                decl = QuotDeclaration.QUOT_SOUND_DECLARATION.declaration
+                decl = QUOT_SOUND_DECLARATION
                 if h is None:
                     return app(
-                        EConst(
-                            name=decl.name,
-                            levels=tuple(
-                                UnivLevelParam(param) for param
-                                in decl.level_params
-                            )
-                        ),
+                        const(STANDARD_ENV, decl.name),
                         type_a,
                         rel_expr,
                         cls._to_expr(a),
@@ -203,13 +194,7 @@ class Quot:
                     )
                 else:
                     return app(
-                        EConst(
-                            name=decl.name,
-                            levels=tuple(
-                                UnivLevelParam(param) for param
-                                in decl.level_params
-                            )
-                        ),
+                        const(STANDARD_ENV, decl.name),
                         type_a,
                         rel_expr,
                         cls._to_expr(a),
@@ -227,16 +212,10 @@ class Quot:
                 q: Quot | Inductive | Expr,
             ) -> Expr:
                 """Construct (Quot.lift .{u, v} A r B f compat q)."""
-                decl = QuotDeclaration.QUOT_LIFT_DECLARATION.declaration
+                decl = QUOT_LIFT_DECLARATION
                 f_expr = Definition.to_expr(f)
                 return app(
-                    EConst(
-                        name=decl.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param
-                            in decl.level_params
-                        )
-                    ),
+                    const(STANDARD_ENV, decl.name),
                     type_a,
                     rel_expr,
                     type_b,
@@ -254,15 +233,9 @@ class Quot:
                 q: Quot | Inductive | Expr,
             ) -> Expr:
                 """Construct (Quot.ind .{u} A r motive h q)."""
-                decl = QuotDeclaration.QUOT_IND_DECLARATION.declaration
+                decl = QUOT_IND_DECLARATION
                 return app(
-                    EConst(
-                        name=decl.name,
-                        levels=tuple(
-                            UnivLevelParam(param) for param
-                            in decl.level_params
-                        )
-                    ),
+                    const(STANDARD_ENV, decl.name),
                     type_a,
                     rel_expr,
                     motive,
@@ -278,13 +251,12 @@ class Quot:
                 right: Quot | Expr,
             ) -> Expr:
                 """Construct (Quot.eq .{u} A r left right)."""
-                decl = EqualityDeclaration.EQ_DECLARATION.declaration
                 return app(
-                    EConst(
-                        name=decl.name,
-                        levels=univ_levels(decl.level_params)
+                    const(
+                        cls.env if cls.env is not None else STANDARD_ENV,
+                        EQ_IND_SPEC.name
                     ),
-                    cls.type_expr(),
+                    cls.type_ref(),
                     cls.to_expr(left),
                     cls.to_expr(right),
                 )

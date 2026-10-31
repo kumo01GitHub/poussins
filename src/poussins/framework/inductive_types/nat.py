@@ -8,19 +8,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ...ast import EApp, EConst, Expr
-from ...environment.library import NatDeclaration
-from ..inductive import Inductive
+from ...ast import Expr, app
+from ...environment import const
+from ...environment.library import (
+    NAT_ADD_DEF_SPEC,
+    NAT_DIV_DEF_SPEC,
+    NAT_IND_SPEC,
+    NAT_MOD_DEF_SPEC,
+    NAT_MUL_DEF_SPEC,
+    NAT_SUB_DEF_SPEC,
+)
+from ..environment import STANDARD_ENV
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=NAT_IND_SPEC)
 class Nat(Inductive):
     """Immutable wrapper for natural number expressions."""
 
-    TYPE_NAME: ClassVar[str] = NatDeclaration.NAT_DECLARATION.declaration.name
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        NatDeclaration.NAT_DECLARATION.declaration.level_params
-    )
+    ZERO_IDX: ClassVar[int] = 0
+    SUCC_IDX: ClassVar[int] = 1
 
     def __init__(self, value: int | Expr | str) -> None:
         """Initialize a natural number."""
@@ -37,21 +45,23 @@ class Nat(Inductive):
     @classmethod
     def zero(cls) -> Nat:
         """Construct zero."""
+        env = cls.env()
         return cls(
-            EConst(
-                NatDeclaration.NAT_ZERO_DECLARATION.declaration.name,
-                levels=cls.levels()
+            const(
+                env=env if env is not None else STANDARD_ENV,
+                name=NAT_IND_SPEC.constructors[cls.ZERO_IDX][0],
             )
         )
 
     @classmethod
     def succ(cls, n: Nat | Expr) -> Nat:
         """Construct the successor of a natural number."""
+        env = cls.env()
         return cls(
-            EApp(
-                EConst(
-                    NatDeclaration.NAT_SUCC_DECLARATION.declaration.name,
-                    levels=cls.levels()
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_IND_SPEC.constructors[cls.SUCC_IDX][0],
                 ),
                 cls.to_expr(n)
             )
@@ -60,31 +70,29 @@ class Nat(Inductive):
     @classmethod
     def add(cls, n: Nat | Expr, m: Nat | Expr) -> Nat:
         """Construct Nat.add n m."""
+        env = cls.env()
         return cls(
-            EApp(
-                EApp(
-                    EConst(
-                        name=NatDeclaration.NAT_ADD_DECLARATION.declaration.name,
-                        levels=cls.levels(),
-                    ),
-                    cls.to_expr(n)
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_ADD_DEF_SPEC.name,
                 ),
-                cls.to_expr(m)
+                cls.to_expr(n),
+                cls.to_expr(m),
             )
         )
 
     @classmethod
     def sub(cls, n: Nat | Expr, m: Nat | Expr) -> Nat:
         """Construct Nat.sub n m."""
+        env = cls.env()
         return cls(
-            EApp(
-                EApp(
-                    EConst(
-                        name=NatDeclaration.NAT_SUB_DECLARATION.declaration.name,
-                        levels=cls.levels(),
-                    ),
-                    cls.to_expr(n),
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_SUB_DEF_SPEC.name,
                 ),
+                cls.to_expr(n),
                 cls.to_expr(m),
             )
         )
@@ -92,15 +100,14 @@ class Nat(Inductive):
     @classmethod
     def mul(cls, n: Nat | Expr, m: Nat | Expr) -> Nat:
         """Construct Nat.mul n m."""
+        env = cls.env()
         return cls(
-            EApp(
-                EApp(
-                    EConst(
-                        name=NatDeclaration.NAT_MUL_DECLARATION.declaration.name,
-                        levels=cls.levels(),
-                    ),
-                    cls.to_expr(n),
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_MUL_DEF_SPEC.name,
                 ),
+                cls.to_expr(n),
                 cls.to_expr(m),
             )
         )
@@ -108,15 +115,14 @@ class Nat(Inductive):
     @classmethod
     def div(cls, n: Nat | Expr, m: Nat | Expr) -> Nat:
         """Construct Nat.div n m."""
+        env = cls.env()
         return cls(
-            EApp(
-                EApp(
-                    EConst(
-                        name=NatDeclaration.NAT_DIV_DECLARATION.declaration.name,
-                        levels=cls.levels(),
-                    ),
-                    cls.to_expr(n),
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_DIV_DEF_SPEC.name,
                 ),
+                cls.to_expr(n),
                 cls.to_expr(m),
             )
         )
@@ -124,15 +130,14 @@ class Nat(Inductive):
     @classmethod
     def mod(cls, n: Nat | Expr, m: Nat | Expr) -> Nat:
         """Construct Nat.mod n m."""
+        env = cls.env()
         return cls(
-            EApp(
-                EApp(
-                    EConst(
-                        name=NatDeclaration.NAT_MOD_DECLARATION.declaration.name,
-                        levels=cls.levels(),
-                    ),
-                    cls.to_expr(n),
+            app(
+                const(
+                    env=env if env is not None else STANDARD_ENV,
+                    name=NAT_MOD_DEF_SPEC.name,
                 ),
+                cls.to_expr(n),
                 cls.to_expr(m),
             )
         )

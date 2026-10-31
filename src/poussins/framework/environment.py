@@ -1,26 +1,33 @@
 """Environment factories."""
 from ..environment import Environment
 from ..environment.library import (
-    BoolDeclaration,
-    EmptyDeclaration,
-    EqualityDeclaration,
-    FinDeclaration,
-    ListDeclaration,
-    LogicDeclaration,
-    NatDeclaration,
-    OptionDeclaration,
-    ProdDeclaration,
-    QuotDeclaration,
-    SigmaDeclaration,
-    SumDeclaration,
-    UnitDeclaration,
-    VectorDeclaration,
+    AND_IND_SPEC,
+    BOOL_IND_SPEC,
+    EMPTY_IND_SPEC,
+    EQ_IND_SPEC,
+    EQ_SYMM_DEF_SPEC,
+    EQ_TRANS_DEF_SPEC,
+    EXISTS_IND_SPEC,
+    FALSE_IND_SPEC,
+    FIN_IND_SPEC,
+    LIST_IND_SPEC,
+    NAT_ADD_DEF_SPEC,
+    NAT_DIV_DEF_SPEC,
+    NAT_IND_SPEC,
+    NAT_MOD_DEF_SPEC,
+    NAT_MUL_DEF_SPEC,
+    NAT_SUB_DEF_SPEC,
+    NOT_DEF_SPEC,
+    OPTION_IND_SPEC,
+    OR_IND_SPEC,
+    PROD_IND_SPEC,
+    SIGMA_IND_SPEC,
+    SUM_IND_SPEC,
+    TRUE_IND_SPEC,
+    UNIT_IND_SPEC,
+    VECTOR_IND_SPEC,
 )
-from ..kernel import (
-    register_definition,
-    register_inductive,
-    register_quotient,
-)
+from .declaration import declare_definition, declare_inductive, declare_quot
 
 
 def create_environment() -> Environment:
@@ -33,239 +40,88 @@ def create_standard_environment() -> Environment:
     env = Environment()
 
     # ------------------------------------------------------------------
-    # Empty
-    # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        EmptyDeclaration.EMPTY_DECLARATION.value,
-        (),
-        EmptyDeclaration.EMPTY_REC_DECLARATION.value,
-    )
-
-    # ------------------------------------------------------------------
-    # Unit
-    # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        UnitDeclaration.UNIT_DECLARATION.value,
-        (
-            UnitDeclaration.UNIT_UNIT_DECLARATION.value,
-        ),
-        UnitDeclaration.UNIT_REC_DECLARATION.value,
-    )
-
-    # ------------------------------------------------------------------
-    # Boolean
-    # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        BoolDeclaration.BOOL_DECLARATION.value,
-        (
-            BoolDeclaration.BOOL_TRUE_DECLARATION.value,
-            BoolDeclaration.BOOL_FALSE_DECLARATION.value,
-        ),
-        BoolDeclaration.BOOL_REC_DECLARATION.value,
-    )
-
-    # ------------------------------------------------------------------
     # Equality
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        EqualityDeclaration.EQ_DECLARATION.value,
-        (
-            EqualityDeclaration.EQ_REFL_DECLARATION.value,
-        ),
-        EqualityDeclaration.EQ_REC_DECLARATION.value,
-    )
-    register_definition(
-        env,
-        EqualityDeclaration.EQ_SYMM_DECLARATION.value
-    )
-    register_definition(
-        env,
-        EqualityDeclaration.EQ_TRANS_DECLARATION.value
-    )
+    declare_inductive(env, EQ_IND_SPEC)
+    declare_definition(env, EQ_SYMM_DEF_SPEC)
+    declare_definition(env, EQ_TRANS_DEF_SPEC)
 
     # ------------------------------------------------------------------
     # Logic
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        LogicDeclaration.TRUE_DECLARATION.value,
-        (
-            LogicDeclaration.TRUE_INTRO_DECLARATION.value,
-        ),
-        LogicDeclaration.TRUE_REC_DECLARATION.value,
-    )
-    register_inductive(
-        env,
-        LogicDeclaration.FALSE_DECLARATION.value,
-        (),
-        LogicDeclaration.FALSE_REC_DECLARATION.value,
-    )
-    register_inductive(
-        env,
-        LogicDeclaration.AND_DECLARATION.value,
-        (
-            LogicDeclaration.AND_INTRO_DECLARATION.value,
-        ),
-        LogicDeclaration.AND_REC_DECLARATION.value,
-    )
-    register_inductive(
-        env,
-        LogicDeclaration.OR_DECLARATION.value,
-        (
-            LogicDeclaration.OR_INL_DECLARATION.value,
-            LogicDeclaration.OR_INR_DECLARATION.value,
-        ),
-        LogicDeclaration.OR_REC_DECLARATION.value,
-    )
-    register_definition(
-        env,
-        LogicDeclaration.NOT_DECLARATION.value
-    )
-    register_inductive(
-        env,
-        LogicDeclaration.EXISTS_DECLARATION.value,
-        (
-            LogicDeclaration.EXISTS_INTRO_DECLARATION.value,
-        ),
-        LogicDeclaration.EXISTS_REC_DECLARATION.value,
-    )
+    declare_inductive(env, TRUE_IND_SPEC)
+    declare_inductive(env, FALSE_IND_SPEC)
+    declare_inductive(env, AND_IND_SPEC)
+    declare_inductive(env, OR_IND_SPEC)
+    declare_definition(env, NOT_DEF_SPEC)
+    declare_inductive(env, EXISTS_IND_SPEC)
+
+    # ------------------------------------------------------------------
+    # Empty
+    # ------------------------------------------------------------------
+    declare_inductive(env, EMPTY_IND_SPEC)
+
+    # ------------------------------------------------------------------
+    # Unit
+    # ------------------------------------------------------------------
+    declare_inductive(env, UNIT_IND_SPEC)
+
+    # ------------------------------------------------------------------
+    # Boolean
+    # ------------------------------------------------------------------
+    declare_inductive(env, BOOL_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Natural numbers
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        NatDeclaration.NAT_DECLARATION.value,
-        (
-            NatDeclaration.NAT_ZERO_DECLARATION.value,
-            NatDeclaration.NAT_SUCC_DECLARATION.value,
-        ),
-        NatDeclaration.NAT_REC_DECLARATION.value,
-    )
-    register_definition(
-        env,
-        NatDeclaration.NAT_ADD_DECLARATION.value
-    )
-    register_definition(
-        env,
-        NatDeclaration.NAT_SUB_DECLARATION.value
-    )
-    register_definition(
-        env,
-        NatDeclaration.NAT_MUL_DECLARATION.value
-    )
-    register_definition(
-        env,
-        NatDeclaration.NAT_DIV_DECLARATION.value
-    )
-    register_definition(
-        env,
-        NatDeclaration.NAT_MOD_DECLARATION.value
-    )
+    declare_inductive(env, NAT_IND_SPEC)
+    declare_definition(env, NAT_ADD_DEF_SPEC)
+    declare_definition(env, NAT_SUB_DEF_SPEC)
+    declare_definition(env, NAT_MUL_DEF_SPEC)
+    declare_definition(env, NAT_DIV_DEF_SPEC)
+    declare_definition(env, NAT_MOD_DEF_SPEC)
 
     # ------------------------------------------------------------------
     # List
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        ListDeclaration.LIST_DECLARATION.value,
-        (
-            ListDeclaration.LIST_NIL_DECLARATION.value,
-            ListDeclaration.LIST_CONS_DECLARATION.value,
-        ),
-        ListDeclaration.LIST_REC_DECLARATION.value,
-    )
+    declare_inductive(env, LIST_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Vector
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        VectorDeclaration.VECTOR_DECLARATION.value,
-        (
-            VectorDeclaration.VECTOR_NIL_DECLARATION.value,
-            VectorDeclaration.VECTOR_CONS_DECLARATION.value,
-        ),
-        VectorDeclaration.VECTOR_REC_DECLARATION.value,
-    )
+    declare_inductive(env, VECTOR_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Finite
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        FinDeclaration.FIN_DECLARATION.value,
-        (
-            FinDeclaration.FIN_ZERO_DECLARATION.value,
-            FinDeclaration.FIN_SUCC_DECLARATION.value,
-        ),
-        FinDeclaration.FIN_REC_DECLARATION.value,
-    )
+    declare_inductive(env, FIN_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Product
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        ProdDeclaration.PROD_DECLARATION.value,
-        (
-            ProdDeclaration.PROD_MK_DECLARATION.value,
-        ),
-        ProdDeclaration.PROD_REC_DECLARATION.value,
-    )
+    declare_inductive(env, PROD_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Sigma
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        SigmaDeclaration.SIGMA_DECLARATION.value,
-        (
-            SigmaDeclaration.SIGMA_MK_DECLARATION.value,
-        ),
-        SigmaDeclaration.SIGMA_REC_DECLARATION.value,
-    )
+    declare_inductive(env, SIGMA_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Sum
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        SumDeclaration.SUM_DECLARATION.value,
-        (
-            SumDeclaration.SUM_INL_DECLARATION.value,
-            SumDeclaration.SUM_INR_DECLARATION.value,
-        ),
-        SumDeclaration.SUM_REC_DECLARATION.value,
-    )
+    declare_inductive(env, SUM_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Option
     # ------------------------------------------------------------------
-    register_inductive(
-        env,
-        OptionDeclaration.OPTION_DECLARATION.value,
-        (
-            OptionDeclaration.OPTION_NONE_DECLARATION.value,
-            OptionDeclaration.OPTION_SOME_DECLARATION.value,
-        ),
-        OptionDeclaration.OPTION_REC_DECLARATION.value,
-    )
+    declare_inductive(env, OPTION_IND_SPEC)
 
     # ------------------------------------------------------------------
     # Quotient
     # ------------------------------------------------------------------
-    register_quotient(
-        env,
-        QuotDeclaration.QUOT_DECLARATION.value,
-        QuotDeclaration.QUOT_MK_DECLARATION.value,
-        QuotDeclaration.QUOT_LIFT_DECLARATION.value,
-        QuotDeclaration.QUOT_IND_DECLARATION.value,
-        QuotDeclaration.QUOT_SOUND_DECLARATION.value,
-    )
+    declare_quot(env)
 
     return env
+
+
+STANDARD_ENV = create_standard_environment()

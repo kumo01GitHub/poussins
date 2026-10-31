@@ -1,11 +1,10 @@
 """Definition in the framework."""
 from __future__ import annotations
 
-from collections.abc import Sequence
 from dataclasses import dataclass
 
 from ..ast import Expr
-from ..environment import DefinitionDeclaration, Environment
+from ..environment import DefinitionDeclaration, DefinitionSpec, Environment
 from .declaration import declare_definition
 
 
@@ -13,38 +12,33 @@ from .declaration import declare_definition
 class Definition:
     """Represent a definition in the framework."""
 
-    env: Environment
     name: str
     type: Expr
     value: Expr
-    level_params: tuple[str, ...]
 
     def __init__(
         self,
-        env: Environment,
         name: str,
         type_: Expr,
         value: Expr,
-        level_params: Sequence[str] = (),
     ) -> None:
         """Create a definition."""
-        object.__setattr__(self, "env", env)
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "type", type_)
         object.__setattr__(self, "value", value)
-        object.__setattr__(self, "level_params", tuple(level_params))
 
     @staticmethod
     def to_expr(value: Definition | Expr) -> Expr:
         """Return the underlying expression."""
         return value.value if isinstance(value, Definition) else value
 
-    def declare(self) -> DefinitionDeclaration:
+    def declare(self, env: Environment) -> DefinitionDeclaration:
         """Declare the definition in the environment."""
         return declare_definition(
-            env=self.env,
-            name=self.name,
-            type_=self.type,
-            value=self.value,
-            level_params=self.level_params,
+            env=env,
+            spec=DefinitionSpec(
+                name=self.name,
+                type=self.type,
+                value=self.value,
+            ),
         )

@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 from ..ast import ELam, EMetaVar, EVar, Expr, app, substitute_expr
-from ..environment.library import EqualityDeclaration
+from ..environment import const
+from ..environment.library import EQ_IND_SPEC, EQ_SYMM_DEF_SPEC
 from ..errors import TacticError
 from ..kernel import ProofManager, infer_type, whnf
 from ..kernel.goal import Goal
 from .helpers import (
-    const_from_decl,
     parse_eq_app,
     require_current_goal,
     requires_active_goal,
@@ -80,7 +80,7 @@ def rewrite(
     h_var = "_h"
 
     eq_symm_term = app(
-        const_from_decl(EqualityDeclaration.EQ_SYMM_DECLARATION.declaration, manager),
+        const(env=manager.env, name=EQ_SYMM_DEF_SPEC.name),
         eq_type,
         from_expr,
         to_expr,
@@ -98,17 +98,14 @@ def rewrite(
     )
 
     eq_lhs_y = app(
-        const_from_decl(EqualityDeclaration.EQ_DECLARATION.declaration, manager),
+        const(env=manager.env, name=EQ_IND_SPEC.name),
         eq_type,
         to_expr,
         EVar(y_var),
     )
 
     assignment = app(
-        const_from_decl(
-            manager.env.get_recs(EqualityDeclaration.EQ_DECLARATION.declaration.name)[0],
-            manager
-        ),
+        const(env=manager.env, name=manager.env.get_recs(EQ_IND_SPEC.name)[0].name),
         eq_type,
         to_expr,
         ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),

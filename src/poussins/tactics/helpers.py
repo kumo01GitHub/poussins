@@ -5,9 +5,8 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Concatenate
 
-from ..ast import EConst, Expr, UnivLevelParam, count_pi_binders, decompose_app
-from ..environment import Declaration
-from ..environment.library import EqualityDeclaration
+from ..ast import EConst, Expr, count_pi_binders, decompose_app
+from ..environment.library import EQ_IND_SPEC
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 
@@ -71,24 +70,10 @@ def parse_eq_app(expr: Expr) -> tuple[Expr, Expr, Expr] | None:
     if not isinstance(head, EConst):
         return None
     if (
-        head.name != EqualityDeclaration.EQ_DECLARATION.declaration.name
+        head.name != EQ_IND_SPEC.name
         or len(args) != count_pi_binders(
-            EqualityDeclaration.EQ_DECLARATION.declaration.type
+            EQ_IND_SPEC.type
         )
     ):
         return None
     return args[0], args[1], args[2]
-
-
-def const_from_decl(decl: Declaration, manager: ProofManager) -> EConst:
-    """Get the constant expression corresponding to a declaration."""
-    decl_name = decl.name
-    if manager.env.get(decl_name) is None:
-        raise TacticError(
-            f"Required declaration '{decl_name}' is not present in the environment."
-        )
-
-    return EConst(
-            name=decl.name,
-            levels=tuple(UnivLevelParam(param) for param in decl.level_params),
-        )

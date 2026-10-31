@@ -1,10 +1,10 @@
 """Existential introduction tactic."""
 from ..ast import EApp, EConst, EMetaVar, Expr, app
-from ..environment.library import LogicDeclaration
+from ..environment import const
+from ..environment.library import EXISTS_IND_SPEC
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
-    const_from_decl,
     require_current_goal,
     requires_active_goal,
 )
@@ -24,7 +24,7 @@ def use(manager: ProofManager, term: Expr) -> None:
         isinstance(head, EApp)
         and isinstance(head.fn, EApp)
         and isinstance(head.fn.fn, EConst)
-        and head.fn.fn.name == LogicDeclaration.EXISTS_DECLARATION.declaration.name
+        and head.fn.fn.name == EXISTS_IND_SPEC.name
     ):
         raise TacticError("Goal is not an existential statement (Exists).")
 
@@ -36,9 +36,9 @@ def use(manager: ProofManager, term: Expr) -> None:
 
     manager.refine_goal(
         app(
-            const_from_decl(
-                LogicDeclaration.EXISTS_INTRO_DECLARATION.declaration,
-                manager
+            const(
+                env=manager.env,
+                name=EXISTS_IND_SPEC.constructors[0][0],
             ),
             head.fn.arg,
             head.arg,

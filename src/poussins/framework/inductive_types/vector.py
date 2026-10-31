@@ -4,19 +4,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ...ast import EConst, Expr, app
-from ...environment.library import VectorDeclaration
-from ..inductive import Inductive
+from ...ast import Expr, app
+from ...environment import const
+from ...environment.library import VECTOR_IND_SPEC
+from ..environment import STANDARD_ENV
+from ..inductive import Inductive, inductive_type
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=VECTOR_IND_SPEC)
 class Vector(Inductive):
     """Immutable wrapper for length-indexed vector expressions."""
 
-    TYPE_NAME: ClassVar[str] = VectorDeclaration.VECTOR_DECLARATION.declaration.name
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = (
-        VectorDeclaration.VECTOR_DECLARATION.declaration.level_params
-    )
+    NIL_IDX: ClassVar[int] = 0
+    CONS_IDX: ClassVar[int] = 1
 
     def __class_getitem__(
         cls,
@@ -25,7 +26,7 @@ class Vector(Inductive):
         """Return a new class representing a vector of given item type and length."""
         elem_item, length_item = item
         elem_expr = (
-            elem_item.type_expr()
+            elem_item.type_ref()
             if isinstance(elem_item, type) and issubclass(elem_item, Inductive)
             else elem_item
         )
@@ -35,16 +36,17 @@ class Vector(Inductive):
         class BoundVector(cls):
             @override
             @classmethod
-            def type_expr(cls) -> Expr:
-                return app(Vector.type_expr(), elem_expr, length_expr)
+            def type_ref(cls) -> Expr:
+                return app(Vector.type_ref(), elem_expr, length_expr)
 
             @classmethod
             def nil(cls) -> BoundVector:
+                env = cls.env()
                 return cls(
                     app(
-                        EConst(
-                            name=VectorDeclaration.VECTOR_NIL_DECLARATION.declaration.name,
-                            levels=cls.levels(),
+                        const(
+                            env=env if env is not None else STANDARD_ENV,
+                            name=VECTOR_IND_SPEC.constructors[cls.NIL_IDX][0],
                         ),
                         elem_expr,
                     )
@@ -57,11 +59,12 @@ class Vector(Inductive):
                 head: Inductive | Expr,
                 tail: BoundVector | Expr,
             ) -> BoundVector:
+                env = cls.env()
                 return cls(
                     app(
-                        EConst(
-                            name=VectorDeclaration.VECTOR_CONS_DECLARATION.declaration.name,
-                            levels=cls.levels(),
+                        const(
+                            env=env if env is not None else STANDARD_ENV,
+                            name=VECTOR_IND_SPEC.constructors[cls.CONS_IDX][0],
                         ),
                         elem_expr,
                         cls.to_expr(length),

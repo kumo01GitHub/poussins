@@ -14,13 +14,13 @@ from .expr import (
     EVar,
     Expr,
 )
-from .universe import UnivLevel, UnivLevelParam, UnivLevelSucc, UnivLevelZero
+from .universe import UnivLevel, UnivLevelIMax, UnivLevelMax, UnivLevelParam, UnivLevelSucc, UnivLevelZero
 
 
 # ------------------------------------------------------------------
 # Expression Builders
 # ------------------------------------------------------------------
-def univ_level(level: int | str) -> UnivLevel:
+def univ_level(level: int | str | UnivLevel) -> UnivLevel:
     """Build a universe level."""
     if isinstance(level, int):
         if level < 0:
@@ -32,8 +32,10 @@ def univ_level(level: int | str) -> UnivLevel:
             return univ_level
     elif isinstance(level, str):
         return UnivLevelParam(level)
+    else:
+        return level
 
-def univ_levels(levels: Sequence[int | str]) -> tuple[UnivLevel, ...]:
+def univ_levels(levels: Sequence[int | str | UnivLevel]) -> tuple[UnivLevel, ...]:
     """Build a tuple of universe levels."""
     return tuple(univ_level(lv) for lv in levels)
 
@@ -44,31 +46,34 @@ def sort(level: int | str | UnivLevel) -> Expr:
     else:
         return ESort(level=univ_level(level))
 
-def app(fn: Expr, *args: Expr) -> Expr:
+def app(fn: Expr | str, *args: Expr | str) -> Expr:
     """Build a left-associated application chain from a head and arguments."""
-    result = fn
+    result = fn if isinstance(fn, Expr) else EVar(fn)
     for arg in args:
-        result = EApp(result, arg)
+        result = EApp(
+            fn=result,
+            arg=arg if isinstance(arg, Expr) else EVar(arg)
+        )
     return result
 
 def lam(
-    binders: Sequence[tuple[str, Expr]],
-    body: Expr,
+    binders: Sequence[tuple[str, Expr | str]],
+    body: Expr | str,
 ) -> Expr:
     """Build nested lambdas from binders, ending in body."""
-    result = body
+    result = body if isinstance(body, Expr) else EVar(body)
     for var_name, domain in reversed(binders):
-        result = ELam(var_name, domain, result)
+        result = ELam(var_name, domain if isinstance(domain, Expr) else EVar(domain), result)
     return result
 
 def pi(
-    binders: Sequence[tuple[str, Expr]],
-    body: Expr,
+    binders: Sequence[tuple[str, Expr | str]],
+    body: Expr | str,
 ) -> Expr:
     """Build nested Pi types from binders, ending in body."""
-    result = body
+    result = body if isinstance(body, Expr) else EVar(body)
     for var_name, domain in reversed(binders):
-        result = EPi(var_name, domain, result)
+        result = EPi(var_name, domain if isinstance(domain, Expr) else EVar(domain), result)
     return result
 
 def decompose_app(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
@@ -112,8 +117,50 @@ def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
                     _collect(case_expr)
 
     _collect(expr)
+
     return tuple(ordered_levels)
 
+def collect_univ_level_params(expr: Expr, base: Sequence[str] | None = None) -> tuple[str, ...]:
+    """Collect all unique universe level parameters present in the expression."""
+    params: list[str] = list(base) if base is not None else []
+
+    def _collect_from_univ_level(level: UnivLevel) -> None:
+        match level:
+            case UnivLevelParam(name):
+                if name not in params:
+                    params.append(name)
+            case UnivLevelSucc(pred):
+                _collect_from_univ_level(pred)
+            case UnivLevelMax(left, right) | UnivLevelIMax(left, right):
+                _collect_from_univ_level(left)
+                _collect_from_univ_level(right)
+            case _:
+                pass
+
+    def _collect_from_expr(e: Expr) -> None:
+        match e:
+            case ESort(level):
+                _collect_from_univ_level(level)
+            case EConst(_, levels):
+                for lvl in levels:
+                    _collect_from_univ_level(lvl)
+            case EPi(_, domain, body) | ELam(_, domain, body):
+                _collect_from_expr(domain)
+                _collect_from_expr(body)
+            case EApp(fn, arg):
+                _collect_from_expr(fn)
+                _collect_from_expr(arg)
+            case EMatch(_, discriminee, motive, cases):
+                _collect_from_expr(discriminee)
+                _collect_from_expr(motive)
+                for case_expr in cases:
+                    _collect_from_expr(case_expr)
+            case _:
+                pass
+
+    _collect_from_expr(expr)
+
+    return tuple(params)
 
 # ------------------------------------------------------------------
 # Variable Utilities

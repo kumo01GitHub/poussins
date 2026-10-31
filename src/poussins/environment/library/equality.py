@@ -1,459 +1,113 @@
 """Equality declarations."""
 from __future__ import annotations
 
-from enum import Enum
-
 from ...ast import (
-    EApp,
     EConst,
-    ELam,
-    EPi,
-    ESort,
-    EVar,
     Sort,
-    UnivLevelParam,
-    UnivLevelZero,
+    app,
+    lam,
+    pi,
+    sort,
+    univ_levels,
 )
-from ..declaration import (
-    ConstructorDeclaration,
-    Declaration,
-    DefinitionDeclaration,
-    InductiveDeclaration,
-    RecursorDeclaration,
+from ..spec import DefinitionSpec, InductiveSpec
+
+EQ_IND_SPEC = InductiveSpec(
+    name="Eq",
+    type=pi(
+        (
+            ("A", sort("u")),
+            ("x", "A"),
+            ("y", "A"),
+        ),
+        Sort.PROP.sort
+    ),
+    constructors=(
+        (
+            "Eq.refl",
+            pi(
+                (
+                    ("A", sort("u")),
+                    ("x", "A"),
+                ),
+                app(EConst("Eq", univ_levels(("u",))), "A", "x", "x"),
+            )
+        ),
+    ),
 )
 
-
-class EqualityDeclaration(Enum):
-    """Inductive declaration for propositional equality."""
-
-    EQ_DECLARATION = InductiveDeclaration(
-        name="Eq",
-        level_params=("u",),
-        type=EPi(
-            "A",
-            ESort(UnivLevelParam("u")),
-            EPi("x", EVar("A"), EPi("y", EVar("A"), Sort.PROP.sort)),
+EQ_SYMM_DEF_SPEC = DefinitionSpec(
+    name="Eq.symm",
+    type=pi(
+        (
+            ("A", sort("u")),
+            ("x", "A"),
+            ("y", "A"),
+            ("h", app(EConst("Eq", univ_levels(("u",))), "A", "x", "y")),
         ),
-        constructor_names=("Eq.refl",),
-        recursor_names=("Eq.rec",)
-    )
-
-    EQ_REFL_DECLARATION = ConstructorDeclaration(
-        name="Eq.refl",
-        level_params=("u",),
-        inductive_name="Eq",
-        type=EPi(
+        app(EConst("Eq", univ_levels(("u",))), "A", "y", "x"),
+    ),
+    value=lam(
+        (
+            ("A", sort("u")),
+            ("x", "A"),
+            ("y", "A"),
+            ("h", app(EConst("Eq", univ_levels(("u",))), "A", "x", "y")),
+        ),
+        app(
+            EConst("Eq.rec", univ_levels(("u", Sort.PROP.level))),
             "A",
-            ESort(UnivLevelParam("u")),
-            EPi(
-                "x",
-                EVar("A"),
-                EApp(
-                    EApp(
-                        EApp(
-                            EConst("Eq", (UnivLevelParam("u"),)),
-                            EVar("A"),
-                        ),
-                        EVar("x"),
-                    ),
-                    EVar("x"),
+            "x",
+            lam(
+                (
+                    ("z", "A"),
+                    ("_", app(EConst("Eq", univ_levels(("u",))), "A", "x", "z")),
                 ),
+                app(EConst("Eq", univ_levels(("u",))), "A", "z", "x"),
             ),
+            app(EConst("Eq.refl", univ_levels(("u",))), "A", "x"),
+            "y",
+            "h",
         ),
-    )
+    ),
+)
 
-    EQ_REC_DECLARATION = RecursorDeclaration(
-        name="Eq.rec",
-        level_params=("u", "l"),
-        inductive_name="Eq",
-        num_params=2,
-        num_indices=1,
-        num_minors=1,
-        type=EPi(
-            "A",
-            ESort(UnivLevelParam("u")),
-            EPi(
-                "x",
-                EVar("A"),
-                EPi(
-                    "motive",
-                    EPi(
-                        "y",
-                        EVar("A"),
-                        EPi(
-                            "h",
-                            EApp(
-                                EApp(
-                                    EApp(
-                                        EConst("Eq", (UnivLevelParam("u"),)),
-                                        EVar("A"),
-                                    ),
-                                    EVar("x"),
-                                ),
-                                EVar("y"),
-                            ),
-                            ESort(UnivLevelParam("l")),
-                        ),
-                    ),
-                    EPi(
-                        "minor",
-                        EApp(
-                            EApp(
-                                EVar("motive"),
-                                EVar("x"),
-                            ),
-                            EApp(
-                                EApp(
-                                    EConst("Eq.refl", (UnivLevelParam("u"),)),
-                                    EVar("A"),
-                                ),
-                                EVar("x"),
-                            ),
-                        ),
-                        EPi(
-                            "y",
-                            EVar("A"),
-                            EPi(
-                                "h",
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EConst(
-                                                "Eq", (UnivLevelParam("u"),)
-                                            ),
-                                            EVar("A"),
-                                        ),
-                                        EVar("x"),
-                                    ),
-                                    EVar("y"),
-                                ),
-                                EApp(
-                                    EApp(
-                                        EVar("motive"),
-                                        EVar("y"),
-                                    ),
-                                    EVar("h"),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
+EQ_TRANS_DEF_SPEC = DefinitionSpec(
+    name="Eq.trans",
+    type=pi(
+        (
+            ("A", sort("u")),
+            ("x", "A"),
+            ("y", "A"),
+            ("z", "A"),
+            ("h1", app(EConst("Eq", univ_levels(("u",))), "A", "x", "y")),
+            ("h2", app(EConst("Eq", univ_levels(("u",))), "A", "y", "z")),
         ),
-    )
-
-    EQ_SYMM_DECLARATION = DefinitionDeclaration(
-        name="Eq.symm",
-        level_params=("u",),
-        type=EPi(
-            "A",
-            ESort(UnivLevelParam("u")),
-            EPi(
-                "x",
-                EVar("A"),
-                EPi(
-                    "y",
-                    EVar("A"),
-                    EPi(
-                        "h",
-                        EApp(
-                            EApp(
-                                EApp(
-                                    EConst("Eq", (UnivLevelParam("u"),)),
-                                    EVar("A"),
-                                ),
-                                EVar("x"),
-                            ),
-                            EVar("y"),
-                        ),
-                        EApp(
-                            EApp(
-                                EApp(
-                                    EConst("Eq", (UnivLevelParam("u"),)),
-                                    EVar("A"),
-                                ),
-                                EVar("y"),
-                            ),
-                            EVar("x"),
-                        ),
-                    ),
-                ),
-            ),
+        app(EConst("Eq", univ_levels(("u",))), "A", "x", "z"),
+    ),
+    value=lam(
+        (
+            ("A", sort("u")),
+            ("x", "A"),
+            ("y", "A"),
+            ("z", "A"),
+            ("h1", app(EConst("Eq", univ_levels(("u",))), "A", "x", "y")),
+            ("h2", app(EConst("Eq", univ_levels(("u",))), "A", "y", "z")),
         ),
-        value=ELam(
+        app(
+            EConst("Eq.rec", univ_levels(("u", Sort.PROP.level))),
             "A",
-            ESort(UnivLevelParam("u")),
-            ELam(
-                "x",
-                EVar("A"),
-                ELam(
-                    "y",
-                    EVar("A"),
-                    ELam(
-                        "h",
-                        EApp(
-                            EApp(
-                                EApp(
-                                    EConst("Eq", (UnivLevelParam("u"),)),
-                                    EVar("A"),
-                                ),
-                                EVar("x"),
-                            ),
-                            EVar("y"),
-                        ),
-                        EApp(
-                            EApp(
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EApp(
-                                                EConst(
-                                                    "Eq.rec",
-                                                    (
-                                                        UnivLevelParam("u"),
-                                                        UnivLevelZero(),
-                                                    ),
-                                                ),
-                                                EVar("A"),
-                                            ),
-                                            EVar("x"),
-                                        ),
-                                        ELam(
-                                            "z",
-                                            EVar("A"),
-                                            ELam(
-                                                "_",
-                                                EApp(
-                                                    EApp(
-                                                        EApp(
-                                                            EConst(
-                                                                "Eq",
-                                                                (
-                                                                    UnivLevelParam(
-                                                                        "u"
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                            EVar("A"),
-                                                        ),
-                                                        EVar("x"),
-                                                    ),
-                                                    EVar("z"),
-                                                ),
-                                                EApp(
-                                                    EApp(
-                                                        EApp(
-                                                            EConst(
-                                                                "Eq",
-                                                                (
-                                                                    UnivLevelParam(
-                                                                        "u"
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                            EVar("A"),
-                                                        ),
-                                                        EVar("z"),
-                                                    ),
-                                                    EVar("x"),
-                                                ),
-                                            ),
-                                        ),
-                                    ),
-                                    EApp(
-                                        EApp(
-                                            EConst(
-                                                "Eq.refl",
-                                                (UnivLevelParam("u"),),
-                                            ),
-                                            EVar("A"),
-                                        ),
-                                        EVar("x"),
-                                    ),
-                                ),
-                                EVar("y"),
-                            ),
-                            EVar("h"),
-                        ),
-                    ),
+            "y",
+            lam(
+                (
+                    ("z'", "A"),
+                    ("_", app(EConst("Eq", univ_levels(("u",))), "A", "y", "z'")),
                 ),
+                app(EConst("Eq", univ_levels(("u",))), "A", "x", "z'"),
             ),
+            "h1",
+            "z",
+            "h2",
         ),
-    )
-
-    EQ_TRANS_DECLARATION = DefinitionDeclaration(
-        name="Eq.trans",
-        level_params=("u",),
-        type=EPi(
-            "A",
-            ESort(UnivLevelParam("u")),
-            EPi(
-                "x",
-                EVar("A"),
-                EPi(
-                    "y",
-                    EVar("A"),
-                    EPi(
-                        "z",
-                        EVar("A"),
-                        EPi(
-                            "h1",
-                            EApp(
-                                EApp(
-                                    EApp(
-                                        EConst("Eq", (UnivLevelParam("u"),)),
-                                        EVar("A"),
-                                    ),
-                                    EVar("x"),
-                                ),
-                                EVar("y"),
-                            ),
-                            EPi(
-                                "h2",
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EConst(
-                                                "Eq", (UnivLevelParam("u"),)
-                                            ),
-                                            EVar("A"),
-                                        ),
-                                        EVar("y"),
-                                    ),
-                                    EVar("z"),
-                                ),
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EConst(
-                                                "Eq", (UnivLevelParam("u"),)
-                                            ),
-                                            EVar("A"),
-                                        ),
-                                        EVar("x"),
-                                    ),
-                                    EVar("z"),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-        value=ELam(
-            "A",
-            ESort(UnivLevelParam("u")),
-            ELam(
-                "x",
-                EVar("A"),
-                ELam(
-                    "y",
-                    EVar("A"),
-                    ELam(
-                        "z",
-                        EVar("A"),
-                        ELam(
-                            "h1",
-                            EApp(
-                                EApp(
-                                    EApp(
-                                        EConst("Eq", (UnivLevelParam("u"),)),
-                                        EVar("A"),
-                                    ),
-                                    EVar("x"),
-                                ),
-                                EVar("y"),
-                            ),
-                            ELam(
-                                "h2",
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EConst(
-                                                "Eq", (UnivLevelParam("u"),)
-                                            ),
-                                            EVar("A"),
-                                        ),
-                                        EVar("y"),
-                                    ),
-                                    EVar("z"),
-                                ),
-                                EApp(
-                                    EApp(
-                                        EApp(
-                                            EApp(
-                                                EApp(
-                                                    EApp(
-                                                        EConst(
-                                                            "Eq.rec",
-                                                            (
-                                                                UnivLevelParam(
-                                                                    "u"
-                                                                ),
-                                                                UnivLevelZero(),
-                                                            ),
-                                                        ),
-                                                        EVar("A"),
-                                                    ),
-                                                    EVar("y"),
-                                                ),
-                                                ELam(
-                                                    "z'",
-                                                    EVar("A"),
-                                                    ELam(
-                                                        "_",
-                                                        EApp(
-                                                            EApp(
-                                                                EApp(
-                                                                    EConst(
-                                                                        "Eq",
-                                                                        (
-                                                                            UnivLevelParam(
-                                                                                "u"
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                    EVar("A"),
-                                                                ),
-                                                                EVar("y"),
-                                                            ),
-                                                            EVar("z'"),
-                                                        ),
-                                                        EApp(
-                                                            EApp(
-                                                                EApp(
-                                                                    EConst(
-                                                                        "Eq",
-                                                                        (
-                                                                            UnivLevelParam(
-                                                                                "u"
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                    EVar("A"),
-                                                                ),
-                                                                EVar("x"),
-                                                            ),
-                                                            EVar("z'"),
-                                                        ),
-                                                    ),
-                                                ),
-                                            ),
-                                            EVar("h1"),
-                                        ),
-                                        EVar("z"),
-                                    ),
-                                    EVar("h2"),
-                                ),
-                            ),
-                        ),
-                    ),
-                ),
-            ),
-        ),
-    )
-
-    @property
-    def declaration(self) -> Declaration:
-        """Return the underlying declaration."""
-        return self.value
+    ),
+)

@@ -1,15 +1,16 @@
 """Theorem, Lemma, Example: proof-carrying DSL objects."""
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Final, override
+from copy import deepcopy
+from typing import Final
 from uuid import uuid4
 
 from ..ast import Expr
-from ..environment import Environment, TheoremDeclaration
+from ..environment import Environment, TheoremDeclaration, TheoremSpec
 from ..errors import FrameworkError
-from ..kernel import ProofManager, register_theorem, validate_theorem
+from ..kernel import ProofManager
 from ..utils.logging import get_logger
+from .declaration import declare_theorem
 from .prop import Prop
 from .tactic_mixin import TacticMixin
 
@@ -33,12 +34,10 @@ class Theorem(TacticMixin):
         name: str,
         statement: Prop | Expr,
         env: Environment,
-        level_params: Sequence[str] = (),
     ) -> None:
         """Create a theorem."""
         self.name: Final[str] = name
         self.statement: Final[Expr] = Prop.to_expr(statement)
-        self.level_params: Final[tuple[str, ...]] = tuple(level_params)
         self.env: Final[Environment] = env
 
         TacticMixin.__init__(
@@ -67,21 +66,18 @@ class Theorem(TacticMixin):
                 + "Failed to extract a valid proof term."
             )
 
-        declaration = TheoremDeclaration(
-            name=self.name,
-            level_params=self.level_params,
-            type=self.statement,
-            value=proof_term,
-        )
-
-        try:
-            register_theorem(self.env, declaration)
-            self.logger.info(
-                f"Theorem '{self.name}' is successfully proved: {self.statement}"
+        declaration = declare_theorem(
+            self.env,
+            TheoremSpec(
+                name=self.name,
+                statement=self.statement,
+                term=proof_term,
             )
-            self.logger.info(f"==> {proof_term}")
-        except Exception as e:
-            raise FrameworkError("Failed to register theorem") from e
+        )
+        self.logger.info(
+            f"Theorem '{self.name}' is successfully proved: {self.statement}"
+        )
+        self.logger.info(f"==> {proof_term}")
 
         return declaration
 
@@ -105,42 +101,11 @@ class Example(Theorem):
         self,
         statement: Prop | Expr,
         env: Environment,
-        level_params: Sequence[str] = (),
     ) -> None:
         """Create a anonymous theorem."""
         Theorem.__init__(
             self,
             name=f"__example:{uuid4()}__",
-            env=env,
+            env=deepcopy(env),
             statement=statement,
-            level_params=level_params
         )
-
-    @override
-    def qed(self) -> TheoremDeclaration:
-        """Verify the anonymity proof is complete."""
-        if not self.is_closed:
-            raise FrameworkError(
-                "Example cannot be verified: The proof is not finished."
-            )
-
-        if self.manager.current_proof_term is None:
-            raise FrameworkError(
-                "Example internal error: Failed to extract a valid proof term."
-            )
-
-        declaration = TheoremDeclaration(
-            name="__example__",
-            level_params=self.level_params,
-            type=self.statement,
-            value=self.manager.current_proof_term,
-        )
-
-        try:
-            validate_theorem(self.env, declaration)
-            self.logger.info(f"Example is successfully proved: {self.statement}")
-            self.logger.info(f"==> {self.manager.current_proof_term}")
-        except Exception as e:
-            raise FrameworkError("Failed to verify example") from e
-
-        return declaration

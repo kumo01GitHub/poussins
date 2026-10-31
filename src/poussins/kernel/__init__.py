@@ -20,6 +20,7 @@ from .proof_session import ProofSession
 from .proof_state import ProofState
 from .typecheck import infer_metavar_types, infer_type
 from .unification import unify
+from .univ import normalize_univ_level
 
 __all__ = [
     "Goal",
@@ -27,6 +28,7 @@ __all__ = [
     "ProofManager",
     "ProofSession",
     "ProofState",
+    "normalize_univ_level",
     "infer_metavar_types",
     "infer_type",
     "instantiate",
