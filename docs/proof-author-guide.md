@@ -265,7 +265,7 @@ You can easily define and register your own inductive types with `declare_induct
 1. **Register with `declare_inductive`**:
    Registers the inductive type, all constructors, and automatically derives the recursor (`.rec`) with motive, index, and inductive hypotheses.
 2. **Extend `Inductive`**:
-   Subclass `Inductive` and define `TYPE_NAME` and `LEVEL_PARAMS`. `Inductive` inherits `BindableMixin` automatically, which enables quantifier binding in `Prop.forall` and `Prop.exists`, along with `.eq(a, b)`.
+   Subclass `Inductive` and define `TYPE_NAME` and `LEVEL_PARAMS`. `Inductive` inherits `BindableMixin` automatically, which enables quantifier bound variables in `Prop.forall` and `Prop.exists`, along with `.eq(a, b)`.
 
 ### Example: Custom Inductive Type with Induction
 
