@@ -19,12 +19,6 @@ spark = [
     "pyspark>=4",
 ]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.ruff]
 line-length = 120
 
@@ -57,11 +51,15 @@ max-statements = 150
 "tests/**/*.py" = ["S101"]
 
 [build-system]
-requires = ["uv_build>=0.11.9,<0.13.0"]
-build-backend = "uv_build"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[tool.maturin]
+module-name = "poussins._poussins"
 
 [dependency-groups]
 dev = [
+    "maturin>=1.16.0",
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "ruff>=0.15.12",
