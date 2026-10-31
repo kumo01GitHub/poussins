@@ -9,9 +9,9 @@ n, m, k = Nat("n"), Nat("m"), Nat("k")
 # ------------------------------------------------------------------
 # Example 1: Prove that if n = m, then n + k = m + k.
 # ------------------------------------------------------------------
-bindings1 = (n, m, k)
+bound_vars1 = (n, m, k)
 statement1 = Prop.forall(
-    bindings1,
+    bound_vars1,
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(n + k, m + k)),
 )
 example1 = Example(statement1, env)
@@ -26,9 +26,9 @@ example1.qed()
 #------------------------------------------------------------------
 # Example 2: Prove that if n = m, then m = n (symmetry of equality).
 # ------------------------------------------------------------------
-bindings2 = (n, m)
+bound_vars2 = (n, m)
 statement2 = Prop.forall(
-    bindings2,
+    bound_vars2,
     Prop(Nat.eq(n, m)) >> Prop(Nat.eq(m, n)),
 )
 example2 = Example(statement2, env)
@@ -43,9 +43,9 @@ example2.qed()
 # ------------------------------------------------------------------
 # Example 3: Prove that if n = m and m = k, then n = k (transitivity of equality).
 # ------------------------------------------------------------------
-bindings3 = (n, m, k)
+bound_vars3 = (n, m, k)
 statement3 = Prop.forall(
-    bindings3,
+    bound_vars3,
     Prop(Nat.eq(n, m)) >> (Prop(Nat.eq(m, k)) >> Prop(Nat.eq(n, k))),
 )
 example3 = Example(statement3, env)

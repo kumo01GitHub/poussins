@@ -44,8 +44,8 @@ The framework layer gives you a friendly, expressive interface:
 
 - `create_standard_environment()`: creates the standard logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`, `Eq`).
 - `Prop(name_or_expr)`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`). Supports quantifier construction:
-  - `Prop.forall(bindings, body)`: universal quantification $\forall$. `bindings` can be passed as a single item or sequence of `Prop`, `Type`, `Inductive` instances, or `(name, type)` tuples. If `body` is omitted, it defaults to `Sort.PROP`.
-  - `Prop.exists(bindings, body)`: existential quantification $\exists$.
+  - `Prop.forall(bound_vars, body)`: universal quantification $\forall$. `bound_vars` can be passed as a single item or sequence of `Prop`, `Type`, `Inductive` instances, or `(name, type)` tuples. If `body` is omitted, it defaults to `Sort.PROP`.
+  - `Prop.exists(bound_vars, body)`: existential quantification $\exists$.
 - `Type(name_or_expr, [level])`: universe-level type expression DSL (defaults to `Sort.TYPE.level`).
 - `Inductive`: base class for inductive data types with `.eq(left, right)`, `.type_expr()`, and bindable variable semantics.
 - `Nat`: natural numbers DSL under `poussins.framework.inductive_types`:
@@ -58,7 +58,7 @@ The framework layer gives you a friendly, expressive interface:
   - `Quot[rel_def].lift(B, f, compat, q)`: lift a compatible function to the quotient.
   - `Quot[rel_def].ind(motive, h, q)`: induction on quotient terms.
   - `Quot[rel_def].eq(left, right)`: equality proposition between quotient elements.
-- `Definition` & `definitions.Eq`: definition wrappers. `Eq(env, name, bindings, type_a, left, right)` creates equivalence relation definitions with `.declare()`.
+- `Definition` & `definitions.Eq`: definition wrappers. `Eq(env, name, bound_vars, type_a, left, right)` creates equivalence relation definitions with `.declare()`.
 - `declare_inductive(env, name, type, constructors, level_params=())`: declares and registers a custom inductive type and derives its `.rec` recursor automatically.
 - `Example(statement, env)`: anonymous proof (useful for exploration and test verification).
 - `Theorem(name, statement, env)`: named proof; `qed()` registers the resulting `TheoremDeclaration` into the environment.
@@ -119,7 +119,7 @@ You can call tactics as methods on `Example`/`Theorem`. Tactic arguments accepti
 | `exfalso()` | Change the target to `False` and prove contradiction first | Useful for indirect proofs. |
 | `contradiction()` | Close the goal from contradictory hypotheses | Detects contradiction patterns such as `False` or mutually incompatible assumptions. |
 
-### Quantifiers and Bindings
+### Quantifiers and Bound Variables
 
 You can bind multiple propositions, types, or inductive variables cleanly using `Prop.forall` and `Prop.exists`:
 

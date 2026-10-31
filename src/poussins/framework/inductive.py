@@ -14,7 +14,7 @@ from ..ast import (
 )
 from ..environment import Environment, InductiveDeclaration, InductiveSpec, const
 from ..environment.library import EQ_IND_SPEC
-from .binding import BindableMixin
+from .bound_var import BindableMixin
 from .declaration import declare_inductive
 from .environment import STANDARD_ENV
 

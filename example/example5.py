@@ -4,7 +4,7 @@ from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
 p, q, r = Prop("P"), Prop("Q"), Prop("R")
-bindings = (p, q, r)
+bound_vars = (p, q, r)
 
 
 # ------------------------------------------------------------------
@@ -12,7 +12,7 @@ bindings = (p, q, r)
 #   Prove that from (P and (Q or R)),
 #   we can derive P using And and Or introduction rules.
 # ------------------------------------------------------------------
-example1 = Example(Prop.forall(bindings, (p & (q | r)) >> p), env)
+example1 = Example(Prop.forall(bound_vars, (p & (q | r)) >> p), env)
 
 example1.intros(["P", "Q", "R"])
 example1.intro("hAnd")
@@ -29,7 +29,7 @@ example1.qed()
 #   Prove that from (P and (Q or R)),
 #   we can derive P using And and Or introduction rules with a different approach.
 # ------------------------------------------------------------------
-example2 = Example(Prop.forall(bindings, (p & (q | r)) >> p), env)
+example2 = Example(Prop.forall(bound_vars, (p & (q | r)) >> p), env)
 
 example2.intros(["P", "Q", "R"])
 example2.intro("hAnd")
@@ -44,7 +44,7 @@ example2.qed()
 # Example 3:
 #   Prove that P follows from (P and (Q or R)) using the 'obtain' tactic.
 # ------------------------------------------------------------------
-example3 = Example(Prop.forall(bindings, (p & p) >> p), env)
+example3 = Example(Prop.forall(bound_vars, (p & p) >> p), env)
 
 example3.intros(["P", "Q", "R"])
 example3.intro("hAnd")

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from ...ast import Expr, Sort, app, lam, pi
 from ...environment import const
 from ...environment.library import EQ_IND_SPEC
-from ..binding import BindingLike, normalize_bindings
+from ..bound_var import BoundVarLike, normalize_bound_vars
 from ..definition import Definition
 from ..environment import STANDARD_ENV
 from ..inductive import Inductive
@@ -19,13 +19,13 @@ class Eq(Definition):
     def __init__(
         self,
         name: str,
-        bindings: BindingLike,
+        bound_vars: BoundVarLike,
         type_a: Expr | type[Inductive],
         left: Inductive | Expr,
         right: Inductive | Expr,
     ) -> None:
         """Create an equality definition."""
-        normalized = normalize_bindings(bindings)
+        normalized = normalize_bound_vars(bound_vars)
         super().__init__(
             name=name,
             type_=pi(normalized, Sort.PROP.sort,),

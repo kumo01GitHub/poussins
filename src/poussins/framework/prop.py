@@ -29,7 +29,7 @@ from ..ast import (
 )
 from ..environment import const
 from ..environment.library import AND_IND_SPEC, EXISTS_IND_SPEC, FALSE_IND_SPEC, OR_IND_SPEC, TRUE_IND_SPEC
-from .binding import BindableMixin, BindingLike, normalize_bindings
+from .bound_var import BindableMixin, BoundVarLike, normalize_bound_vars
 from .environment import STANDARD_ENV
 
 
@@ -104,31 +104,31 @@ class Prop(BindableMixin):
         )
 
     @classmethod
-    def forall(cls, bindings: BindingLike, body: Prop | Expr | None) -> Prop:
+    def forall(cls, bound_vars: BoundVarLike, body: Prop | Expr | None) -> Prop:
         """Construct a universal quantifier proposition.
 
         The interface is intentionally explicit: a tuple of ``(name, type)``
-        bindings and a single body expression. If `body` is omitted (None),
+        bound variables and a single body expression. If `body` is omitted (None),
         it defaults to the proposition sort (`Prop`).
         """
         return cls(
             pi(
-                normalize_bindings(bindings),
+                normalize_bound_vars(bound_vars),
                 cls.to_expr(body if body is not None else Sort.PROP.sort)
             )
         )
 
     @classmethod
-    def exists(cls, bindings: BindingLike, body: Prop | Expr | None) -> Prop:
+    def exists(cls, bound_vars: BoundVarLike, body: Prop | Expr | None) -> Prop:
         """Construct an existential quantifier proposition.
 
         Accepts a single Inductive variable, a single (name, type) tuple,
-        or a Sequence of bindings.
+        or a Sequence of bound variables.
         """
-        normalized_bindings = normalize_bindings(bindings)
+        normalized = normalize_bound_vars(bound_vars)
         expr = cls.to_expr(body if body is not None else Sort.PROP.sort)
 
-        for name, type_ in reversed(normalized_bindings):
+        for name, type_ in reversed(normalized):
             expr = app(
                 const(
                     env=STANDARD_ENV,
