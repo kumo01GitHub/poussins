@@ -1,7 +1,7 @@
 """Module for declaring axioms, definitions, inductive types, and quotients."""
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from ..ast import (
     EApp,
@@ -487,7 +487,7 @@ def _open_pi_binders(
     return binders, current
 
 
-def _substitute_named_many(expr: Expr, subst: dict[str, Expr]) -> Expr:
+def _substitute_named_many(expr: Expr, subst: Mapping[str, Expr]) -> Expr:
     """Apply a sequence of named substitutions to an expression."""
     result = expr
     for name, replacement in subst.items():
