@@ -29,7 +29,7 @@ class Bool(Inductive):
         return cls(
             const(
                 env=env if env is not None else STANDARD_ENV,
-                name=cls.CONSTRUCTORS[cls.TRUE_IDX][0],
+                name=cls.constructor_name(cls.TRUE_IDX),
             )
         )
 
@@ -40,6 +40,6 @@ class Bool(Inductive):
         return cls(
             const(
                 env=env if env is not None else STANDARD_ENV,
-                name=cls.CONSTRUCTORS[cls.FALSE_IDX][0],
+                name=cls.constructor_name(cls.FALSE_IDX),
             )
         )

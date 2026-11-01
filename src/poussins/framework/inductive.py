@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 from abc import ABC
-from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import ClassVar, override
 
 from ..ast import (
     EFVar,
     Expr,
-    Sort,
     app,
 )
 from ..environment import Environment, InductiveDeclaration, InductiveSpec, const
@@ -23,9 +21,8 @@ from .environment import STANDARD_ENV
 class Inductive(BindableMixin, ABC):
     """Immutable wrapper for inductive type expressions."""
 
-    NAME: ClassVar[str] = "__undefined__"
-    TYPE: ClassVar[Expr] = Sort.TYPE.sort
-    CONSTRUCTORS: ClassVar[Sequence[tuple[str, Expr]]] = ()
+    SPEC: ClassVar[InductiveSpec | None] = None
+    _env: ClassVar[Environment | None] = None
 
     value: Expr
 
@@ -39,7 +36,11 @@ class Inductive(BindableMixin, ABC):
     @classmethod
     def declare(cls, env: Environment) -> InductiveDeclaration:
         """Declare the inductive type in the environment."""
-        raise NotImplementedError
+        if cls.SPEC is None:
+            raise NotImplementedError
+        declaration = declare_inductive(env, cls.SPEC)
+        cls._env = env
+        return declaration
 
     @classmethod
     def env(cls) -> Environment | None:
@@ -52,10 +53,22 @@ class Inductive(BindableMixin, ABC):
         return value.value if isinstance(value, Inductive) else value
 
     @classmethod
+    def spec(cls) -> InductiveSpec:
+        """Return the inductive specification for this class."""
+        if cls.SPEC is None:
+            raise NotImplementedError
+        return cls.SPEC
+
+    @classmethod
+    def constructor_name(cls, index: int) -> str:
+        """Return constructor name by index from this inductive spec."""
+        return cls.spec().constructors[index][0]
+
+    @classmethod
     def type_ref(cls) -> Expr:
         """Return the type expression of this inductive type."""
         env = cls.env()
-        return const(env if env is not None else STANDARD_ENV, cls.NAME)
+        return const(env if env is not None else STANDARD_ENV, cls.spec().name)
 
     @property
     def type(self) -> Expr:
@@ -97,23 +110,8 @@ def inductive_type[T: Inductive](spec: InductiveSpec):
     """Define an inductive type class with the given specification."""
 
     def decorator(cls: type[T]) -> type[T]:
-        cls.NAME = spec.name
-        cls.TYPE = spec.type
-        cls.CONSTRUCTORS = spec.constructors
-
-        _env: Environment | None = None
-
-        @override
-        @classmethod
-        def declare(cls, env: Environment) -> InductiveDeclaration:
-            declaration = declare_inductive(env, spec)
-            cls._env = env
-            return declaration
-
-        @override
-        @classmethod
-        def env(cls) -> Environment | None:
-            return cls._env
+        cls.SPEC = spec
+        cls._env = None
 
         return cls
 

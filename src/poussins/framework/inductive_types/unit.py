@@ -24,6 +24,6 @@ class Unit(Inductive):
         return cls(
             const(
                 env=env if env is not None else STANDARD_ENV,
-                name=cls.CONSTRUCTORS[cls.UNIT_IDX][0],
+                name=cls.constructor_name(cls.UNIT_IDX),
             )
         )
