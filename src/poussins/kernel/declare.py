@@ -242,9 +242,7 @@ def register_inductive(
         decl: Inductive type declaration (e.g., Nat, List).
         ctors: List of constructor declarations (e.g., zero/succ, nil/cons).
         rec: Recursor declaration (e.g., Nat.rec).
-
-    Raises:
-        KernelTypeError: If type checking, positivity check, or recursor rules fail.
+        extra_definitions: Optional additional definitions associated with the inductive type.
 
     """
     _register_inductive_on_staging(
