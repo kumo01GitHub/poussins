@@ -1,5 +1,5 @@
 """Tactics for closing goals with exact terms or assumptions."""
-from ..ast import EVar, Expr
+from ..ast import EFVar, Expr
 from ..errors import TacticError
 from ..kernel import ProofManager, is_def_eq
 from .helpers import require_current_goal, requires_active_goal
@@ -23,7 +23,7 @@ def assumption(manager: ProofManager) -> None:
 
     for hyp_name, hyp_type in current_goal.local_context.items():
         if is_def_eq(hyp_type, target, context, metavars, manager.env):
-            manager.close_goal(EVar(hyp_name))
+            manager.close_goal(EFVar(hyp_name))
             return
 
     raise TacticError("No matching hypothesis found in context.")

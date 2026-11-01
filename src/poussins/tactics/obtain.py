@@ -1,7 +1,7 @@
 """Introduce a hypothesis by destructing a proof term according to a pattern."""
 from __future__ import annotations
 
-from ..ast import EVar, Expr
+from ..ast import EFVar, Expr
 from ..kernel import ProofManager, infer_type
 from .cases import RCasesPattern, rcases
 from .exact import exact
@@ -20,7 +20,7 @@ def obtain(
     term: Expr,
 ) -> None:
     """Introduce a hypothesis by destructing a proof term according to a pattern."""
-    if isinstance(term, EVar):
+    if isinstance(term, EFVar):
         rcases(manager, hyp_name=term.name, pattern=pattern)
         return
 

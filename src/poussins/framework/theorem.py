@@ -25,7 +25,7 @@ class Theorem(TacticMixin):
         th.intro("hpq")          # method style
         intro(th.manager, "hpq")  # function style — also valid
         th.intro("hp")
-        th.exact(EVar("hp"))
+        th.exact(EFVar("hp"))
         th.qed(env)              # seals the proof and registers into env
     """
 

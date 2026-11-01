@@ -6,19 +6,19 @@ from collections.abc import Sequence
 from ..ast import (
     EApp,
     EConst,
-    ELam,
-    EMatch,
+    EFVar,
     EMetaVar,
     EPi,
-    EVar,
     Expr,
     UnivLevelParam,
+    app,
     decompose_app,
     lam,
     substitute_var,
 )
-from ..environment import ConstructorDeclaration, InductiveDeclaration
+from ..environment import ConstructorDeclaration, InductiveDeclaration, RecursorDeclaration
 from ..errors import TacticError
+from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
     const_head_name,
@@ -42,36 +42,17 @@ def _build_constructor_pattern(
     branch_binders: list[tuple[str, Expr]] = []
     current_context = dict(context)
     current_type = constructor_type
-    renaming: dict[str, Expr] = {}
 
     while isinstance(current_type, EPi):
-        domain = current_type.domain
-        body = current_type.body
-        for old_name, new_expr in renaming.items():
-            domain = substitute_var(domain, old_name, new_expr)
-            body = substitute_var(body, old_name, new_expr)
-
         var_name = fresh_binder_name(current_type.var, current_context, used_names)
-        if var_name != current_type.var:
-            body = substitute_var(body, current_type.var, EVar(var_name))
-
-        current_context[var_name] = domain
-        branch_binders.append((var_name, domain))
-        pattern = EApp(pattern, EVar(var_name))
-        renaming[current_type.var] = EVar(var_name)
-        current_type = body
+        current_context[var_name] = current_type.domain
+        branch_binders.append((var_name, current_type.domain))
+        pattern = EApp(pattern, EFVar(var_name))
+        current_type = instantiate_binder_body(
+            current_type.body, EFVar(var_name)
+        )
 
     return pattern, branch_binders
-
-
-def _collect_pi_binders(expr: Expr) -> list[str]:
-    """Collect the binder names from a Pi-chain expression."""
-    binders: list[str] = []
-    current = expr
-    while isinstance(current, EPi):
-        binders.append(current.var)
-        current = current.body
-    return binders
 
 
 def _normalize_patterns(
@@ -190,11 +171,12 @@ def cases(
 
     _, hypothesis_args = decompose_app(hypothesis_type)
 
-    inductive_param_count = 0
-    curr_t = inductive_decl.type
-    while isinstance(curr_t, EPi):
-        inductive_param_count += 1
-        curr_t = curr_t.body
+    recursor_decl = manager.env.get(inductive_decl.recursor_names[0])
+    if not isinstance(recursor_decl, RecursorDeclaration):
+        raise TacticError(f"Missing recursor declaration for '{head_name}'.")
+
+    inductive_param_count = recursor_decl.num_params
+    inductive_index_count = recursor_decl.num_indices
 
     normalized_patterns = _normalize_patterns(
         patterns,
@@ -241,7 +223,7 @@ def cases(
             for binder_name, binder_type in constructor_arg_binders
         ]
 
-        final_branch_binders = list(branch_binders)
+        final_branch_binders = list(constructor_arg_binders)
         if names_for_branch:
             num_to_rename = len(names_for_branch)
             for i in range(num_to_rename):
@@ -250,8 +232,11 @@ def cases(
                 new_name = names_for_branch[i]
                 final_branch_binders[target_idx] = (new_name, old_type)
                 constructor_pattern = substitute_var(
-                    constructor_pattern, old_name, EVar(new_name)
+                    constructor_pattern, old_name, EFVar(new_name)
                 )
+
+        for p_name, p_value in parameter_substitutions.items():
+            constructor_pattern = substitute_var(constructor_pattern, p_name, p_value)
 
         specialized_branch_binders = [
             (
@@ -294,12 +279,18 @@ def cases(
             )
         )
 
-    motive = ELam(
-        "_case",
-        hypothesis_type,
-        substitute_var(current_goal.statement, hyp_name, EVar("_case")),
+    motive = lam(
+        (("_case", hypothesis_type),),
+        substitute_var(current_goal.statement, hyp_name, EFVar("_case")),
     )
-    assignment = EMatch(head_name, EVar(hyp_name), motive, tuple(branch_terms))
+    assignment = app(
+        EConst(f"{head_name}.casesOn", ()),
+        *hypothesis_args[:inductive_param_count],
+        *hypothesis_args[inductive_param_count:inductive_param_count + inductive_index_count],
+        EFVar(hyp_name),
+        motive,
+        *branch_terms,
+    )
     manager.refine_goal(assignment, subgoals)
 
 

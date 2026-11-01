@@ -3,16 +3,14 @@ from __future__ import annotations
 
 from ..ast import (
     EApp,
+    EBVar,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
-    collect_free_vars,
-    substitute_var,
 )
 from ..environment import Environment
 from .eval import instantiate, whnf
@@ -20,89 +18,57 @@ from .proof_state import MetaVar
 from .univ import is_def_eq_univ
 
 
-def _alpha_eq_bound_var(
-    n1: str,
-    n2: str,
-    bvars1: list[str],
-    bvars2: list[str],
-) -> bool:
-    """Compare possibly bound variables by de Bruijn-like binder positions."""
-    if n1 in bvars1 or n2 in bvars2:
-        try:
-            return bvars1.index(n1) == bvars2.index(n2)
-        except ValueError:
-            return False
-    return n1 == n2
-
-
-def _alpha_eq_match_cases(
-    c1: tuple[Expr, ...],
-    c2: tuple[Expr, ...],
-    bvars1: list[str],
-    bvars2: list[str],
-) -> bool:
-    """Compare match branches under the same binder context."""
-    if len(c1) != len(c2):
-        return False
-    return all(
-        is_alpha_eq(b1, b2, bvars1, bvars2)
-        for b1, b2 in zip(c1, c2, strict=False)
-    )
-
-
 def is_alpha_eq(
     t1: Expr,
     t2: Expr,
-    bvars1: list[str] | None = None,
-    bvars2: list[str] | None = None
 ) -> bool:
     """Return True when two expressions are alpha-equivalent."""
     if type(t1) is not type(t2):
         return False
 
-    bvars1 = [] if bvars1 is None else bvars1
-    bvars2 = [] if bvars2 is None else bvars2
-
     match (t1, t2):
-        case (EVar(n1), EVar(n2)):
-            result = _alpha_eq_bound_var(n1, n2, bvars1, bvars2)
+        case (EFVar(n1), EFVar(n2)):
+            result = n1 == n2
+        case (EBVar(i1), EBVar(i2)):
+            result = i1 == i2
         case (ESort(l1), ESort(l2)):
             result = l1 == l2
         case (EConst(n1, lv1), EConst(n2, lv2)):
             result = n1 == n2 and lv1 == lv2
         case (EMetaVar(g1), EMetaVar(g2)):
             result = g1 == g2
-        case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
-            result = is_alpha_eq(d1, d2, bvars1, bvars2) and is_alpha_eq(
-                b1, b2, [v1] + bvars1, [v2] + bvars2
-            )
+        case (EPi(_, d1, b1), EPi(_, d2, b2)) | (ELam(_, d1, b1), ELam(_, d2, b2)):
+            result = is_alpha_eq(d1, d2) and is_alpha_eq(b1, b2)
         case (EApp(f1, a1), EApp(f2, a2)):
-            result = (
-                is_alpha_eq(f1, f2, bvars1, bvars2)
-                and is_alpha_eq(a1, a2, bvars1, bvars2)
-            )
-        case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
-            result = (
-                i1 != i2
-                or not is_alpha_eq(d1, d2, bvars1, bvars2)
-                or not is_alpha_eq(m1, m2, bvars1, bvars2)
-            )
-            result = _alpha_eq_match_cases(c1, c2, bvars1, bvars2) if not result else False
+            result = is_alpha_eq(f1, f2) and is_alpha_eq(a1, a2)
         case _:
             result = False
 
     return result
 
 
+def _contains_outer_bvar(expr: Expr, depth: int = 0) -> bool:
+    """Return True when the expression contains `EBVar(depth)`."""
+    match expr:
+        case EBVar(index):
+            return index == depth
+        case EApp(fn, arg):
+            return _contains_outer_bvar(fn, depth) or _contains_outer_bvar(arg, depth)
+        case ELam(_, domain, body) | EPi(_, domain, body):
+            return _contains_outer_bvar(domain, depth) or _contains_outer_bvar(body, depth + 1)
+        case _:
+            return False
+
+
 def _eta_contract_lam(expr: ELam) -> Expr | None:
     """Return eta-contracted body when `expr` has shape `fun x => f x`."""
     if not isinstance(expr.body, EApp):
         return None
-    if not isinstance(expr.body.arg, EVar):
+    if not isinstance(expr.body.arg, EBVar):
         return None
-    if expr.body.arg.name != expr.var:
+    if expr.body.arg.index != 0:
         return None
-    if expr.body.arg.name in collect_free_vars(expr.body.fn):
+    if _contains_outer_bvar(expr.body.fn):
         return None
     return expr.body.fn
 
@@ -115,13 +81,13 @@ def _is_def_eq_eta_expanded_pair(
     env: Environment | None,
 ) -> bool | None:
     """Try eta-contraction on one side and continue definal equality check."""
-    if isinstance(t1_whnf, ELam) and isinstance(t2_whnf, EVar):
+    if isinstance(t1_whnf, ELam) and isinstance(t2_whnf, EFVar):
         contracted = _eta_contract_lam(t1_whnf)
         if contracted is None:
             return False
         return is_def_eq(contracted, t2_whnf, context, metavars, env)
 
-    if isinstance(t1_whnf, EVar) and isinstance(t2_whnf, ELam):
+    if isinstance(t1_whnf, EFVar) and isinstance(t2_whnf, ELam):
         contracted = _eta_contract_lam(t2_whnf)
         if contracted is None:
             return False
@@ -150,27 +116,11 @@ def _is_def_eq_same_shape(
                 is_def_eq(f1, f2, context, metavars, env)
                 and is_def_eq(a1, a2, context, metavars, env)
             )
-        case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
+        case (EPi(_, d1, b1), EPi(_, d2, b2)) | (ELam(_, d1, b1), ELam(_, d2, b2)):
             domains_eq = is_def_eq(d1, d2, context, metavars, env)
             if not domains_eq:
                 return False
-            b2_norm = b2
-            if v1 != v2:
-                b2_norm = substitute_var(b2, var_name=v2, replacement=EVar(v1))
-            return is_def_eq(b1, b2_norm, context | {v1: d1}, metavars, env)
-        case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
-            if i1 != i2:
-                return False
-            if not is_def_eq(d1, d2, context, metavars, env):
-                return False
-            if not is_def_eq(m1, m2, context, metavars, env):
-                return False
-            if len(c1) != len(c2):
-                return False
-            return all(
-                is_def_eq(b1, b2, context, metavars, env)
-                for b1, b2 in zip(c1, c2, strict=False)
-            )
+            return is_def_eq(b1, b2, context, metavars, env)
         case _:
             return False
 

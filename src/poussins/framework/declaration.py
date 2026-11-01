@@ -6,16 +6,18 @@ from collections.abc import Sequence
 from ..ast import (
     EApp,
     EConst,
+    EFVar,
     ELam,
     EPi,
     ESort,
-    EVar,
     Expr,
     UnivLevelParam,
     UnivLevelZero,
     app,
     collect_univ_level_params,
     decompose_app,
+    lam,
+    pi,
     substitute_var,
     univ_levels,
 )
@@ -50,6 +52,7 @@ from ..kernel import (
     register_theorem,
     whnf,
 )
+from .bound_var import instantiate_binder_body
 
 
 def declare_axiom(
@@ -125,7 +128,7 @@ def _is_prop(
     match expr:
         case ESort(_):
             return False
-        case EVar(name):
+        case EFVar(name):
             if name in ctx:
                 var_type = ctx[name]
                 if isinstance(var_type, ESort):
@@ -134,7 +137,7 @@ def _is_prop(
             return False
         case EApp():
             head, _ = decompose_app(expr)
-            if isinstance(head, EVar) and head.name in ctx:
+            if isinstance(head, EFVar) and head.name in ctx:
                 fn_type = ctx[head.name]
                 curr = fn_type
                 while isinstance(curr, EPi):
@@ -186,12 +189,17 @@ def declare_inductive(
         constructor_decls,
         env=env,
     )
+    cases_on_decl = _build_cases_on(
+        inductive_decl,
+        recursor_decl,
+    )
 
     register_inductive(
         env,
         inductive_decl,
         constructor_decls,
         recursor_decl,
+        extra_definitions=(cases_on_decl,),
     )
 
     return inductive_decl
@@ -226,33 +234,20 @@ def _build_recursor(
 
     used_names: set[str] = set(base_level_params)
 
-    ind_binders: list[tuple[str, Expr]] = []
-    curr = inductive_decl.type
-    while isinstance(curr, EPi):
-        ind_binders.append((curr.var, curr.domain))
-        curr = curr.body
-    target_sort = curr
+    ind_binders, target_sort = _open_pi_binders(inductive_decl.type, used_names)
 
     if not constructor_decls:
         num_params = len(ind_binders)
     else:
         match_count = len(ind_binders)
         for ctor in constructor_decls:
-            c_curr = ctor.type
-            c_binders: list[tuple[str, Expr]] = []
-            while isinstance(c_curr, EPi):
-                c_binders.append((c_curr.var, c_curr.domain))
-                c_curr = c_curr.body
-            _, c_args = decompose_app(c_curr)
+            opened_binders, ctor_target = _open_pi_binders(ctor.type, used_names=set())
+            _, c_args = decompose_app(ctor_target)
             k = 0
-            while (
-                k < len(ind_binders)
-                and k < len(c_binders)
-                and k < len(c_args)
-            ):
+            while k < len(ind_binders) and k < len(opened_binders) and k < len(c_args):
+                expected_var = opened_binders[k][0]
                 arg = c_args[k]
-                expected_var = c_binders[k][0]
-                if isinstance(arg, EVar) and arg.name == expected_var:
+                if isinstance(arg, EFVar) and arg.name == expected_var:
                     k += 1
                 else:
                     break
@@ -293,65 +288,50 @@ def _build_recursor(
         rec_level_params = tuple(base_level_params)
         motive_sort = ESort(UnivLevelZero())
 
-    param_binders: list[tuple[str, Expr]] = []
-    for p_var, p_dom in ind_binders[:num_params]:
-        p_name = _fresh_name(p_var, used_names)
-        param_binders.append((p_name, p_dom))
-
-    index_binders: list[tuple[str, Expr]] = []
-    for i_var, i_dom in ind_binders[num_params:]:
-        i_name = _fresh_name(i_var, used_names)
-        index_binders.append((i_name, i_dom))
+    param_binders = ind_binders[:num_params]
+    index_binders = ind_binders[num_params:]
 
     ind_param_expr = EConst(ind_name, univ_levels(inductive_decl.level_params))
     for p_name, _ in param_binders:
-        ind_param_expr = EApp(ind_param_expr, EVar(p_name))
+        ind_param_expr = EApp(ind_param_expr, EFVar(p_name))
     target_expr = ind_param_expr
     for i_name, _ in index_binders:
-        target_expr = EApp(target_expr, EVar(i_name))
+        target_expr = EApp(target_expr, EFVar(i_name))
 
     motive_var = _fresh_name("motive", used_names)
     t_var = _fresh_name("t", used_names)
 
-    motive_body = EPi(var=t_var, domain=target_expr, body=motive_sort)
+    motive_body = pi(((t_var, target_expr),), motive_sort)
     for i_name, i_dom in reversed(index_binders):
-        motive_body = EPi(var=i_name, domain=i_dom, body=motive_body)
+        motive_body = pi(((i_name, i_dom),), motive_body)
     motive_type = motive_body
 
     num_minors = len(constructor_decls)
 
     minor_premises: list[tuple[str, Expr]] = []
     for i, ctor in enumerate(constructor_decls):
-        ctor_curr = ctor.type
-        raw_ctor_binders: list[tuple[str, Expr]] = []
-        while isinstance(ctor_curr, EPi):
-            raw_ctor_binders.append((ctor_curr.var, ctor_curr.domain))
-            ctor_curr = ctor_curr.body
-        ctor_target = ctor_curr
-        _, ctor_target_args = decompose_app(ctor_target)
-        ctor_indices = ctor_target_args[num_params:]
-
-        raw_param_names = [name for name, _ in raw_ctor_binders[:num_params]]
-        raw_field_binders = raw_ctor_binders[num_params:]
-
-        param_subst: dict[str, Expr] = {
-            c_p_name: EVar(p_name)
-            for c_p_name, (p_name, _) in zip(
-                raw_param_names, param_binders, strict=False
+        opened_binders, ctor_target = _open_pi_binders(ctor.type, used_names)
+        ctor_param_binders = opened_binders[:num_params]
+        param_subst = {
+            ctor_name: EFVar(rec_name)
+            for (ctor_name, _), (rec_name, _) in zip(
+                ctor_param_binders,
+                param_binders,
+                strict=False,
             )
         }
+        _, ctor_target_args = decompose_app(ctor_target)
+        ctor_indices = [
+            _substitute_named_many(idx_expr, param_subst)
+            for idx_expr in ctor_target_args[num_params:]
+        ]
         field_binders: list[tuple[str, Expr]] = []
-        local_subst: dict[str, Expr] = dict(param_subst)
-        ctor_app_args = [EVar(p_name) for p_name, _ in param_binders]
+        ctor_app_args = [EFVar(p_name) for p_name, _ in param_binders]
 
-        for f_name, f_dom in raw_field_binders:
-            spec_dom = f_dom
-            for k, v in local_subst.items():
-                spec_dom = substitute_var(spec_dom, k, v)
-            unique_f_name = _fresh_name(f_name, used_names)
-            local_subst[f_name] = EVar(unique_f_name)
-            field_binders.append((unique_f_name, spec_dom))
-            ctor_app_args.append(EVar(unique_f_name))
+        for f_name, raw_spec_dom in opened_binders[num_params:]:
+            spec_dom = _substitute_named_many(raw_spec_dom, param_subst)
+            field_binders.append((f_name, spec_dom))
+            ctor_app_args.append(EFVar(f_name))
 
             if _contains_inductive(spec_dom, ind_name):
                 ih_base = f"ih_{f_name}"
@@ -359,31 +339,25 @@ def _build_recursor(
                 _, rec_args = decompose_app(spec_dom)
                 rec_indices = rec_args[num_params:] if len(rec_args) >= num_params else []
                 ih_dom = app(
-                    EVar(motive_var),
+                    EFVar(motive_var),
                     *rec_indices,
-                    EVar(unique_f_name),
+                    EFVar(f_name),
                 )
                 field_binders.append((unique_ih_name, ih_dom))
 
         ctor_const = EConst(ctor.name, univ_levels(ctor.level_params))
         ctor_instance = app(ctor_const, *ctor_app_args)
-
-        spec_ctor_indices = []
-        for idx_expr in ctor_indices:
-            spec_idx = idx_expr
-            for k, v in local_subst.items():
-                spec_idx = substitute_var(spec_idx, k, v)
-            spec_ctor_indices.append(spec_idx)
+        spec_ctor_indices = list(ctor_indices)
 
         case_conclusion = app(
-            EVar(motive_var),
+            EFVar(motive_var),
             *spec_ctor_indices,
             ctor_instance,
         )
 
         current_case_type = case_conclusion
         for b_name, b_dom in reversed(field_binders):
-            current_case_type = EPi(var=b_name, domain=b_dom, body=current_case_type)
+            current_case_type = pi(((b_name, b_dom),), current_case_type)
 
         base_case_name = (
             ctor.name.split(".")[-1] if "." in ctor.name else f"case_{i}"
@@ -392,21 +366,21 @@ def _build_recursor(
         minor_premises.append((case_name, current_case_type))
 
     body_expr = app(
-        EVar(motive_var),
-        *[EVar(i_name) for i_name, _ in index_binders],
-        EVar(t_var),
+        EFVar(motive_var),
+        *[EFVar(i_name) for i_name, _ in index_binders],
+        EFVar(t_var),
     )
-    built_type = EPi(var=t_var, domain=target_expr, body=body_expr)
+    built_type = pi(((t_var, target_expr),), body_expr)
     for i_name, i_dom in reversed(index_binders):
-        built_type = EPi(var=i_name, domain=i_dom, body=built_type)
+        built_type = pi(((i_name, i_dom),), built_type)
 
     for case_name, case_type in reversed(minor_premises):
-        built_type = EPi(var=case_name, domain=case_type, body=built_type)
+        built_type = pi(((case_name, case_type),), built_type)
 
-    built_type = EPi(var=motive_var, domain=motive_type, body=built_type)
+    built_type = pi(((motive_var, motive_type),), built_type)
 
     for p_name, p_dom in reversed(param_binders):
-        built_type = EPi(var=p_name, domain=p_dom, body=built_type)
+        built_type = pi(((p_name, p_dom),), built_type)
 
     return RecursorDeclaration(
         name=rec_name,
@@ -417,6 +391,103 @@ def _build_recursor(
         num_indices=num_indices,
         num_minors=num_minors,
     )
+
+
+def _build_cases_on(
+    inductive_decl: InductiveDeclaration,
+    recursor_decl: RecursorDeclaration,
+) -> DefinitionDeclaration:
+    """Build a `casesOn` definition by reordering recursor arguments."""
+    binders, current = _open_pi_binders(recursor_decl.type, used_names=set())
+
+    param_binders = binders[:recursor_decl.num_params]
+    motive_binder = binders[recursor_decl.num_params]
+    minor_start = recursor_decl.num_params + 1
+    minor_end = minor_start + recursor_decl.num_minors
+    rec_minor_binders = binders[minor_start:minor_end]
+    index_start = minor_end
+    index_end = index_start + recursor_decl.num_indices
+    index_binders = binders[index_start:index_end]
+    major_binder = binders[index_end]
+
+    transformed_minor_binders: list[tuple[str, Expr]] = []
+    rec_minor_wrappers: list[Expr] = []
+
+    for case_name, case_type in rec_minor_binders:
+        minor_pi_binders, minor_result = _open_pi_binders(case_type, used_names=set())
+
+        visible_minor_binders = [
+            (name, domain)
+            for name, domain in minor_pi_binders
+            if not name.startswith("ih_")
+        ]
+
+        transformed_case_type = minor_result
+        for var_name, domain in reversed(visible_minor_binders):
+            transformed_case_type = pi(((var_name, domain),), transformed_case_type)
+        transformed_minor_binders.append((case_name, transformed_case_type))
+
+        wrapped_minor_body = app(
+            EFVar(case_name),
+            *[EFVar(name) for name, _ in visible_minor_binders],
+        )
+        wrapped_minor_value: Expr = wrapped_minor_body
+        for var_name, domain in reversed(minor_pi_binders):
+            wrapped_minor_value = lam(((var_name, domain),), wrapped_minor_value)
+        rec_minor_wrappers.append(wrapped_minor_value)
+
+    cases_on_binders = [
+        *param_binders,
+        *index_binders,
+        major_binder,
+        motive_binder,
+        *transformed_minor_binders,
+    ]
+
+    cases_on_type = current
+    for var_name, domain in reversed(cases_on_binders):
+        cases_on_type = pi(((var_name, domain),), cases_on_type)
+
+    recursor_const = EConst(recursor_decl.name, univ_levels(recursor_decl.level_params))
+    recursor_args = [
+        *[EFVar(name) for name, _ in param_binders],
+        EFVar(motive_binder[0]),
+        *rec_minor_wrappers,
+        *[EFVar(name) for name, _ in index_binders],
+        EFVar(major_binder[0]),
+    ]
+    cases_on_value: Expr = app(recursor_const, *recursor_args)
+    for var_name, domain in reversed(cases_on_binders):
+        cases_on_value = lam(((var_name, domain),), cases_on_value)
+
+    return DefinitionDeclaration(
+        name=f"{inductive_decl.name}.casesOn",
+        level_params=recursor_decl.level_params,
+        type=cases_on_type,
+        value=cases_on_value,
+    )
+
+
+def _open_pi_binders(expr: Expr, used_names: set[str]) -> tuple[list[tuple[str, Expr]], Expr]:
+    """Open Pi binders into fresh EFVar names and return opened binders with body."""
+    binders: list[tuple[str, Expr]] = []
+    current = expr
+    local_used = set(used_names)
+    while isinstance(current, EPi):
+        opened_name = _fresh_name(current.var, local_used)
+        binders.append((opened_name, current.domain))
+        current = instantiate_binder_body(current.body, EFVar(opened_name))
+    used_names.update(local_used)
+    return binders, current
+
+
+def _substitute_named_many(expr: Expr, subst: dict[str, Expr]) -> Expr:
+    """Apply a sequence of named substitutions to an expression."""
+    result = expr
+    for name, replacement in subst.items():
+        result = substitute_var(result, name, replacement)
+    return result
+
 
 def _contains_inductive(expr: Expr, ind_name: str) -> bool:
     """Check if an expression refers to the given inductive type name."""

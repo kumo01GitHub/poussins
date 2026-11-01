@@ -19,17 +19,21 @@ from dataclasses import dataclass
 from typing import override
 
 from ..ast import (
-    ELam,
+    EFVar,
     EPi,
-    EVar,
     Expr,
     Sort,
     app,
+    lam,
     pi,
 )
 from ..environment import const
 from ..environment.library import AND_IND_SPEC, EXISTS_IND_SPEC, FALSE_IND_SPEC, OR_IND_SPEC, TRUE_IND_SPEC
-from .bound_var import BindableMixin, BoundVarLike, normalize_bound_vars
+from .bound_var import (
+    BindableMixin,
+    BoundVarLike,
+    normalize_bound_vars,
+)
 from .environment import STANDARD_ENV
 
 
@@ -47,7 +51,7 @@ class Prop(BindableMixin):
         if isinstance(statement, Expr):
             object.__setattr__(self, "statement", statement)
         else:
-            object.__setattr__(self, "statement", EVar(statement))
+            object.__setattr__(self, "statement", EFVar(statement))
 
     @staticmethod
     def to_expr(prop_or_expr: Prop | Expr) -> Expr:
@@ -135,7 +139,7 @@ class Prop(BindableMixin):
                     name=EXISTS_IND_SPEC.name,
                 ),
                 type_,
-                ELam(var=name, domain=type_, body=expr),
+                lam(((name, type_),), expr),
             )
 
         return cls(expr)

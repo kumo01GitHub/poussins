@@ -4,12 +4,11 @@ from typing import Final
 from poussins.ast import (
     EApp,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     UnivLevel,
     UnivLevelIMax,
     UnivLevelMax,
@@ -203,11 +202,11 @@ class TestUniverseInstantiationOverExpr:
     def test_substitution_across_expression_syntax(self):
         """Universe substitution respects each expression constructor policy."""
         # Empty substitution returns original expression
-        var_expr = EVar("x")
+        var_expr = EFVar("x")
         assert instantiate_univ(var_expr, {}) is var_expr
 
         # Individual Expr variants coverage (Success / substitution)
-        assert instantiate_univ(EVar("x"), self.assignment) == EVar("x")
+        assert instantiate_univ(EFVar("x"), self.assignment) == EFVar("x")
         assert (
             instantiate_univ(ESort(self.param_u), self.assignment)
             == ESort(self.zero)
@@ -218,24 +217,20 @@ class TestUniverseInstantiationOverExpr:
         )
         assert (
             instantiate_univ(
-                EApp(EVar("f"), EConst("c", (self.param_u,))),
+                EApp(EFVar("f"), EConst("c", (self.param_u,))),
                 self.assignment
             )
-            == EApp(EVar("f"), EConst("c", (self.zero,)))
+            == EApp(EFVar("f"), EConst("c", (self.zero,)))
         )
         assert (
-            instantiate_univ(ELam("x", ESort(self.param_u), EVar("x")), self.assignment)
-            == ELam("x", ESort(self.zero), EVar("x"))
+            instantiate_univ(ELam("x", ESort(self.param_u), EFVar("x")), self.assignment)
+            == ELam("x", ESort(self.zero), EFVar("x"))
         )
         assert (
-            instantiate_univ(EPi("x", ESort(self.param_u), EVar("x")), self.assignment)
-            == EPi("x", ESort(self.zero), EVar("x"))
+            instantiate_univ(EPi("x", ESort(self.param_u), EFVar("x")), self.assignment)
+            == EPi("x", ESort(self.zero), EFVar("x"))
         )
 
-        # Fallback variants returning as-is (EMatch, EMetaVar)
-        match_expr = EMatch(
-            "Nat", EVar("n"), ESort(self.param_u), (EConst("z", (self.param_u,)),)
-        )
-        assert instantiate_univ(match_expr, self.assignment) == match_expr
+        # Fallback variants returning as-is (EMetaVar)
         metavar_expr = EMetaVar("m1")
         assert instantiate_univ(metavar_expr, self.assignment) == metavar_expr

@@ -4,12 +4,12 @@ from typing import Final
 from poussins.ast import (
     EApp,
     EConst,
-    ELam,
-    EMatch,
+    EFVar,
     EMetaVar,
     ESort,
-    EVar,
     UnivLevelZero,
+    app,
+    lam,
 )
 from poussins.environment import DefinitionDeclaration
 from poussins.framework import create_environment, create_standard_environment
@@ -25,9 +25,9 @@ class TestMetavarInstantiationSoundness:
     def test_replaces_assigned_metavar(self):
         """An assigned metavariable is definitionally replaced by its witness."""
         metavars = {
-            "m1": MetaVar(statement=self.statement, assignment=EVar("x")),
+            "m1": MetaVar(statement=self.statement, assignment=EFVar("x")),
         }
-        assert instantiate_metavar(EMetaVar("m1"), metavars) == EVar("x")
+        assert instantiate_metavar(EMetaVar("m1"), metavars) == EFVar("x")
 
     def test_preserves_unsolved_metavar(self):
         """An unsolved metavariable remains unchanged."""
@@ -46,9 +46,9 @@ class TestRecursiveInstantiationClosure:
         """Transitive assignments are normalized to a stable representative."""
         metavars = {
             "m1": MetaVar(statement=self.statement, assignment=EMetaVar("m2")),
-            "m2": MetaVar(statement=self.statement, assignment=EVar("x")),
+            "m2": MetaVar(statement=self.statement, assignment=EFVar("x")),
         }
-        assert instantiate(EMetaVar("m1"), metavars) == EVar("x")
+        assert instantiate(EMetaVar("m1"), metavars) == EFVar("x")
 
 
 class TestWhnfConversionSoundness:
@@ -58,8 +58,8 @@ class TestWhnfConversionSoundness:
 
     def test_beta_reduction_at_head(self):
         """Head beta-redex reduces to substituted body."""
-        expr = EApp(ELam("x", self.sort_prop, EVar("x")), EVar("y"))
-        assert whnf(expr, {}) == EVar("y")
+        expr = EApp(lam((("x", self.sort_prop),), "x"), EFVar("y"))
+        assert whnf(expr, {}) == EFVar("y")
 
     def test_delta_then_beta_on_head_constant(self):
         """Definition unfolding (delta) composes with head beta-reduction."""
@@ -68,12 +68,12 @@ class TestWhnfConversionSoundness:
             DefinitionDeclaration(
                 name="id",
                 level_params=(),
-                type=ELam("A", self.sort_prop, EVar("A")),
-                value=ELam("x", self.sort_prop, EVar("x")),
+                type=lam((("A", self.sort_prop),), "A"),
+                value=lam((("x", self.sort_prop),), "x"),
             )
         )
-        expr = EApp(EConst("id", ()), EVar("z"))
-        assert whnf(expr, {}, env) == EVar("z")
+        expr = EApp(EConst("id", ()), EFVar("z"))
+        assert whnf(expr, {}, env) == EFVar("z")
 
     def test_guarded_unfolding_prevents_nontermination(self):
         """Unfolding guard blocks infinite delta-expansion on recursive heads."""
@@ -88,35 +88,31 @@ class TestWhnfConversionSoundness:
         )
         assert whnf(EConst("loop", ()), {}, env) == EConst("loop", ())
 
-    def test_match_reduces_constructor_discriminee(self):
-        """Match on a constructor discriminee reduces to the matching branch."""
+    def test_cases_on_reduces_constructor_discriminee(self):
+        """`casesOn` on a constructor discriminee reduces to the matching branch."""
         env = create_standard_environment()
         nat = EConst("Nat", ())
-        motive = ELam("_n", nat, nat)
-        expr = EMatch(
-            "Nat",
+        motive = lam((("_n", nat),), nat)
+        expr = app(
+            EConst("Nat.casesOn", ()),
             EConst("Nat.zero", ()),
             motive,
-            (
-                EConst("Nat.zero", ()),
-                ELam("k", nat, EVar("k")),
-            ),
+            EConst("Nat.zero", ()),
+            lam((("k", nat),), "k"),
         )
         assert whnf(expr, {}, env) == EConst("Nat.zero", ())
 
-    def test_match_reduces_and_substitutes_constructor_arguments(self):
-        """Match branch lambdas are instantiated with constructor arguments."""
+    def test_cases_on_reduces_and_substitutes_constructor_arguments(self):
+        """`casesOn` branch lambdas are instantiated with constructor arguments."""
         env = create_standard_environment()
         nat = EConst("Nat", ())
         discriminee = EApp(EConst("Nat.succ", ()), EConst("Nat.zero", ()))
-        motive = ELam("_n", nat, nat)
-        expr = EMatch(
-            "Nat",
+        motive = lam((("_n", nat),), nat)
+        expr = app(
+            EConst("Nat.casesOn", ()),
             discriminee,
             motive,
-            (
-                EConst("Nat.zero", ()),
-                ELam("k", nat, EVar("k")),
-            ),
+            EConst("Nat.zero", ()),
+            lam((("k", nat),), "k"),
         )
         assert whnf(expr, {}, env) == EConst("Nat.zero", ())

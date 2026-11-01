@@ -5,15 +5,12 @@ from ..ast import (
     EApp,
     EConst,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     UnivLevel,
     collect_metavar_ids,
-    substitute_var,
 )
 from ..environment import Environment
 from ..errors import KernelTypeError
@@ -124,48 +121,17 @@ def unify(
             a1_inst = instantiate(a1, current_metavars)
             a2_inst = instantiate(a2, current_metavars)
             return unify(a1_inst, a2_inst, context, current_metavars, env)
-        case (EPi(v1, d1, b1), EPi(v2, d2, b2)) | (ELam(v1, d1, b1), ELam(v2, d2, b2)):
+        case (EPi(_, d1, b1), EPi(_, d2, b2)) | (ELam(_, d1, b1), ELam(_, d2, b2)):
             current_metavars = unify(d1, d2, context, metavars, env)
-            d1_inst = instantiate(d1, current_metavars)
             b1_inst = instantiate(b1, current_metavars)
             b2_inst = instantiate(b2, current_metavars)
-            if v1 != v2:
-                b2_inst = substitute_var(
-                    b2_inst,
-                    var_name=v2,
-                    replacement=EVar(v1),
-                )
             return unify(
                 b1_inst,
                 b2_inst,
-                context | {v1: d1_inst},
+                context,
                 current_metavars,
                 env,
             )
-        case (EMatch(i1, d1, m1, c1), EMatch(i2, d2, m2, c2)):
-            if i1 != i2:
-                raise KernelTypeError(
-                    "Unification failed: match inductive type mismatch"
-                )
-            current_metavars = unify(d1, d2, context, metavars, env)
-            m1_inst = instantiate(m1, current_metavars)
-            m2_inst = instantiate(m2, current_metavars)
-            current_metavars = unify(m1_inst, m2_inst, context, current_metavars, env)
-            if len(c1) != len(c2):
-                raise KernelTypeError(
-                    "Unification failed: match branch length mismatch"
-                )
-            for b1, b2 in zip(c1, c2, strict=False):
-                b1_inst = instantiate(b1, current_metavars)
-                b2_inst = instantiate(b2, current_metavars)
-                current_metavars = unify(
-                    b1_inst,
-                    b2_inst,
-                    context,
-                    current_metavars,
-                    env,
-                )
-            return current_metavars
         case _:
             raise KernelTypeError(
                 "Unification failed: expressions are structurally distinct: "

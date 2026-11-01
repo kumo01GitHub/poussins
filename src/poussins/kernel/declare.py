@@ -5,13 +5,13 @@ from collections.abc import Sequence
 
 from ..ast import (
     EApp,
+    EBVar,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     decompose_app,
 )
@@ -232,7 +232,8 @@ def register_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
-    rec: RecursorDeclaration
+    rec: RecursorDeclaration,
+    extra_definitions: Sequence[DefinitionDeclaration] = (),
 ) -> None:
     """Validate and declare an inductive type, its constructors, and recursor.
 
@@ -246,13 +247,21 @@ def register_inductive(
         KernelTypeError: If type checking, positivity check, or recursor rules fail.
 
     """
-    _register_inductive_on_staging(env, decl, ctors, rec, with_commit=True)
+    _register_inductive_on_staging(
+        env,
+        decl,
+        ctors,
+        rec,
+        extra_definitions,
+        with_commit=True,
+    )
 
 def validate_inductive(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
-    rec: RecursorDeclaration
+    rec: RecursorDeclaration,
+    extra_definitions: Sequence[DefinitionDeclaration] = (),
 ) -> None:
     """Validate an inductive type, its constructors, and optional recursor.
 
@@ -260,18 +269,26 @@ def validate_inductive(
         KernelTypeError: If any kernel verification rule fails.
 
     """
-    _register_inductive_on_staging(env, decl, ctors, rec, with_commit=False)
+    _register_inductive_on_staging(
+        env,
+        decl,
+        ctors,
+        rec,
+        extra_definitions,
+        with_commit=False,
+    )
 
 def _register_inductive_on_staging(
     env: Environment,
     decl: InductiveDeclaration,
     ctors: Sequence[ConstructorDeclaration],
     rec: RecursorDeclaration,
+    extra_definitions: Sequence[DefinitionDeclaration],
     *,
     with_commit: bool
 ) -> None:
     """Validate an inductive declaration, optionally committing to the environment."""
-    staged_decls: list[Declaration] = [decl, *ctors, rec]
+    staged_decls: list[Declaration] = [decl, *ctors, rec, *extra_definitions]
 
     stage_id = env.stage(declarations=staged_decls)
     staging_env = env.get_staging(stage_id)
@@ -286,6 +303,9 @@ def _register_inductive_on_staging(
 
         # 3. Validate the recursor with strict structural checks.
         _validate_recursor(staging_env, decl, ctors, rec)
+
+        for extra_definition in extra_definitions:
+            _validate_definition_in_env(staging_env, extra_definition)
 
         if with_commit:
             env.commit(stage_id)
@@ -303,6 +323,28 @@ def _validate_inductive_head(env: Environment, decl: InductiveDeclaration) -> No
         raise KernelTypeError(
             f"Type of inductive '{decl.name}' must be a Sort, got: "
             f"{sort_expr}"
+        )
+
+
+def _validate_definition_in_env(
+    env: Environment,
+    definition: DefinitionDeclaration,
+) -> None:
+    """Validate a definition against the given environment."""
+    type_inferred = infer_type(definition.type, {}, {}, env)
+    type_sort = whnf(type_inferred, {}, env)
+    if not isinstance(type_sort, ESort):
+        raise KernelTypeError(
+            f"Type of definition '{definition.name}' must evaluate to a "
+            f"Sort, got: {type_sort}"
+        )
+
+    value_type = infer_type(definition.value, {}, {}, env)
+    if not is_def_eq(value_type, definition.type, {}, {}, env):
+        raise KernelTypeError(
+            f"Type mismatch in definition '{definition.name}':\n"
+            f"  Expected type : {definition.type}\n"
+            f"  Actual type   : {value_type}"
         )
 
 def _validate_constructor(
@@ -421,13 +463,7 @@ def _occurs_in(target_name: str, expr: Expr) -> bool:
             return _occurs_in(target_name, domain) or _occurs_in(target_name, body)
         case EApp(fn, arg):
             return _occurs_in(target_name, fn) or _occurs_in(target_name, arg)
-        case EMatch(_, discriminee, motive, cases):
-            return (
-                _occurs_in(target_name, discriminee)
-                or _occurs_in(target_name, motive)
-                or any(_occurs_in(target_name, c) for c in cases)
-            )
-        case ESort(_) | EVar(_) | EMetaVar(_) | EConst(_):
+        case ESort(_) | EFVar(_) | EBVar(_) | EMetaVar(_) | EConst(_):
             return False
         case _:
             return False

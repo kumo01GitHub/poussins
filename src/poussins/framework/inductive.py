@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import ClassVar, override
 
 from ..ast import (
-    EVar,
+    EFVar,
     Expr,
     Sort,
     app,
@@ -34,7 +34,7 @@ class Inductive(BindableMixin, ABC):
         if isinstance(value, Expr):
             object.__setattr__(self, "value", value)
         else:
-            object.__setattr__(self, "value", EVar(value))
+            object.__setattr__(self, "value", EFVar(value))
 
     @classmethod
     def declare(cls, env: Environment) -> InductiveDeclaration:

@@ -35,14 +35,25 @@ class ESort:
 
 
 @dataclass(frozen=True)
-class EVar:
-    """Variable, e.g. x, y."""
+class EFVar:
+    """Free variable, e.g. x, y."""
 
     name: str
 
     @override
     def __str__(self) -> str:
         return self.name
+
+
+@dataclass(frozen=True)
+class EBVar:
+    """Bound variable represented by de Bruijn index."""
+
+    index: int
+
+    @override
+    def __str__(self) -> str:
+        return f"#{self.index}"
 
 
 @dataclass(frozen=True)
@@ -100,24 +111,6 @@ class EApp:
 
 
 @dataclass(frozen=True)
-class EMatch:
-    """Pattern matching expression."""
-
-    inductive_name: str
-    discriminee: Expr
-    motive: Expr
-    cases: tuple[Expr, ...]
-
-    @override
-    def __str__(self) -> str:
-        cases_str = ", ".join(f"branch ↦ {c}" for c in self.cases)
-        return (
-            f"match ({self.inductive_name}) {self.discriminee} "
-            + f"motive {self.motive} with [ {cases_str} ]"
-        )
-
-
-@dataclass(frozen=True)
 class EMetaVar:
     """Meta-variable, e.g. ?m."""
 
@@ -130,11 +123,11 @@ class EMetaVar:
 
 Expr = (
     ESort
-    | EVar
+    | EFVar
+    | EBVar
     | EConst
     | EPi
     | ELam
     | EApp
-    | EMatch
     | EMetaVar
 )

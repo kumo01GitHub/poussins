@@ -3,18 +3,18 @@ from __future__ import annotations
 
 from ..ast import (
     EApp,
+    EBVar,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     app,
     decompose_app,
+    instantiate_binder,
     substitute_metavar,
-    substitute_var,
 )
 from ..environment import (
     ConstructorDeclaration,
@@ -62,13 +62,7 @@ def whnf(
                 return occurs_in(target_name, domain) or occurs_in(target_name, body)
             case EApp(fn, arg):
                 return occurs_in(target_name, fn) or occurs_in(target_name, arg)
-            case EMatch(_, discriminee, motive, cases):
-                return (
-                    occurs_in(target_name, discriminee)
-                    or occurs_in(target_name, motive)
-                    or any(occurs_in(target_name, c) for c in cases)
-                )
-            case ESort(_) | EVar(_) | EMetaVar(_) | EConst(_):
+            case ESort(_) | EFVar(_) | EBVar(_) | EMetaVar(_) | EConst(_):
                 return False
             case _:
                 return False
@@ -169,55 +163,11 @@ def whnf(
             # 2. Standard Application beta-reduction
             fn_whnf = whnf(fn, metavars, env, unfolding)
             if isinstance(fn_whnf, ELam):
-                new_expr = substitute_var(fn_whnf.body, fn_whnf.var, arg)
+                new_expr = instantiate_binder(fn_whnf.body, arg)
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
 
-        case EMatch(inductive_name, discriminee, motive, cases):
-            discriminee_whnf = whnf(discriminee, metavars, env, unfolding)
-
-            if env is not None:
-                decl = env.get(inductive_name)
-                if isinstance(decl, InductiveDeclaration):
-                    discriminee_head, discriminee_args = decompose_app(
-                        discriminee_whnf
-                    )
-                    if isinstance(discriminee_head, EConst):
-                        constructor_names = decl.constructor_names
-                        if (
-                            discriminee_head.name in constructor_names
-                            and len(cases) == len(constructor_names)
-                        ):
-                            branch_index = constructor_names.index(
-                                discriminee_head.name
-                            )
-                            branch_expr = cases[branch_index]
-                            reduced_branch: Expr = branch_expr
-
-                            for constructor_arg in discriminee_args:
-                                reduced_head = whnf(
-                                    reduced_branch,
-                                    metavars,
-                                    env,
-                                    unfolding,
-                                )
-                                if isinstance(reduced_head, ELam):
-                                    reduced_branch = substitute_var(
-                                        reduced_head.body,
-                                        reduced_head.var,
-                                        constructor_arg,
-                                    )
-                                else:
-                                    reduced_branch = EApp(
-                                        reduced_branch,
-                                        constructor_arg,
-                                    )
-
-                            return whnf(reduced_branch, metavars, env, unfolding)
-
-            return EMatch(inductive_name, discriminee_whnf, motive, cases)
-
-        case (ESort(_) | EVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMetaVar(_)):
+        case (ESort(_) | EFVar(_) | EBVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMetaVar(_)):
             return expr
 
 
@@ -250,15 +200,5 @@ def normalize(
                 normalize(domain, actual_metavars, env, unfolding),
                 normalize(body, actual_metavars, env, unfolding),
             )
-        case EMatch(inductive_name, discriminee, motive, cases):
-            return EMatch(
-                inductive_name=inductive_name,
-                discriminee=normalize(discriminee, actual_metavars, env, unfolding),
-                motive=normalize(motive, actual_metavars, env, unfolding),
-                cases=tuple(
-                    normalize(case_expr, actual_metavars, env, unfolding)
-                    for case_expr in cases
-                ),
-            )
-        case ESort() | EVar() | EConst() | EMetaVar():
+        case ESort() | EFVar() | EBVar() | EConst() | EMetaVar():
             return e

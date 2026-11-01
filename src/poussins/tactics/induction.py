@@ -4,18 +4,19 @@ from __future__ import annotations
 from ..ast import (
     EApp,
     EConst,
-    ELam,
-    EMatch,
+    EFVar,
     EMetaVar,
     EPi,
-    EVar,
     Expr,
+    app,
+    decompose_app,
     lam,
     substitute_var,
     univ_levels,
 )
-from ..environment import ConstructorDeclaration, InductiveDeclaration
+from ..environment import ConstructorDeclaration, InductiveDeclaration, RecursorDeclaration
 from ..errors import TacticError
+from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
     const_head_name,
@@ -59,6 +60,12 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         raise TacticError(f"Inductive type '{head_name}' has no constructors.")
 
     constructor_names = inductive_decl.constructor_names
+    _, hypothesis_args = decompose_app(hypothesis_type)
+    recursor_decl = manager.env.get(inductive_decl.recursor_names[0])
+    if not isinstance(recursor_decl, RecursorDeclaration):
+        raise TacticError(f"Missing recursor declaration for '{head_name}'.")
+    inductive_param_count = recursor_decl.num_params
+    inductive_index_count = recursor_decl.num_indices
     subgoals: list[Goal] = []
     branch_terms: list[Expr] = []
 
@@ -76,25 +83,28 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         branch_binders: list[tuple[str, Expr]] = []
         branch_expr: Expr = constructor
         current_type = constructor_type
-        renaming: dict[str, Expr] = {}
         while isinstance(current_type, EPi):
-            domain = current_type.domain
-            body = current_type.body
-            for old_name, new_expr in renaming.items():
-                domain = substitute_var(domain, old_name, new_expr)
-                body = substitute_var(body, old_name, new_expr)
-
             var_name = fresh_binder_name(
                 current_type.var,
                 current_goal.context, used_names=set()
             )
-            if var_name != current_type.var:
-                body = substitute_var(body, current_type.var, EVar(var_name))
+            branch_binders.append((var_name, current_type.domain))
+            branch_expr = EApp(branch_expr, EFVar(var_name))
+            current_type = instantiate_binder_body(
+                current_type.body, EFVar(var_name)
+            )
 
-            branch_binders.append((var_name, domain))
-            branch_expr = EApp(branch_expr, EVar(var_name))
-            renaming[current_type.var] = EVar(var_name)
-            current_type = body
+        parameter_substitutions: dict[str, Expr] = {}
+        for idx in range(
+            min(inductive_param_count, len(hypothesis_args), len(branch_binders))
+        ):
+            p_var_name = branch_binders[idx][0]
+            parameter_substitutions[p_var_name] = hypothesis_args[idx]
+
+        constructor_arg_binders = branch_binders[inductive_param_count:]
+
+        for p_name, p_value in parameter_substitutions.items():
+            branch_expr = substitute_var(branch_expr, p_name, p_value)
 
         branch_statement = substitute_var(
             current_goal.statement,
@@ -108,11 +118,19 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         }
         branch_local_context[hyp_name] = branch_expr
 
-        for var_name, var_type in branch_binders:
+        specialized_constructor_arg_binders = [
+            (
+                var_name,
+                _specialize_with_parameter_substitutions(var_type, parameter_substitutions),
+            )
+            for var_name, var_type in constructor_arg_binders
+        ]
+
+        for var_name, var_type in specialized_constructor_arg_binders:
             branch_local_context[var_name] = var_type
 
         induction_hypotheses: list[tuple[str, Expr]] = []
-        for var_name, var_type in branch_binders:
+        for var_name, var_type in specialized_constructor_arg_binders:
             if const_head_name(var_type) == head_name:
                 ih_name = fresh_binder_name(
                     "ih",
@@ -122,10 +140,10 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
                 ih_expr = substitute_var(
                     current_goal.statement,
                     hyp_name,
-                    EVar(var_name)
+                    EFVar(var_name)
                 )
                 branch_local_context[ih_name] = ih_expr
-                induction_hypotheses.append((ih_name, EVar(var_name)))
+                induction_hypotheses.append((ih_name, EFVar(var_name)))
 
         subgoal = Goal(
             statement=branch_statement,
@@ -134,22 +152,34 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         )
         subgoals.append(subgoal)
 
-        branch_terms.append(lam(branch_binders, EMetaVar(subgoal.id)))
+        branch_terms.append(lam(specialized_constructor_arg_binders, EMetaVar(subgoal.id)))
 
     manager.refine_goal(
-        EMatch(
-            head_name,
-            EVar(hyp_name),
-            ELam(
-                "_induction",
-                hypothesis_type,
+        app(
+            EConst(f"{head_name}.casesOn", ()),
+            *hypothesis_args[:inductive_param_count],
+            *hypothesis_args[inductive_param_count:inductive_param_count + inductive_index_count],
+            EFVar(hyp_name),
+            lam(
+                (("_induction", hypothesis_type),),
                 substitute_var(
                     current_goal.statement,
                     hyp_name,
-                    EVar("_induction")
+                    EFVar("_induction")
                 ),
             ),
-            tuple(branch_terms)
+            *branch_terms,
         ),
         subgoals
     )
+
+
+def _specialize_with_parameter_substitutions(
+    expr: Expr,
+    substitutions: dict[str, Expr],
+) -> Expr:
+    """Specialize an expression by substituting inferred inductive parameters."""
+    specialized_expr = expr
+    for param_name, param_value in substitutions.items():
+        specialized_expr = substitute_var(specialized_expr, param_name, param_value)
+    return specialized_expr

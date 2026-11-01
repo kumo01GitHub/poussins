@@ -5,13 +5,13 @@ import pytest
 
 from poussins.ast import (
     EApp,
-    ELam,
+    EFVar,
     EMetaVar,
     ESort,
-    EVar,
     Expr,
     UnivLevelSucc,
     UnivLevelZero,
+    lam,
 )
 from poussins.environment import Environment
 from poussins.errors import KernelStateError, KernelTypeError, KernelValueError
@@ -142,7 +142,7 @@ class TestChangeGoal:
 
     prop = ESort(UnivLevelZero())
 
-    def _state_with_statement(self, statement: EVar) -> tuple[ProofState, Environment]:
+    def _state_with_statement(self, statement: EFVar) -> tuple[ProofState, Environment]:
         env = Environment()
         context: dict[str, Expr] = {"x": self.prop, "z": self.prop}
         goal = Goal(
@@ -159,10 +159,10 @@ class TestChangeGoal:
     def test_changes_goal_for_definitionally_equal_statement(self):
         """Changing to a convertible statement preserves logical meaning."""
         engine = ProofEngine()
-        state, env = self._state_with_statement(EVar("x"))
+        state, env = self._state_with_statement(EFVar("x"))
         goal_before = state.current_goal
         assert goal_before is not None
-        new_statement = EApp(ELam("y", self.prop, EVar("y")), EVar("x"))
+        new_statement = EApp(lam((("y", self.prop),), "y"), EFVar("x"))
 
         next_state = engine.change_goal(state, new_statement, env)
         assert next_state.current_goal is not None
@@ -182,16 +182,16 @@ class TestChangeGoal:
     def test_rejects_ill_typed_new_statement(self):
         """Changing goal fails when the replacement is not well-typed."""
         engine = ProofEngine()
-        state, env = self._state_with_statement(EVar("x"))
+        state, env = self._state_with_statement(EFVar("x"))
         with pytest.raises(KernelValueError):
-            engine.change_goal(state, EVar("unknown"), env)
+            engine.change_goal(state, EFVar("unknown"), env)
 
     def test_rejects_non_definitionally_equal_statement(self):
         """Changing goal fails for non-convertible statements."""
         engine = ProofEngine()
-        state, env = self._state_with_statement(EVar("x"))
+        state, env = self._state_with_statement(EFVar("x"))
         with pytest.raises(KernelValueError):
-            engine.change_goal(state, EVar("z"), env)
+            engine.change_goal(state, EFVar("z"), env)
 
 
 class TestChangeHypothesis:
@@ -204,13 +204,13 @@ class TestChangeHypothesis:
         env = Environment()
         context: dict[str, Expr] = {"h": self.prop}
         goal = Goal(
-            statement=EVar("h"),
+            statement=EFVar("h"),
             context=context,
             local_hypothesis_names=frozenset({"h"}),
         )
         state = ProofState(
             goals=(goal,),
-            metavars={goal.id: MetaVar(statement=EVar("h"))},
+            metavars={goal.id: MetaVar(statement=EFVar("h"))},
         )
         return state, env
 
@@ -220,7 +220,7 @@ class TestChangeHypothesis:
         state, env = self._state_with_local_hyp()
         goal_before = state.current_goal
         assert goal_before is not None
-        new_type = EApp(ELam("T", self.type0, EVar("T")), self.prop)
+        new_type = EApp(lam((("T", self.type0),), "T"), self.prop)
 
         next_state = engine.change_hypothesis(state, "h", new_type, env)
         assert next_state.current_goal is not None
@@ -245,7 +245,7 @@ class TestChangeHypothesis:
         engine = ProofEngine()
         state, env = self._state_with_local_hyp()
         with pytest.raises(KernelValueError):
-            engine.change_hypothesis(state, "h", EVar("unknown"), env)
+            engine.change_hypothesis(state, "h", EFVar("unknown"), env)
 
     def test_rejects_non_definitionally_equal_hypothesis_type(self):
         """Changing hypothesis fails when types are not definitionally equal."""

@@ -1,7 +1,7 @@
 """Tactics for basic logical transformations."""
 from __future__ import annotations
 
-from ..ast import ELam, EMetaVar, EPi, EVar, Expr, app
+from ..ast import EFVar, ELam, EMetaVar, EPi, Expr, app
 from ..environment import const
 from ..environment.library import FALSE_IND_SPEC
 from ..errors import TacticError
@@ -58,7 +58,7 @@ def contradiction(manager: ProofManager) -> None:
     for name, hyp_type in local_ctx.items():
         norm_type = whnf(hyp_type, metavars, env)
         if norm_type == false_type:
-            proof = _build_false_elim(manager, current_goal, EVar(name))
+            proof = _build_false_elim(manager, current_goal, EFVar(name))
             manager.close_goal(proof)
             return
 

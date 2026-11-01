@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import cast
 
-from ..ast import EVar, Expr
+from ..ast import EApp, EBVar, EConst, EFVar, ELam, EMetaVar, EPi, ESort, Expr
+from ..ast.ops import instantiate_binder
 
 type BoundVar = tuple[str, Expr]
 type BoundVarLike = Sequence[BoundVar | BindableMixin] | BoundVar | BindableMixin
@@ -30,7 +31,7 @@ def normalize_bound_vars(bound_vars: BoundVarLike) -> Sequence[BoundVar]:
     elif isinstance(bound_vars, BindableMixin):
         return (bound_vars.to_bound_var(),)
     else:
-        normalized: Sequence[BoundVar] = []
+        normalized: list[BoundVar] = []
         for var in bound_vars:
             if is_bound_var(var):
                 normalized.append(cast(BoundVar, var))
@@ -42,6 +43,37 @@ def normalize_bound_vars(bound_vars: BoundVarLike) -> Sequence[BoundVar]:
                 )
 
         return normalized
+
+
+def abstract_over_bound_vars(expr: Expr, bound_var_names: Sequence[str]) -> Expr:
+    """Abstract free variables into de Bruijn bound variables."""
+    if not bound_var_names:
+        return expr
+
+    name_to_index = {name: i for i, name in enumerate(reversed(bound_var_names))}
+
+    def _abstract(e: Expr, depth: int) -> Expr:
+        match e:
+            case EFVar(name):
+                idx = name_to_index.get(name)
+                if idx is None:
+                    return e
+                return EBVar(depth + idx)
+            case EApp(fn, arg):
+                return EApp(_abstract(fn, depth), _abstract(arg, depth))
+            case ELam(var, domain, body):
+                return ELam(var, _abstract(domain, depth), _abstract(body, depth + 1))
+            case EPi(var, domain, body):
+                return EPi(var, _abstract(domain, depth), _abstract(body, depth + 1))
+            case ESort() | EConst() | EBVar() | EMetaVar():
+                return e
+
+    return _abstract(expr, 0)
+
+
+def instantiate_binder_body(body: Expr, replacement: Expr) -> Expr:
+    """Instantiate one binder body represented with de Bruijn indices."""
+    return instantiate_binder(body, replacement)
 
 
 class BindableMixin(ABC):
@@ -63,7 +95,7 @@ class BindableMixin(ABC):
     def name(self) -> str | None:
         """Return the name."""
         value = self.bound_value
-        if isinstance(value, EVar):
+        if isinstance(value, EFVar):
             return value.name
 
         return None

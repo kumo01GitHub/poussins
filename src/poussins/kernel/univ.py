@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from ..ast import (
     EApp,
+    EBVar,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     UnivLevel,
     UnivLevelIMax,
@@ -152,7 +152,7 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
     match expr:
         case ESort(level):
             return ESort(instantiate_univ_level(level, param_assignment))
-        case EVar(_):
+        case EFVar(_) | EBVar(_):
             return expr
         case EConst(name, levels):
             new_levels = tuple(
@@ -176,5 +176,5 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
                 instantiate_univ(type_, param_assignment),
                 instantiate_univ(body, param_assignment)
             )
-        case EMatch(_, _, _, _) | EMetaVar(_):
+        case EMetaVar(_):
             return expr

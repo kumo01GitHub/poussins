@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, override
 
-from ..ast import EPi, EVar, Expr, app
+from ..ast import EFVar, EPi, Expr, app
 from ..environment import Environment, QuotientDeclaration, const
 from ..environment.library import (
     EQ_IND_SPEC,
@@ -199,7 +199,7 @@ class Quot:
                         rel_expr,
                         cls._to_expr(a),
                         cls._to_expr(b),
-                        h if isinstance(h, Expr) else EVar(h)
+                        h if isinstance(h, Expr) else EFVar(h)
                     )
 
             @classmethod

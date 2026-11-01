@@ -1,7 +1,7 @@
 """Revert one or more hypotheses from the local context back into the goal."""
 from __future__ import annotations
 
-from ..ast import EApp, EMetaVar, EPi, EVar, collect_free_vars
+from ..ast import EApp, EFVar, EMetaVar, collect_free_vars, pi
 from ..errors import TacticError
 from ..kernel import Goal, ProofManager
 from .helpers import require_current_goal, requires_active_goal
@@ -30,7 +30,7 @@ def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
                 )
 
         new_goal = Goal(
-            statement=EPi(var=hyp_name, domain=hyp_type, body=current_goal.statement),
+            statement=pi(((hyp_name, hyp_type),), current_goal.statement),
             context={
                 name: expr
                 for name, expr in current_goal.context.items()
@@ -44,6 +44,6 @@ def revert(manager: ProofManager, hyp_names: str | list[str]) -> None:
         )
 
         manager.refine_goal(
-            EApp(fn=EMetaVar(new_goal.id), arg=EVar(hyp_name)),
+            EApp(fn=EMetaVar(new_goal.id), arg=EFVar(hyp_name)),
             [new_goal]
         )

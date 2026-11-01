@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from ..ast import (
+    EFVar,
     EMetaVar,
     EPi,
-    EVar,
     Expr,
     app,
     lam,
@@ -58,7 +58,7 @@ def have(manager: ProofManager, name: str, term: Expr) -> None:
     p_to_g = EPi("_", term, current_goal.statement)
     cut_fn = lam(
         [("f", p_to_g)],
-        app(EVar("f"), EMetaVar(proof_goal.id)),
+        app(EFVar("f"), EMetaVar(proof_goal.id)),
     )
     cut_arg = lam(
         [(bound_name, term)],

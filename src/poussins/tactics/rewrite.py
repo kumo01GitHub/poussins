@@ -1,7 +1,7 @@
 """Advanced Rewrite tactic for equality substitution."""
 from __future__ import annotations
 
-from ..ast import ELam, EMetaVar, EVar, Expr, app, substitute_expr
+from ..ast import EFVar, EMetaVar, Expr, app, lam, substitute_expr
 from ..environment import const
 from ..environment.library import EQ_IND_SPEC, EQ_SYMM_DEF_SPEC
 from ..errors import TacticError
@@ -91,24 +91,24 @@ def rewrite(
         substitute_expr(
             target_expr,
             subexpr,
-            substitute_expr(subexpr, from_expr, EVar(y_var))
+            substitute_expr(subexpr, from_expr, EFVar(y_var))
         )
         if subexpr is not None
-        else substitute_expr(target_expr, from_expr, EVar(y_var))
+        else substitute_expr(target_expr, from_expr, EFVar(y_var))
     )
 
     eq_lhs_y = app(
         const(env=manager.env, name=EQ_IND_SPEC.name),
         eq_type,
         to_expr,
-        EVar(y_var),
+        EFVar(y_var),
     )
 
     assignment = app(
         const(env=manager.env, name=manager.env.get_recs(EQ_IND_SPEC.name)[0].name),
         eq_type,
         to_expr,
-        ELam(y_var, eq_type, ELam(h_var, eq_lhs_y, body_with_y)),
+        lam(((y_var, eq_type), (h_var, eq_lhs_y)), body_with_y),
         EMetaVar(new_goal.id),
         from_expr,
         eq_symm_term,

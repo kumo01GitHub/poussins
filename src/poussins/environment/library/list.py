@@ -1,16 +1,16 @@
 """List declarations."""
 from __future__ import annotations
 
-from ...ast import EConst, EPi, app, pi, sort, univ_levels
+from ...ast import EConst, app, pi, sort, univ_levels
 from ..spec import InductiveSpec
 
 LIST_IND_SPEC = InductiveSpec(
     name="List",
-    type=EPi("A", sort("u"), sort("u")),
+    type=pi((("A", sort("u")),), sort("u")),
     constructors=(
         (
             "List.nil",
-            EPi("A", sort("u"), app(EConst("List", univ_levels(("u",))), "A"))
+            pi((("A", sort("u")),), app(EConst("List", univ_levels(("u",))), "A"))
         ),
         (
             "List.cons",

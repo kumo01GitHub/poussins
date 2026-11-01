@@ -5,18 +5,20 @@ import pytest
 
 from poussins.ast import (
     EApp,
+    EBVar,
     EConst,
-    ELam,
-    EMatch,
+    EFVar,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     UnivLevelIMax,
     UnivLevelParam,
     UnivLevelSucc,
     UnivLevelZero,
+    app,
+    lam,
+    pi,
 )
 from poussins.environment import AxiomDeclaration
 from poussins.errors import KernelTypeError
@@ -40,12 +42,12 @@ class TestInferType:
     def test_variable_rule(self):
         """Variables are typed by context lookup."""
         context: dict[str, Expr] = {"x": self.prop}
-        assert infer_type(EVar("x"), context, {}) == self.prop
+        assert infer_type(EFVar("x"), context, {}) == self.prop
 
     def test_variable_rule_rejects_unbound_names(self):
         """Typing fails for unbound variables."""
         with pytest.raises(KernelTypeError):
-            infer_type(EVar("x"), {}, {})
+            infer_type(EFVar("x"), {}, {})
 
     def test_constant_rule_with_universe_instantiation(self):
         """Polymorphic constants instantiate level parameters correctly."""
@@ -97,8 +99,8 @@ class TestInferType:
 
     def test_pi_formation_requires_sort_domain(self):
         """Pi formation rejects non-sort domains."""
-        expr = EPi("x", EVar("A"), self.prop)
-        context: dict[str, Expr] = {"A": EVar("B"), "B": self.prop}
+        expr = EPi("x", EFVar("A"), self.prop)
+        context: dict[str, Expr] = {"A": EFVar("B"), "B": self.prop}
         with pytest.raises(
             KernelTypeError,
         ):
@@ -106,20 +108,20 @@ class TestInferType:
 
     def test_pi_formation_requires_sort_body(self):
         """Pi formation rejects non-sort codomains."""
-        expr = EPi("x", self.prop, EVar("f"))
+        expr = EPi("x", self.prop, EFVar("f"))
         context: dict[str, Expr] = {"f": EPi("y", self.prop, self.prop)}
         with pytest.raises(KernelTypeError):
             infer_type(expr, context, {})
 
     def test_lambda_introduction_rule(self):
         """Lambda introduction yields a Pi type."""
-        expr = ELam("x", self.prop, EVar("x"))
-        assert infer_type(expr, {}, {}) == EPi("x", self.prop, self.prop)
+        expr = lam((("x", self.prop),), "x")
+        assert infer_type(expr, {}, {}) == pi((("x", self.prop),), self.prop)
 
     def test_lambda_introduction_requires_well_formed_domain(self):
         """Lambda introduction rejects ill-formed binder domains."""
-        expr = ELam("x", EVar("A"), EVar("x"))
-        context: dict[str, Expr] = {"A": EVar("B"), "B": self.prop}
+        expr = lam((("x", EFVar("A")),), "x")
+        context: dict[str, Expr] = {"A": EFVar("B"), "B": self.prop}
         with pytest.raises(
             KernelTypeError,
         ):
@@ -127,29 +129,29 @@ class TestInferType:
 
     def test_application_elimination_rule(self):
         """Application eliminates Pi by substituting the argument."""
-        fn_type = EPi("x", self.prop, EVar("x"))
+        fn_type = pi((("x", self.prop),), "x")
         context: dict[str, Expr] = {
             "f": fn_type,
             "p": self.prop,
         }
-        inferred = infer_type(EApp(EVar("f"), EVar("p")), context, {})
-        assert inferred == EVar("p")
+        inferred = infer_type(EApp(EFVar("f"), EFVar("p")), context, {})
+        assert inferred == EFVar("p")
 
     def test_application_rejects_non_function_head(self):
         """Application requires a Pi-typed head."""
         context: dict[str, Expr] = {"x": self.prop, "p": self.prop}
         with pytest.raises(KernelTypeError):
-            infer_type(EApp(EVar("x"), EVar("p")), context, {})
+            infer_type(EApp(EFVar("x"), EFVar("p")), context, {})
 
     def test_application_rejects_domain_mismatch(self):
         """Application requires argument/domain definitional equality."""
-        fn_type = EPi("x", self.type0, EVar("x"))
+        fn_type = pi((("x", self.type0),), "x")
         context: dict[str, Expr] = {
             "f": fn_type,
             "p": self.prop,
         }
         with pytest.raises(KernelTypeError):
-            infer_type(EApp(EVar("f"), EVar("p")), context, {})
+            infer_type(EApp(EFVar("f"), EFVar("p")), context, {})
 
     def test_metavariable_rule(self):
         """Metavariables are typed by their declared statement."""
@@ -161,36 +163,32 @@ class TestInferType:
         with pytest.raises(KernelTypeError):
             infer_type(EMetaVar("m1"), {}, {})
 
-    def test_match_typing_checks_constructor_branches(self):
-        """Match typing validates branch arity/types against constructors."""
+    def test_cases_on_typing_checks_constructor_branches(self):
+        """`casesOn` typing validates branch arity/types against constructors."""
         env = create_standard_environment()
         nat = EConst("Nat", ())
-        motive = ELam("_n", nat, nat)
-        expr = EMatch(
-            "Nat",
-            EVar("n"),
+        motive = lam((("_n", nat),), nat)
+        expr = app(
+            EConst("Nat.casesOn", ()),
+            EFVar("n"),
             motive,
-            (
-                EConst("Nat.zero", ()),
-                ELam("k", nat, EVar("k")),
-            ),
+            EConst("Nat.zero", ()),
+            lam((("k", nat),), "k"),
         )
         context: dict[str, Expr] = {"n": nat}
-        assert infer_type(expr, context, {}, env) == EApp(motive, EVar("n"))
+        assert infer_type(expr, context, {}, env) == EApp(motive, EFVar("n"))
 
-    def test_match_typing_rejects_invalid_branch_type(self):
-        """Match typing rejects branches that do not match constructor binders."""
+    def test_cases_on_typing_rejects_invalid_branch_type(self):
+        """`casesOn` typing rejects branches that do not match constructor binders."""
         env = create_standard_environment()
         nat = EConst("Nat", ())
-        motive = ELam("_n", nat, nat)
-        expr = EMatch(
-            "Nat",
-            EVar("n"),
+        motive = lam((("_n", nat),), nat)
+        expr = app(
+            EConst("Nat.casesOn", ()),
+            EFVar("n"),
             motive,
-            (
-                EConst("Nat.zero", ()),
-                EConst("Nat.zero", ()),
-            ),
+            EConst("Nat.zero", ()),
+            EConst("Nat.zero", ()),
         )
         context: dict[str, Expr] = {"n": nat}
         with pytest.raises(KernelTypeError):
@@ -206,7 +204,7 @@ class TestInferType:
             self.prop,
             EPi(
                 "B",
-                EPi("_", EVar("A"), self.prop),
+                EPi("_", EBVar(0), self.prop),
                 ESort(UnivLevelIMax(UnivLevelZero(), UnivLevelZero())),
             ),
         )
@@ -220,10 +218,9 @@ class TestCheckType:
 
     def test_conversion_rule(self):
         """Checking accepts types convertible to the inferred type."""
-        expr = ELam("x", self.prop, EVar("x"))
-        expected = EPi(
-            "y",
-            EApp(ELam("T", self.type0, EVar("T")), self.prop),
+        expr = lam((("x", self.prop),), "x")
+        expected = pi(
+            (("y", EApp(lam((("T", self.type0),), "T"), self.prop)),),
             self.prop,
         )
         assert check_type(expr, expected, {}, {}) is True
@@ -234,8 +231,8 @@ class TestCheckType:
 
     def test_rejects_incompatible_types(self):
         """Checking fails for incompatible expected types."""
-        expr = ELam("x", self.prop, EVar("x"))
-        expected = EPi("x", self.type0, EVar("x"))
+        expr = lam((("x", self.prop),), "x")
+        expected = pi((("x", self.type0),), "x")
         assert check_type(expr, expected, {}, {}) is False
 
     def test_rejects_non_cumulative_sort_direction(self):
@@ -244,7 +241,7 @@ class TestCheckType:
 
     def test_returns_false_when_inference_fails(self):
         """Checking returns False when inference raises a type error."""
-        assert check_type(EVar("x"), self.prop, {}, {}) is False
+        assert check_type(EFVar("x"), self.prop, {}, {}) is False
 
 
 class TestInferMetaVarTypes:
@@ -254,7 +251,7 @@ class TestInferMetaVarTypes:
 
     def test_propagates_expected_domain_through_application(self):
         """Application structure propagates domain expectations to metavariables."""
-        expr = EApp(EVar("f"), EMetaVar("m1"))
+        expr = EApp(EFVar("f"), EMetaVar("m1"))
         context: dict[str, Expr] = {"f": EPi("x", self.prop, self.prop)}
         result = infer_metavar_types(
             expr,
@@ -273,7 +270,7 @@ class TestInferMetaVarTypes:
 
     def test_falls_back_when_function_inference_fails(self):
         """When function inference fails under application, fallback still applies."""
-        expr = EApp(EVar("unknown_fn"), EMetaVar("m1"))
+        expr = EApp(EFVar("unknown_fn"), EMetaVar("m1"))
         expected = self.prop
         result = infer_metavar_types(expr, expected, {}, {"m1": MetaVar(self.prop)})
         assert result["m1"] == expected

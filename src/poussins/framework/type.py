@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import override
 
-from ..ast import ESort, EVar, Expr, Sort, UnivLevel, univ_level
+from ..ast import EFVar, ESort, Expr, Sort, UnivLevel, univ_level
 from .bound_var import BindableMixin
 
 
@@ -24,7 +24,7 @@ class Type(BindableMixin):
         object.__setattr__(
             self,
             "value",
-            value if isinstance(value, Expr) else EVar(value)
+            value if isinstance(value, Expr) else EFVar(value)
         )
         object.__setattr__(self, "level", univ_level(level))
 

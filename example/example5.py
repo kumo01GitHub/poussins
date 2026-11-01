@@ -1,5 +1,4 @@
 """Example 5: Propositional logic with And and Or introduction rules."""
-from poussins.ast import EVar
 from poussins.framework import Example, Prop, create_standard_environment
 
 env = create_standard_environment()
@@ -48,7 +47,7 @@ example3 = Example(Prop.forall(bound_vars, (p & p) >> p), env)
 
 example3.intros(["P", "Q", "R"])
 example3.intro("hAnd")
-example3.obtain(("And.intro", "hP1", "hP2"), EVar("hAnd"))
+example3.obtain(("And.intro", "hP1", "hP2"), "hAnd")
 example3.exact("hP1")
 
 example3.qed()

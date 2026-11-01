@@ -1,9 +1,9 @@
 """Tactic for specializing a hypothesis with an argument (specialize h a)."""
 from __future__ import annotations
 
-from ..ast import EMetaVar, EPi, EVar, Expr, app, lam
-from ..ast.ops import substitute_var
+from ..ast import EFVar, EMetaVar, EPi, Expr, app, lam
 from ..errors import TacticError
+from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager
 from .helpers import (
     require_current_goal,
@@ -36,7 +36,7 @@ def specialize(manager: ProofManager, hyp_name: str, term: Expr) -> None:
     specialized_type = (
         hyp_type.body
         if hyp_type.var == "_"
-        else substitute_var(hyp_type.body, hyp_type.var, term)
+        else instantiate_binder_body(hyp_type.body, term)
     )
 
     new_context = current_goal.context | {hyp_name: specialized_type}
@@ -50,6 +50,6 @@ def specialize(manager: ProofManager, hyp_name: str, term: Expr) -> None:
         [(hyp_name, specialized_type)],
         EMetaVar(new_goal.id),
     )
-    assignment_expr = app(cut_lambda, app(EVar(hyp_name), term))
+    assignment_expr = app(cut_lambda, app(EFVar(hyp_name), term))
 
     manager.refine_goal(assignment_expr, [new_goal])

@@ -1,12 +1,12 @@
 """Finite-index declarations."""
 from __future__ import annotations
 
-from ...ast import EConst, EPi, Sort, app, pi
+from ...ast import EConst, Sort, app, pi
 from ..spec import InductiveSpec
 
 FIN_IND_SPEC = InductiveSpec(
     name="Fin",
-    type=EPi("n", EConst("Nat", ()), Sort.TYPE.sort),
+    type=pi((("n", EConst("Nat", ())),), Sort.TYPE.sort),
     constructors=(
         (
             "Fin.zero",

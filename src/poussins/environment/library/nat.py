@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from ...ast import (
     EConst,
-    EMatch,
     Sort,
     app,
     lam,
@@ -160,9 +159,9 @@ NAT_DIV_DEF_SPEC = DefinitionSpec(
                     ("n_ih", EConst("Nat", ())),
                     ("ih", EConst("Nat", ())),
                 ),
-                EMatch(
-                    inductive_name="Nat",
-                    discriminee=app(
+                app(
+                    EConst("Nat.casesOn", ()),
+                    app(
                         EConst("Nat.sub", ()),
                         "m",
                         app(
@@ -179,25 +178,23 @@ NAT_DIV_DEF_SPEC = DefinitionSpec(
                                         ("n_ih2", EConst("Nat", ())),
                                         ("ih2", EConst("Nat", ())),
                                     ),
-                                    EMatch(
-                                        inductive_name="Nat",
-                                        discriminee=app(
+                                    app(
+                                        EConst("Nat.casesOn", ()),
+                                        app(
                                             EConst("Nat.sub", ()),
                                             "m",
                                             app(EConst("Nat.succ", ()), "ih2"),
                                         ),
-                                        motive=lam(
+                                        lam(
                                             (("_", EConst("Nat", ())),),
                                             EConst("Nat", ()),
                                         ),
-                                        cases=(
-                                            EConst("Nat.zero", ()),
-                                            lam(
-                                                (
-                                                    ("k", EConst("Nat", ())),
-                                                ),
-                                                app(EConst("Nat.succ", ()), "ih2"),
+                                        EConst("Nat.zero", ()),
+                                        lam(
+                                            (
+                                                ("k", EConst("Nat", ())),
                                             ),
+                                            app(EConst("Nat.succ", ()), "ih2"),
                                         ),
                                     ),
                                 ),
@@ -205,18 +202,16 @@ NAT_DIV_DEF_SPEC = DefinitionSpec(
                             ),
                         ),
                     ),
-                    motive=lam(
+                    lam(
                         (("_", EConst("Nat", ())),),
                         EConst("Nat", ()),
                     ),
-                    cases=(
-                        EConst("Nat.zero", ()),
-                        lam(
-                            (
-                                ("k", EConst("Nat", ())),
-                            ),
-                            app(EConst("Nat.succ", ()), "ih"),
+                    EConst("Nat.zero", ()),
+                    lam(
+                        (
+                            ("k", EConst("Nat", ())),
                         ),
+                        app(EConst("Nat.succ", ()), "ih"),
                     ),
                 ),
             ),
@@ -251,23 +246,21 @@ NAT_MOD_DEF_SPEC = DefinitionSpec(
                     ("n_ih", EConst("Nat", ())),
                     ("ih", EConst("Nat", ())),
                 ),
-                EMatch(
-                    inductive_name="Nat",
-                    discriminee=app(
+                app(
+                    EConst("Nat.casesOn", ()),
+                    app(
                         EConst("Nat.sub", ()),
                         "m",
                         app(EConst("Nat.succ", ()), "ih"),
                     ),
-                    motive=lam(
+                    lam(
                         (("_", EConst("Nat", ())),),
                         EConst("Nat", ()),
                     ),
-                    cases=(
-                        EConst("Nat.zero", ()),
-                        lam(
-                            (("k", EConst("Nat", ())),),
-                            app(EConst("Nat.succ", ()), "ih"),
-                        ),
+                    EConst("Nat.zero", ()),
+                    lam(
+                        (("k", EConst("Nat", ())),),
+                        app(EConst("Nat.succ", ()), "ih"),
                     ),
                 ),
             ),

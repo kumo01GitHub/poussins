@@ -3,23 +3,22 @@ from __future__ import annotations
 
 from ..ast import (
     EApp,
+    EBVar,
     EConst,
+    EFVar,
     ELam,
-    EMatch,
     EMetaVar,
     EPi,
     ESort,
-    EVar,
     Expr,
     UnivLevelIMax,
-    UnivLevelParam,
     UnivLevelSucc,
-    app,
     collect_metavar_ids,
-    decompose_app,
-    substitute_var,
+    instantiate_binder,
+    pi,
+    shift_bvars,
 )
-from ..environment import ConstructorDeclaration, Environment, InductiveDeclaration
+from ..environment import Environment
 from ..errors import KernelTypeError
 from .equality import is_def_eq
 from .eval import instantiate_metavar, whnf
@@ -39,12 +38,19 @@ def _infer_sort(expr: ESort) -> Expr:
     return ESort(UnivLevelSucc(expr.level))
 
 
-def _infer_var(expr: EVar, context: dict[str, Expr]) -> Expr:
-    """Infer the type of a variable expression."""
+def _infer_fvar(expr: EFVar, context: dict[str, Expr]) -> Expr:
+    """Infer the type of a free variable expression."""
     inferred = context.get(expr.name)
     if inferred is None:
         raise KernelTypeError(f"Unknown local variable '{expr.name}'.")
     return inferred
+
+
+def _infer_bvar(expr: EBVar, bound_context: list[Expr]) -> Expr:
+    """Infer the type of a bound variable expression."""
+    if expr.index < 0 or expr.index >= len(bound_context):
+        raise KernelTypeError(f"Unknown bound variable index '{expr.index}'.")
+    return bound_context[expr.index]
 
 
 def _infer_const(
@@ -80,14 +86,24 @@ def _infer_pi(
     context: dict[str, Expr],
     metavars: dict[str, MetaVar],
     env: Environment | None,
+    bound_context: list[Expr],
 ) -> Expr:
     """Infer the type of a dependent product expression."""
-    sort_a = infer_type(expr.domain, context, metavars, env)
+    sort_a = _infer_type(expr.domain, context, metavars, env, bound_context)
     sort_a_whnf = whnf(sort_a, metavars, env)
     if not isinstance(sort_a_whnf, ESort):
         raise KernelTypeError("The domain of a dependent product must be a Sort.")
 
-    sort_b = infer_type(expr.body, context | {expr.var: expr.domain}, metavars, env)
+    extended_bound_context = [shift_bvars(expr.domain, 1)] + [
+        shift_bvars(bound_type, 1) for bound_type in bound_context
+    ]
+    sort_b = _infer_type(
+        expr.body,
+        context | {expr.var: expr.domain},
+        metavars,
+        env,
+        extended_bound_context,
+    )
     sort_b_whnf = whnf(sort_b, metavars, env)
     if not isinstance(sort_b_whnf, ESort):
         raise KernelTypeError("The body of a dependent product must be a Sort.")
@@ -100,12 +116,23 @@ def _infer_lam(
     context: dict[str, Expr],
     metavars: dict[str, MetaVar],
     env: Environment | None,
+    bound_context: list[Expr],
 ) -> Expr:
     """Infer the type of a lambda expression."""
+    domain_sort = _infer_type(expr.domain, context, metavars, env, bound_context)
+    if not isinstance(whnf(domain_sort, metavars, env), ESort):
+        raise KernelTypeError("The domain of a lambda must be a Sort.")
+
     extended_context = context | {expr.var: expr.domain}
-    body_type = infer_type(expr.body, extended_context, metavars, env)
-    _ = infer_type(EPi(expr.var, expr.domain, body_type), context, metavars, env)
-    return EPi(expr.var, expr.domain, body_type)
+    opened_body = instantiate_binder(expr.body, EFVar(expr.var))
+    body_type = _infer_type(
+        opened_body,
+        extended_context,
+        metavars,
+        env,
+        bound_context,
+    )
+    return pi(((expr.var, expr.domain),), body_type)
 
 
 def _infer_app(
@@ -113,10 +140,11 @@ def _infer_app(
     context: dict[str, Expr],
     metavars: dict[str, MetaVar],
     env: Environment | None,
+    bound_context: list[Expr],
 ) -> Expr:
     """Infer the type of an application expression."""
-    fn_type = infer_type(expr.fn, context, metavars, env)
-    arg_type = infer_type(expr.arg, context, metavars, env)
+    fn_type = _infer_type(expr.fn, context, metavars, env, bound_context)
+    arg_type = _infer_type(expr.arg, context, metavars, env, bound_context)
     fn_type_whnf = whnf(fn_type, metavars, env)
     if not isinstance(fn_type_whnf, EPi):
         raise KernelTypeError(
@@ -130,131 +158,15 @@ def _infer_app(
             "Argument type mismatch. "
             + f"Expected: {expected_domain}, Found: {actual_arg_type}"
         )
-    return substitute_var(fn_type_whnf.body, fn_type_whnf.var, expr.arg)
+    return instantiate_binder(fn_type_whnf.body, expr.arg)
 
 
-def _infer_match(
-    expr: EMatch,
-    context: dict[str, Expr],
-    metavars: dict[str, MetaVar],
-    env: Environment | None,
-) -> Expr:
-    """Infer the type of a match expression and validate branch typings."""
-    if env is None:
-        raise KernelTypeError("Match typing requires an environment with declarations.")
-
-    discriminee_type = whnf(
-        infer_type(expr.discriminee, context, metavars, env),
-        metavars,
-        env,
-    )
-    discriminee_head, discriminee_args = decompose_app(discriminee_type)
-    if not isinstance(discriminee_head, EConst):
-        raise KernelTypeError("Match discriminee must have an inductive type head.")
-    if discriminee_head.name != expr.inductive_name:
-        raise KernelTypeError(
-            "Match discriminee type mismatch. "
-            + f"Expected '{expr.inductive_name}', found '{discriminee_head.name}'."
-        )
-
-    inductive_decl = env.get(expr.inductive_name)
-    if not isinstance(inductive_decl, InductiveDeclaration):
-        raise KernelTypeError(f"'{expr.inductive_name}' is not an inductive type.")
-
-    constructor_names = inductive_decl.constructor_names
-    if len(expr.cases) != len(constructor_names):
-        raise KernelTypeError(
-            "Match branch count mismatch. "
-            f"Expected {len(constructor_names)}, found {len(expr.cases)}."
-        )
-
-    motive_type = whnf(infer_type(expr.motive, context, metavars, env), metavars, env)
-    if not isinstance(motive_type, EPi):
-        raise KernelTypeError("Match motive must be a function (Pi type).")
-
-    motive_domain = whnf(motive_type.domain, metavars, env)
-    if not is_def_eq(motive_domain, discriminee_type, context, metavars, env):
-        raise KernelTypeError("Match motive domain mismatch with discriminee type.")
-
-    inductive_param_count = 0
-    curr_t = inductive_decl.type
-    while isinstance(curr_t, EPi):
-        inductive_param_count += 1
-        curr_t = curr_t.body
-
-    for branch_expr, constructor_name in zip(
-        expr.cases,
-        constructor_names,
-        strict=False
-    ):
-        constructor_decl = env.get(constructor_name)
-        if not isinstance(constructor_decl, ConstructorDeclaration):
-            raise KernelTypeError(
-                f"'{constructor_name}' is not a constructor declaration."
-            )
-        constructor_const = EConst(
-            constructor_name,
-            tuple(UnivLevelParam(p) for p in constructor_decl.level_params),
-        )
-        constructor_type = whnf(
-            infer_type(constructor_const, context, metavars, env),
-            metavars,
-            env
-        )
-
-        binders: list[tuple[str, Expr]] = []
-        constructor_args: list[Expr] = []
-        current_constructor_type = constructor_type
-        while isinstance(current_constructor_type, EPi):
-            binders.append(
-                (current_constructor_type.var, current_constructor_type.domain)
-            )
-            constructor_args.append(EVar(current_constructor_type.var))
-            current_constructor_type = current_constructor_type.body
-
-        param_substitutions: dict[str, Expr] = {}
-        for idx in range(
-            min(inductive_param_count, len(discriminee_args), len(binders))
-        ):
-            p_var_name = binders[idx][0]
-            param_substitutions[p_var_name] = discriminee_args[idx]
-
-        specialized_binders: list[tuple[str, Expr]] = []
-        branch_context = dict(context)
-        for var_name, domain in binders:
-            spec_domain = domain
-            for p_name, p_val in param_substitutions.items():
-                spec_domain = substitute_var(spec_domain, p_name, p_val)
-            specialized_binders.append((var_name, spec_domain))
-            branch_context[var_name] = spec_domain
-
-        constructor_instance = app(constructor_const, *constructor_args)
-        for p_name, p_val in param_substitutions.items():
-            constructor_instance = substitute_var(
-                constructor_instance,
-                p_name,
-                p_val
-            )
-
-        expected_branch_type: Expr = EApp(expr.motive, constructor_instance)
-        for var_name, domain in reversed(specialized_binders):
-            expected_branch_type = EPi(var_name, domain, expected_branch_type)
-
-        branch_type = infer_type(branch_expr, branch_context, metavars, env)
-        if not is_def_eq(branch_type, expected_branch_type, context, metavars, env):
-            raise KernelTypeError(
-                "Match branch type mismatch for constructor "
-                + f"'{constructor_name}'."
-            )
-
-    return EApp(expr.motive, expr.discriminee)
-
-
-def infer_type(
+def _infer_type(
     expr: Expr,
     context: dict[str, Expr],
     metavars: dict[str, MetaVar],
-    env: Environment | None = None,
+    env: Environment | None,
+    bound_context: list[Expr],
 ) -> Expr:
     """Infer the type of an expression."""
     expr = instantiate_metavar(expr, metavars)
@@ -264,18 +176,28 @@ def infer_type(
             return _infer_metavar(expr, metavars)
         case ESort():
             return _infer_sort(expr)
-        case EVar():
-            return _infer_var(expr, context)
+        case EFVar():
+            return _infer_fvar(expr, context)
+        case EBVar():
+            return _infer_bvar(expr, bound_context)
         case EConst():
             return _infer_const(expr, context, env)
         case EPi():
-            return _infer_pi(expr, context, metavars, env)
+            return _infer_pi(expr, context, metavars, env, bound_context)
         case ELam():
-            return _infer_lam(expr, context, metavars, env)
+            return _infer_lam(expr, context, metavars, env, bound_context)
         case EApp():
-            return _infer_app(expr, context, metavars, env)
-        case EMatch():
-            return _infer_match(expr, context, metavars, env)
+            return _infer_app(expr, context, metavars, env, bound_context)
+
+
+def infer_type(
+    expr: Expr,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar],
+    env: Environment | None = None,
+) -> Expr:
+    """Infer the type of an expression."""
+    return _infer_type(expr, context, metavars, env, [])
 
 
 def check_type(

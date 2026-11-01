@@ -7,7 +7,7 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Concatenate, Final
 
-from ..ast import EConst, EVar, Expr, UnivLevelParam
+from ..ast import EConst, EFVar, Expr, UnivLevelParam
 from ..environment import Declaration
 from ..kernel import ProofManager, ProofState
 from ..tactics import (
@@ -127,7 +127,7 @@ class TacticMixin(ABC):
                     + "No active goal to resolve local context."
                 )
             elif current_goal.has_local_hypothesis(term):
-                return EVar(term)
+                return EFVar(term)
             else:
                 decl = self.manager.env.get(term)
                 if isinstance(decl, Declaration):
