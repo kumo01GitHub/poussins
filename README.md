@@ -24,15 +24,20 @@ Install `poussins` from PyPI:
 
 ```bash
 pip install poussins
-poussins --help
 ```
 
-Run a proof file:
+Try the official example (`example/hilbert_s.py`) by downloading and running it:
 
 ```bash
-poussins prove path/to/proof.py
-# or
-python -m poussins prove path/to/proof.py
+curl -L -o hilbert_s.py \
+  https://raw.githubusercontent.com/kumo01GitHub/poussins/main/example/hilbert_s.py
+python hilbert_s.py
+```
+
+Then create your own proof script and run it:
+
+```bash
+python path/to/proof.py
 ```
 
 ### From Source / Development
@@ -44,6 +49,5 @@ git clone https://github.com/kumo01GitHub/poussins.git
 cd poussins
 
 uv sync
-uv run -m poussins --help
-uv run -m poussins prove example/hilbert_s.py
+uv run example/hilbert_s.py
 ```

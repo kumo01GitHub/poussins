@@ -10,7 +10,6 @@ For daily proof writing, see [Proof Author Guide](proof-author-guide.md). For di
 uv sync
 uv run pytest
 uv run ruff check .
-uv run -m poussins --help
 ```
 
 ## Overview
@@ -28,7 +27,6 @@ src/poussins/
   framework/       # High-level DSL: Prop, Type, Theorem, Example, TacticMixin, Inductive, Quot, bound_var utilities, declaration helpers
     inductive_types/ # Concrete inductive wrappers (Nat, Bool, List, Vector, Fin, Prod, Sigma, Sum, Option, Unit, Empty)
     definitions/     # Specialized definition wrappers (Eq)
-  cli/             # Command-line entry points and converters
   errors/          # Domain-specific exception hierarchy
 example/           # Executable proof scripts (examples 1 through 9, spark verification)
 tests/             # Comprehensive unit and integration test suite
@@ -54,19 +52,16 @@ flowchart TD
     X --> K
     X --> T
     X --> F
-    C[cli/] --> F
-    C --> T
 ```
 
 In practice:
 
 - `ast/` is the foundation layer. It defines expressions, universe levels, sorts, and traversal/substitution utilities used everywhere.
-- `errors/` is a shared support layer. It provides exception types used by the kernel, tactics, framework, and CLI.
+- `errors/` is a shared support layer. It provides exception types used by the kernel, tactics, and framework.
 - `environment/` builds on `ast/` and defines declarations, specifications (`Spec`), and library modules for the kernel and framework.
 - `kernel/` depends on `ast/`, `environment/`, and `errors/`, and is the core proof-state, type-checking, recursor reduction, and registration/validation engine.
 - `tactics/` depends on the kernel and AST concepts to transform goals via `ProofManager`.
 - `framework/` builds on kernel, tactics, environment, and AST to provide the user-facing DSL (`Prop`, `Type`, `Theorem`, `Example`, `TacticMixin`, `Quot`, `Inductive`, `inductive_types/`, `definitions/`).
-- `cli/` is the top-level command-line entrypoint and depends on the framework and tactics layers.
 
 ### Design Principles
 
@@ -89,7 +84,6 @@ flowchart LR
     Engine --> State[kernel: ProofState + MetaVars]
     Engine --> TC[kernel: infer_type + unify + whnf / recursor reduction]
     Manager --> Env[environment: declarations]
-    CLI[cli commands] --> DSL
 ```
 
 ## Internals
@@ -193,20 +187,6 @@ This section explains how proof construction and verification flow through the s
   - `declare_axiom(env, spec: AxiomSpec) -> AxiomDeclaration`
   - `declare_theorem(env, spec: TheoremSpec) -> TheoremDeclaration`
   - `declare_quot(env) -> QuotientDeclaration`
-
-### CLI Surface
-
-Main entrypoint:
-
-```bash
-uv run -m poussins <subcommand>
-```
-
-Available subcommands:
-- `prove <file>`: batch execution
-- `step <file> [--theorem NAME]`: step-wise execution
-- `lean2py <file> [--output FILE]`
-- `py2lean <file> [--output FILE]`
 
 ## Customization
 
@@ -422,8 +402,8 @@ Tactics are thin adapters over `ProofManager`. Keep them narrow and do not move 
 ## Common Commands
 
 ```bash
-# CLI
-uv run -m poussins prove path/to/proofs.py
+# Run proof scripts
+uv run python path/to/proofs.py
 
 # Tests and lint
 uv run pytest

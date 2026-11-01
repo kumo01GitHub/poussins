@@ -366,13 +366,6 @@ intro(th.manager, "h")
 uv run python path/to/proofs.py
 ```
 
-### Run through CLI
-
-```bash
-uv run -m poussins prove path/to/proofs.py
-uv run -m poussins step path/to/proofs.py --theorem theorem_name
-```
-
 ## Troubleshooting
 
 - `TacticError`: the chosen tactic does not match the current goal shape.
