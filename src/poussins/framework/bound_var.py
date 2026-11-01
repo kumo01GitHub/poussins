@@ -24,7 +24,10 @@ def normalize_bound_vars(bound_vars: BoundVarLike) -> Sequence[BoundVar]:
         )
 
     if not bound_vars:
-        raise TypeError("bound_vars must be a non-empty sequence of bound variables or bindable objects")
+        raise TypeError(
+            "bound_vars must be a non-empty sequence of bound variables"
+            + " or bindable objects"
+        )
 
     if is_bound_var(bound_vars):
         return (cast(BoundVar, bound_vars),)
@@ -39,7 +42,8 @@ def normalize_bound_vars(bound_vars: BoundVarLike) -> Sequence[BoundVar]:
                 normalized.append(var.to_bound_var())
             else:
                 raise TypeError(
-                    f"Invalid bound variable: {var}. Must be a tuple of (name, type) or a BindableMixin instance."
+                    f"Invalid bound variable: {var}."
+                    + " Must be a tuple of (name, type) or a BindableMixin instance."
                 )
 
         return normalized

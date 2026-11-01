@@ -1,4 +1,4 @@
-"""Specifications for axioms, definitions, theorems, and inductive types in the environment."""
+"""Specifications for declarations in the environment."""
 from __future__ import annotations
 
 from collections.abc import Sequence

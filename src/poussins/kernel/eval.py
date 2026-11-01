@@ -167,7 +167,14 @@ def whnf(
                 return whnf(new_expr, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
 
-        case (ESort(_) | EFVar(_) | EBVar(_) | ELam(_, _, _) | EPi(_, _, _) | EMetaVar(_)):
+        case (
+            ESort(_)
+            | EFVar(_)
+            | EBVar(_)
+            | ELam(_, _, _)
+            | EPi(_, _, _)
+            | EMetaVar(_)
+        ):
             return expr
 
 

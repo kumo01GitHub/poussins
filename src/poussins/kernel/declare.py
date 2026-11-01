@@ -242,7 +242,7 @@ def register_inductive(
         decl: Inductive type declaration (e.g., Nat, List).
         ctors: List of constructor declarations (e.g., zero/succ, nil/cons).
         rec: Recursor declaration (e.g., Nat.rec).
-        extra_definitions: Optional additional definitions associated with the inductive type.
+        extra_definitions: Additional definitions associated with the inductive type.
 
     """
     _register_inductive_on_staging(
@@ -400,10 +400,11 @@ def _validate_recursor(
     rec: RecursorDeclaration,
 ) -> None:
     """Validate the recursor declaration."""
-    # 1. Check that the recursor is listed in the inductive declaration's recursor names.
+    # 1. Check that recursor is listed in the inductive declaration's recursor names.
     if rec.name not in decl.recursor_names:
         raise KernelTypeError(
-            f"Recursor '{rec.name}' is not listed in the inductive declaration's recursor names: {decl.recursor_names}"
+            f"Recursor '{rec.name}' is not listed"
+            + f" in the inductive declaration's recursor names: {decl.recursor_names}"
         )
     if rec.inductive_name != decl.name:
         raise KernelTypeError(

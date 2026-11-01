@@ -9,7 +9,9 @@ def const(env: Environment, name: str) -> EConst:
     """Create an EConst expression for a declaration in the environment."""
     decl = env.get(name)
     if decl is None:
-        raise ValueError(f"Declaration with name '{name}' does not exist in the environment.")
+        raise ValueError(
+            f"Declaration with name '{name}' does not exist in the environment."
+        )
 
     return EConst(
         name=decl.name,

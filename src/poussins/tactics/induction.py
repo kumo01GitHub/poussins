@@ -14,7 +14,11 @@ from ..ast import (
     substitute_var,
     univ_levels,
 )
-from ..environment import ConstructorDeclaration, InductiveDeclaration, RecursorDeclaration
+from ..environment import (
+    ConstructorDeclaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 from ..errors import TacticError
 from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
@@ -121,7 +125,10 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         specialized_constructor_arg_binders = [
             (
                 var_name,
-                _specialize_with_parameter_substitutions(var_type, parameter_substitutions),
+                _specialize_with_parameter_substitutions(
+                    var_type,
+                    parameter_substitutions
+                ),
             )
             for var_name, var_type in constructor_arg_binders
         ]
@@ -152,13 +159,18 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
         )
         subgoals.append(subgoal)
 
-        branch_terms.append(lam(specialized_constructor_arg_binders, EMetaVar(subgoal.id)))
+        branch_terms.append(
+            lam(specialized_constructor_arg_binders, EMetaVar(subgoal.id))
+        )
 
     manager.refine_goal(
         app(
             EConst(f"{head_name}.casesOn", ()),
             *hypothesis_args[:inductive_param_count],
-            *hypothesis_args[inductive_param_count:inductive_param_count + inductive_index_count],
+            *hypothesis_args[
+                inductive_param_count:inductive_param_count
+                + inductive_index_count
+            ],
             EFVar(hyp_name),
             lam(
                 (("_induction", hypothesis_type),),

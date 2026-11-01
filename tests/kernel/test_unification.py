@@ -101,7 +101,15 @@ class TestUnificationAssignmentRules:
     def test_cases_on_unification_fails_on_arity(self):
         """Different argument arities cannot unify."""
         left = nat_cases_on(EFVar("n"), EFVar("P"), EFVar("z"), EFVar("s"))
-        right = EApp(EApp(EApp(EConst("Nat.casesOn", ()), EFVar("n")), EFVar("P")), EFVar("z"))
+        right = EApp(
+            EApp(
+                EApp(
+                    EConst("Nat.casesOn", ()),
+                    EFVar("n")
+                ),
+                EFVar("P")),
+            EFVar("z")
+        )
         with pytest.raises(KernelTypeError, match=r"type mismatch"):
             unify(left, right, {}, {})
 

@@ -14,7 +14,14 @@ from .expr import (
     ESort,
     Expr,
 )
-from .universe import UnivLevel, UnivLevelIMax, UnivLevelMax, UnivLevelParam, UnivLevelSucc, UnivLevelZero
+from .universe import (
+    UnivLevel,
+    UnivLevelIMax,
+    UnivLevelMax,
+    UnivLevelParam,
+    UnivLevelSucc,
+    UnivLevelZero,
+)
 
 
 # ------------------------------------------------------------------
@@ -82,7 +89,10 @@ def lam(
     result = body if isinstance(body, Expr) else EFVar(body)
     for var_name, domain in reversed(binders):
         dom = domain if isinstance(domain, Expr) else EFVar(domain)
-        abstracted = _abstract_name_to_bvar(result, var_name) if var_name != "_" else result
+        abstracted = (
+            _abstract_name_to_bvar(result, var_name)
+            if var_name != "_" else result
+        )
         result = ELam(var_name, dom, abstracted)
     return result
 
@@ -94,7 +104,10 @@ def pi(
     result = body if isinstance(body, Expr) else EFVar(body)
     for var_name, domain in reversed(binders):
         dom = domain if isinstance(domain, Expr) else EFVar(domain)
-        abstracted = _abstract_name_to_bvar(result, var_name) if var_name != "_" else result
+        abstracted = (
+            _abstract_name_to_bvar(result, var_name)
+            if var_name != "_" else result
+        )
         result = EPi(var_name, dom, abstracted)
     return result
 
@@ -136,7 +149,10 @@ def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
 
     return tuple(ordered_levels)
 
-def collect_univ_level_params(expr: Expr, base: Sequence[str] | None = None) -> tuple[str, ...]:
+def collect_univ_level_params(
+    expr: Expr,
+    base: Sequence[str] | None = None
+) -> tuple[str, ...]:
     """Collect all unique universe level parameters present in the expression."""
     params: list[str] = list(base) if base is not None else []
 

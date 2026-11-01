@@ -6,7 +6,12 @@ from collections.abc import Sequence
 
 from ..ast import Expr
 from ..utils.logging import get_logger
-from .declaration import ConstructorDeclaration, Declaration, InductiveDeclaration, RecursorDeclaration
+from .declaration import (
+    ConstructorDeclaration,
+    Declaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 
 
 class Environment:
@@ -38,7 +43,10 @@ class Environment:
         )
         return decl
 
-    def get_ctors(self, for_: str | InductiveDeclaration) -> tuple[ConstructorDeclaration]:
+    def get_ctors(
+        self,
+        for_: str | InductiveDeclaration
+    ) -> tuple[ConstructorDeclaration]:
         """Return all constructor declarations for a given inductive type."""
         self.logger.debug(f"Retrieving constructors for: {for_}")
         inductive = self.get(for_) if isinstance(for_, str) else for_
@@ -53,7 +61,8 @@ class Environment:
                     ctors.append(ctor_decl)
                 else:
                     raise ValueError(
-                        f"Constructor '{ctor_name}' for inductive '{for_}' is not a valid ConstructorDeclaration."
+                        f"Constructor '{ctor_name}' for inductive"
+                        + f" '{for_}' is not valid."
                     )
             self.logger.debug(f"Retrieved constructors: {ctors}")
             return tuple(ctors)
@@ -74,7 +83,7 @@ class Environment:
                     recs.append(rec_decl)
                 else:
                     raise ValueError(
-                        f"Recursor '{rec_name}' for inductive '{for_}' is not a valid RecursorDeclaration."
+                        f"Recursor '{rec_name}' for inductive '{for_}' is not valid."
                     )
             self.logger.debug(f"Retrieved recursors: {recs}")
             return tuple(recs)
@@ -128,7 +137,9 @@ class Environment:
                 )
             self.stages[stage_id][decl.name] = decl
 
-        self.logger.debug(f"Staged declarations under ID '{stage_id}': {self.stages[stage_id]}")
+        self.logger.debug(
+            f"Staged declarations under ID '{stage_id}': {self.stages[stage_id]}"
+        )
         return stage_id
 
     def commit(self, id_: str):
@@ -143,13 +154,19 @@ class Environment:
 
         staged_decls = self.stages.pop(id_)
         for name, decl in staged_decls.items():
-            self.logger.debug(f"Committing declaration '{name}' from stage '{id_}' to main environment.: {decl}")
+            self.logger.debug(
+                f"Committing declaration '{name}'"
+                + f" from stage '{id_}' to main environment.: {decl}"
+            )
             if name in self.declarations:
                 raise ValueError(
                     f"Declaration with name '{name}' already exists"
                     + " in environment during commit."
                 )
-            self.logger.debug(f"Committing declaration '{name}' from stage '{id_}' to main environment.")
+            self.logger.debug(
+                f"Committing declaration '{name}'"
+                + f" from stage '{id_}' to main environment."
+            )
             self.declarations[name] = decl
 
     def rollback(self, id_: str):

@@ -337,7 +337,10 @@ def _build_recursor(
                 ih_base = f"ih_{f_name}"
                 unique_ih_name = _fresh_name(ih_base, used_names)
                 _, rec_args = decompose_app(spec_dom)
-                rec_indices = rec_args[num_params:] if len(rec_args) >= num_params else []
+                rec_indices = (
+                    rec_args[num_params:]
+                    if len(rec_args) >= num_params else []
+                )
                 ih_dom = app(
                     EFVar(motive_var),
                     *rec_indices,
@@ -468,7 +471,10 @@ def _build_cases_on(
     )
 
 
-def _open_pi_binders(expr: Expr, used_names: set[str]) -> tuple[list[tuple[str, Expr]], Expr]:
+def _open_pi_binders(
+    expr: Expr,
+    used_names: set[str]
+) -> tuple[list[tuple[str, Expr]], Expr]:
     """Open Pi binders into fresh EFVar names and return opened binders with body."""
     binders: list[tuple[str, Expr]] = []
     current = expr

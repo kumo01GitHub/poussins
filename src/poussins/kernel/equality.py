@@ -55,7 +55,10 @@ def _contains_outer_bvar(expr: Expr, depth: int = 0) -> bool:
         case EApp(fn, arg):
             return _contains_outer_bvar(fn, depth) or _contains_outer_bvar(arg, depth)
         case ELam(_, domain, body) | EPi(_, domain, body):
-            return _contains_outer_bvar(domain, depth) or _contains_outer_bvar(body, depth + 1)
+            return (
+                _contains_outer_bvar(domain, depth)
+                or _contains_outer_bvar(body, depth + 1)
+            )
         case _:
             return False
 

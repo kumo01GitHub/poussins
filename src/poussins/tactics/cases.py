@@ -16,7 +16,11 @@ from ..ast import (
     lam,
     substitute_var,
 )
-from ..environment import ConstructorDeclaration, InductiveDeclaration, RecursorDeclaration
+from ..environment import (
+    ConstructorDeclaration,
+    InductiveDeclaration,
+    RecursorDeclaration,
+)
 from ..errors import TacticError
 from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
@@ -286,7 +290,10 @@ def cases(
     assignment = app(
         EConst(f"{head_name}.casesOn", ()),
         *hypothesis_args[:inductive_param_count],
-        *hypothesis_args[inductive_param_count:inductive_param_count + inductive_index_count],
+        *hypothesis_args[
+            inductive_param_count:inductive_param_count
+            + inductive_index_count
+        ],
         EFVar(hyp_name),
         motive,
         *branch_terms,
@@ -328,7 +335,10 @@ def _apply_rcases_pattern(
             bound_names.append(tmp_sub_name)
             nested_targets.append((tmp_sub_name, sub))
 
-    branch_pattern = (constructor_name, *bound_names) if constructor_name else tuple(bound_names)
+    branch_pattern = (
+        (constructor_name, *bound_names)
+        if constructor_name else tuple(bound_names)
+    )
 
     cases(manager, hyp_name=hyp_name, patterns=(branch_pattern,))
 

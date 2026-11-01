@@ -223,7 +223,10 @@ class TestUniverseInstantiationOverExpr:
             == EApp(EFVar("f"), EConst("c", (self.zero,)))
         )
         assert (
-            instantiate_univ(ELam("x", ESort(self.param_u), EFVar("x")), self.assignment)
+            instantiate_univ(
+                ELam("x", ESort(self.param_u), EFVar("x")),
+                self.assignment
+            )
             == ELam("x", ESort(self.zero), EFVar("x"))
         )
         assert (

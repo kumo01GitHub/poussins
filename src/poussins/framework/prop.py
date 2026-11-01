@@ -28,7 +28,13 @@ from ..ast import (
     pi,
 )
 from ..environment import const
-from ..environment.library import AND_IND_SPEC, EXISTS_IND_SPEC, FALSE_IND_SPEC, OR_IND_SPEC, TRUE_IND_SPEC
+from ..environment.library import (
+    AND_IND_SPEC,
+    EXISTS_IND_SPEC,
+    FALSE_IND_SPEC,
+    OR_IND_SPEC,
+    TRUE_IND_SPEC,
+)
 from .bound_var import (
     BindableMixin,
     BoundVarLike,

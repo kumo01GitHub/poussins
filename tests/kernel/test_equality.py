@@ -170,7 +170,16 @@ class TestDefinitionalEqualityConversions:
     def test_cases_on_defeq_requires_same_arity(self):
         """`casesOn` terms are not equal when argument arities differ."""
         left = nat_cases_on(EFVar("n"), EFVar("P"), EFVar("z"), EFVar("s"))
-        right = EApp(EApp(EApp(EConst("Nat.casesOn", ()), EFVar("n")), EFVar("P")), EFVar("z"))
+        right = EApp(
+            EApp(
+                EApp(
+                    EConst("Nat.casesOn", ()),
+                    EFVar("n")
+                ),
+                EFVar("P")
+            ),
+            EFVar("z")
+        )
         assert is_def_eq(left, right, {}, {}) is False
 
     def test_cases_on_defeq_rejects_motive_mismatch(self):
