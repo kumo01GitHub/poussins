@@ -31,8 +31,9 @@ uv run python example/example1.py
 
 Prefer importing from the subpackage that owns the API. The root package `poussins` is intentionally minimal.
 
-- Use `poussins.environment` for `Environment`.
+- Use `poussins.environment` for `Environment`, declaration specifications (`InductiveSpec`, `DefinitionSpec`, `AxiomSpec`, `TheoremSpec`), and operations like `const`.
 - Use `poussins.framework` for proof-authoring DSL objects: `Prop`, `Type`, `Example`, `Theorem` (and aliases `Lemma`, `Proposition`, `Corollary`, `Fact`, `Remark`, `Property`), `Axiom`, `Definition`, `Inductive`, `Quot`, environment creators (`create_environment`, `create_standard_environment`), and declaration helpers (`declare_axiom`, `declare_definition`, `declare_theorem`, `declare_inductive`, `declare_quot`).
+- Use `poussins.framework.inductive` for the `Inductive` base class and `@inductive_type` decorator.
 - Use `poussins.framework.inductive_types` for built-in inductive types: `Nat`, `Bool`, `List`, `Vector`, `Fin`, `Prod`, `Sigma`, `Sum`, `Option`, `Unit`, `Empty`.
 - Use `poussins.framework.definitions` for predefined definition helpers such as `Eq`.
 - Use `poussins.tactics` only when you want function-style tactics instead of method-style proof scripts.
@@ -44,10 +45,10 @@ The framework layer gives you a friendly, expressive interface:
 
 - `create_standard_environment()`: creates the standard logic environment (`True`, `False`, `And`, `Or`, `Not`, `Nat`, `Bool`, `Prod`, `Option`, `List`, `Unit`, `Sum`, `Empty`, `Fin`, `Vector`, `Quot`, `Eq`).
 - `Prop(name_or_expr)`: proposition DSL (`>>`, `&`, `|`, `~`, `Prop.top()`, `Prop.bottom()`). Supports quantifier construction:
-  - `Prop.forall(bound_vars, body)`: universal quantification $\forall$. `bound_vars` can be passed as a single item or sequence of `Prop`, `Type`, `Inductive` instances, or `(name, type)` tuples. If `body` is omitted, it defaults to `Sort.PROP`.
+  - `Prop.forall(bound_vars, body)`: universal quantification $\forall$. `bound_vars` can be passed as a single item or sequence of `Prop`, `Type`, `Inductive` instances, or `(name, type)` tuples. If `body` is omitted, it defaults to `Sort.PROP.sort`.
   - `Prop.exists(bound_vars, body)`: existential quantification $\exists$.
 - `Type(name_or_expr, [level])`: universe-level type expression DSL (defaults to `Sort.TYPE.level`).
-- `Inductive`: base class for inductive data types with `.eq(left, right)`, `.type_expr()`, and bindable variable semantics.
+- `Inductive`: base class for inductive data types with `.eq(left, right)`, `.type_ref()`, `.type`, `.env()`, and bound variable semantics (`BindableMixin`). Configured via the `@inductive_type(spec)` decorator.
 - `Nat`: natural numbers DSL under `poussins.framework.inductive_types`:
   - Construct with variable name (`Nat("n")`) or integer literal (`Nat(3)`).
   - Arithmetic constructors: `Nat.zero()`, `Nat.succ(n)`, `Nat.add(n, m)`, `Nat.sub(n, m)`, `Nat.mul(n, m)`, `Nat.div(n, m)`, `Nat.mod(n, m)`, `Nat.eq(n, m)`.
@@ -58,9 +59,14 @@ The framework layer gives you a friendly, expressive interface:
   - `Quot[rel_def].lift(B, f, compat, q)`: lift a compatible function to the quotient.
   - `Quot[rel_def].ind(motive, h, q)`: induction on quotient terms.
   - `Quot[rel_def].eq(left, right)`: equality proposition between quotient elements.
-- `Definition` & `definitions.Eq`: definition wrappers. `Eq(env, name, bound_vars, type_a, left, right)` creates equivalence relation definitions with `.declare()`.
-- `declare_inductive(env, name, type, constructors, level_params=())`: declares and registers a custom inductive type and derives its `.rec` recursor automatically.
-- `Example(statement, env)`: anonymous proof (useful for exploration and test verification).
+- `Definition` & `definitions.Eq`: definition wrappers. `Eq(name, bound_vars, type_a, left, right)` creates equivalence relation definitions with `.declare(env)`.
+- `Axiom`: proposition accepted without proof. `Axiom(name, statement)` with `.declare(env)`.
+- `declare_inductive(env, spec)`: registers a custom inductive type with `InductiveSpec(name, type, constructors)` and derives its `.rec` recursor and `.casesOn` eliminator automatically.
+- `declare_definition(env, spec)`: registers a definition with `DefinitionSpec(name, type, value)`.
+- `declare_axiom(env, spec)`: registers an axiom with `AxiomSpec(name, statement)`.
+- `declare_theorem(env, spec)`: registers a theorem with `TheoremSpec(name, statement, term)`.
+- `declare_quot(env)`: registers quotient declarations into the environment.
+- `Example(statement, env)`: anonymous proof (isolated in an environment copy, useful for exploration and test verification).
 - `Theorem(name, statement, env)`: named proof; `qed()` registers the resulting `TheoremDeclaration` into the environment.
 
 ### Minimal `Example`
@@ -146,18 +152,20 @@ ex.qed()
 The built-in `Nat` type supports full arithmetic expressions and operator overloading:
 
 ```python
-from poussins.framework import Example, create_standard_environment
+from poussins.framework import Example, Prop, create_standard_environment
 from poussins.framework.inductive_types import Nat
-from poussins.ast import EConst, EMetaVar
-from poussins.kernel.goal import Goal
 
 env = create_standard_environment()
+n = Nat("n")
 
-example = Example(EConst("True", ()), env)
-subgoal = Goal(statement=EConst("True", ()), context={"n": EConst("Nat", ())})
-example.manager.refine_goal(EMetaVar(subgoal.id), [subgoal])
-
-example.induction("n")
+# Induction on a natural number variable
+statement = Prop.forall((n,), Nat.eq(n, n))
+ex = Example(statement, env)
+ex.intro("n")
+ex.induction("n")  # generates subgoals for zero base case and succ inductive step
+ex.rfl()
+ex.rfl()
+ex.qed()
 ```
 
 `Nat.zero()`, `Nat.succ(n)`, `Nat(3)`, and arithmetic operators (`+`, `-`, `*`, `//`, `%`) construct valid expressions. The `induction` tactic works for all inductive declarations registered in `env`, creating one branch per constructor and adding induction hypotheses for recursive arguments.
@@ -244,8 +252,8 @@ env = create_standard_environment()
 
 x, y = Nat("x"), Nat("y")
 # Define the equivalence relation: x ≡ y (mod 3) := (x % 3 = y % 3)
-rel_def = Eq(env, "NMod3", (x, y), Nat.type_expr(), x % Nat(3), y % Nat(3))
-rel_def.declare()
+rel_def = Eq("NMod3", (x, y), Nat, x % Nat(3), y % Nat(3))
+rel_def.declare(env)
 
 # Create quotient values
 q_four = Quot[rel_def](Nat(4))
@@ -260,19 +268,22 @@ example.qed()
 
 ## Defining Custom Inductive Types
 
-You can easily define and register your own inductive types with `declare_inductive` and extend `Inductive` to build a clean DSL interface:
+You can define custom inductive types by decorating an `Inductive` subclass with `@inductive_type(spec)` and calling `.declare(env)`:
 
-1. **Register with `declare_inductive`**:
-   Registers the inductive type, all constructors, and automatically derives the recursor (`.rec`) with motive, index, and inductive hypotheses.
-2. **Extend `Inductive`**:
-   Subclass `Inductive` and define `TYPE_NAME` and `LEVEL_PARAMS`. `Inductive` inherits `BindableMixin` automatically, which enables quantifier bound variables in `Prop.forall` and `Prop.exists`, along with `.eq(a, b)`.
+1. **Define the Specification (`InductiveSpec`)**:
+   Specify the inductive type name, sort type, and constructors.
+2. **Define the DSL Class with `@inductive_type`**:
+   Decorate the `Inductive` subclass with `@inductive_type(spec=...)`. The decorator automatically sets the inductive metadata and constructor specifications.
+3. **Define `.declare(env)` and Register**:
+   Implement `.declare(env)` on the class using `declare_inductive(env, spec)` and setting `cls._env = env`. Calling `MyNat.declare(env)` registers the inductive type, all constructors, recursor (`.rec`), and `.casesOn` eliminator into `env`.
 
 ### Example: Custom Inductive Type with Induction
 
 ```python
 from dataclasses import dataclass
 from typing import ClassVar
-from poussins.ast import EApp, EConst, EPi, Expr, Sort
+from poussins.ast import EConst, Expr, Sort, app, pi
+from poussins.environment import Environment, InductiveDeclaration, InductiveSpec, const
 from poussins.framework import (
     Example,
     Inductive,
@@ -280,36 +291,48 @@ from poussins.framework import (
     create_standard_environment,
     declare_inductive,
 )
+from poussins.framework.inductive import inductive_type
 
 env = create_standard_environment()
 
-# 1. Register the inductive type in the environment
+# 1. Define the inductive specification
 my_nat_type = EConst("MyNat", ())
-declare_inductive(
-    env=env,
+my_nat_spec = InductiveSpec(
     name="MyNat",
     type=Sort.TYPE.sort,
-    constructors=[
+    constructors=(
         ("MyNat.zero", my_nat_type),
-        ("MyNat.succ", EPi("n", my_nat_type, my_nat_type)),
-    ],
+        ("MyNat.succ", pi((("n", my_nat_type),), my_nat_type)),
+    ),
 )
 
-# 2. Extend Inductive to create the ergonomic DSL wrapper
+# 2. Define the DSL wrapper class decorated with @inductive_type
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=my_nat_spec)
 class MyNat(Inductive):
-    TYPE_NAME: ClassVar[str] = "MyNat"
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = ()
+    ZERO_IDX: ClassVar[int] = 0
+    SUCC_IDX: ClassVar[int] = 1
+
+    @classmethod
+    def declare(cls, env: Environment) -> InductiveDeclaration:
+        decl = declare_inductive(env, my_nat_spec)
+        cls._env = env
+        return decl
 
     @classmethod
     def zero(cls) -> MyNat:
-        return cls(EConst("MyNat.zero", levels=cls.levels()))
+        env = cls.env()
+        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.ZERO_IDX][0]))
 
     @classmethod
     def succ(cls, n: MyNat | Expr) -> MyNat:
-        return cls(EApp(EConst("MyNat.succ", levels=cls.levels()), cls.to_expr(n)))
+        env = cls.env()
+        return cls(app(const(env=env, name=cls.CONSTRUCTORS[cls.SUCC_IDX][0]), cls.to_expr(n)))
 
-# 3. Use in interactive proofs with induction
+# 3. Register the inductive type into the environment
+MyNat.declare(env)
+
+# 4. Use in interactive proofs with induction
 n = MyNat("n")
 ex = Example(Prop.forall((n,), MyNat.eq(n, n)), env)
 ex.intro("n")

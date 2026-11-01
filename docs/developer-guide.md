@@ -21,11 +21,11 @@ This section gives the high-level structure of the repository and the main archi
 
 ```text
 src/poussins/
-  ast/             # Core expression, universe data types, Sort enum, and AST manipulation utilities
-  environment/     # Declaration hierarchy and predefined logical environment library (nat, bool, quot, eq, ...)
+  ast/             # Core expression (EFVar, EBVar, EConst, ...), universe data types, Sort enum (sorts.py), and AST manipulation utilities (ops.py)
+  environment/     # Declaration hierarchy, specifications (AxiomSpec, DefinitionSpec, TheoremSpec, InductiveSpec), ops (const), and predefined library specs (nat, bool, quot, eq, ...)
   kernel/          # Goal state, type checking, unification, recursor reduction (whnf), registration and validation
   tactics/         # User-facing tactical transformations over ProofManager
-  framework/       # High-level DSL: Prop, Type, Theorem, Example, TacticMixin, Inductive, Quot, declaration helpers
+  framework/       # High-level DSL: Prop, Type, Theorem, Example, TacticMixin, Inductive, Quot, bound_var utilities, declaration helpers
     inductive_types/ # Concrete inductive wrappers (Nat, Bool, List, Vector, Fin, Prod, Sigma, Sum, Option, Unit, Empty)
     definitions/     # Specialized definition wrappers (Eq)
   cli/             # Command-line entry points and converters
@@ -62,7 +62,7 @@ In practice:
 
 - `ast/` is the foundation layer. It defines expressions, universe levels, sorts, and traversal/substitution utilities used everywhere.
 - `errors/` is a shared support layer. It provides exception types used by the kernel, tactics, framework, and CLI.
-- `environment/` builds on `ast/` and defines declarations and library modules for the kernel and framework.
+- `environment/` builds on `ast/` and defines declarations, specifications (`Spec`), and library modules for the kernel and framework.
 - `kernel/` depends on `ast/`, `environment/`, and `errors/`, and is the core proof-state, type-checking, recursor reduction, and registration/validation engine.
 - `tactics/` depends on the kernel and AST concepts to transform goals via `ProofManager`.
 - `framework/` builds on kernel, tactics, environment, and AST to provide the user-facing DSL (`Prop`, `Type`, `Theorem`, `Example`, `TacticMixin`, `Quot`, `Inductive`, `inductive_types/`, `definitions/`).
@@ -72,7 +72,7 @@ In practice:
 
 - **Pure kernel state transitions**: proof steps produce new immutable `ProofState` snapshots.
 - **Thin tactics layer**: tactics orchestrate `ProofManager`, while correctness is strictly enforced by kernel checks.
-- **Full computational reduction**: `whnf` in the kernel evaluates definition unfolding, beta reduction, and recursor $\iota$-reduction (e.g. `Nat.rec` execution).
+- **Full computational reduction**: `whnf` in the kernel evaluates definition unfolding, beta reduction, and recursor $\iota$-reduction (e.g. `Nat.rec` and `Nat.casesOn` execution).
 - **Friendly frontend DSL**: `Prop`, `Type`, `Example`, `Theorem`, and `Quot` hide low-level expression trees from users.
 - **Explicit environment model**: declarations are validated and registered in `Environment` and referenced by name.
 - **Dynamic environment sync**: active goals are refreshed from the latest environment view before each kernel transition.
@@ -103,27 +103,54 @@ This section explains how proof construction and verification flow through the s
 3. Tactic methods (provided via `TacticMixin`) convert user inputs (`ExprLike`) into AST nodes and invoke tactical functions in `poussins.tactics`.
 4. The tactical functions construct proof skeletons and ask `ProofManager` to refine, change, or close goals.
 5. The kernel validates typing, unification, and definitional equality via `whnf` (evaluating delta unfolding, beta reductions, and recursor applications).
-6. On `Theorem.qed()`, the complete proof term is validated with `validate_theorem` and permanently registered in `Environment` via `register_theorem`. In an `Example.qed()`, the proof term is validated but not registered globally.
+6. On `Theorem.qed()`, the complete proof term is validated and permanently registered in `Environment` via `declare_theorem` (wrapping kernel `register_theorem`). In an `Example.qed()`, the proof term is verified against an isolated copy of the environment without polluting the caller's global environment.
 
 ### Key Components
 
 #### AST (`ast/`)
 
-- Defines expressions (`EVar`, `EConst`, `EPi`, `EApp`, `ELam`, `EMatch`, `EMetaVar`, `ESort`).
+- Defines expressions:
+  - `EFVar`: Free variable, identified by name (e.g. `x`, `y`).
+  - `EBVar`: Bound variable represented by de Bruijn index (e.g. `#0`, `#1`).
+  - `EConst`: Constant declaration reference with universe levels (e.g. `Nat`, `Eq.refl`).
+  - `EPi`: Dependent function type ($\Pi x : A, B$).
+  - `ELam`: Lambda abstraction ($\lambda x : A, t$).
+  - `EApp`: Function application ($f\ a$).
+  - `EMetaVar`: Metavariable standing for an unproven goal.
+  - `ESort`: Sort universe (`Prop` or `Type u`).
+  *(Note: pattern matching expression `EMatch` was removed; case analysis and pattern reduction are evaluated via recursors and derived `.casesOn` definitions).*
 - Defines universe levels (`UnivLevel`, `UnivLevelZero`, `UnivLevelSucc`, `UnivLevelParam`, `UnivLevelMax`, `UnivLevelIMax`).
-- Provides `Sort` enum (`Sort.PROP`, `Sort.TYPE`).
-- Exposes expression builders and utilities in `ops.py`: `app`, `decompose_app`, `pi`, `lam`, `substitute_var`, `substitute_expr`, `count_pi_binders`, `univ_level`, `univ_levels`, `sort`, `has_metavar`, `collect_metavar_ids`, and `collect_free_vars`.
+- Provides `Sort` enum in `sorts.py` (`Sort.PROP`, `Sort.TYPE`).
+- Exposes expression builders and utilities in `ops.py`:
+  - `app`: builds left-associated application chains. Accepts `Expr | str` (strings are converted to `EFVar`).
+  - `lam`: builds nested lambda abstractions from `(name, domain)` binders and automatically abstracts variable occurrences into de Bruijn indices (`EBVar`).
+  - `pi`: builds nested Pi types from `(name, domain)` binders and automatically abstracts variable occurrences into de Bruijn indices (`EBVar`).
+  - `decompose_app`: decomposes application chain into head and arguments.
+  - `shift_bvars`, `substitute_bvar`, `substitute_bvar_top`, `instantiate_binder`: de Bruijn index operations.
+  - `substitute_var`, `substitute_expr`: variable and subexpression substitution.
+  - `count_pi_binders`: counts Pi binders (arity).
+  - `univ_level`, `univ_levels`, `sort`: universe level and sort builders.
+  - `has_metavar`, `collect_metavar_ids`: metavariable inspection.
+  - `collect_univ_level_params`: collects universe level parameter names from expressions.
+  - `collect_free_vars`: collects free variable names (`EFVar`).
 
 #### Environment (`environment/`)
 
 - Declaration hierarchy: `AxiomDeclaration`, `DefinitionDeclaration`, `TheoremDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, `RecursorDeclaration`, and `QuotientDeclaration`.
-- Enum-based predefined library modules under `src/poussins/environment/library/`:
-  - `LogicDeclaration`: `True`, `False`, `And`, `Or`, `Not`, `Exists`, and logical recursors.
-  - `EqualityDeclaration`: universe-polymorphic equality `Eq.{u}` with `Eq.refl`, `Eq.symm`, `Eq.trans`, and `Eq.rec`.
-  - `NatDeclaration`: inductive `Nat` with constructors `Nat.zero`, `Nat.succ`, recursor `Nat.rec`, and recursive arithmetic definitions `Nat.add`, `Nat.sub`, `Nat.mul`, `Nat.div`, and `Nat.mod`.
-  - `QuotDeclaration`: quotient primitives `Quot`, `Quot.mk`, `Quot.lift`, `Quot.ind`, and `Quot.sound`.
-  - Other core types: `Bool`, `List`, `Vector`, `Fin`, `Prod`, `Sigma`, `Sum`, `Option`, `Unit`, `Empty`.
-- `create_standard_environment()`: factory initializing all standard declarations into a fresh `Environment`.
+- Declaration specifications under `src/poussins/environment/spec.py`:
+  - `AxiomSpec`: specification for an axiom (`name`, `statement`).
+  - `DefinitionSpec`: specification for a definition (`name`, `type`, `value`).
+  - `TheoremSpec`: specification for a theorem (`name`, `statement`, `term`).
+  - `InductiveSpec`: specification for an inductive type (`name`, `type`, `constructors`).
+- Predefined library specifications under `src/poussins/environment/library/`:
+  - `EQ_IND_SPEC`, `EQ_SYMM_DEF_SPEC`, `EQ_TRANS_DEF_SPEC`: universe-polymorphic equality `Eq.{u}` with symmetry and transitivity definitions.
+  - `TRUE_IND_SPEC`, `FALSE_IND_SPEC`, `AND_IND_SPEC`, `OR_IND_SPEC`, `NOT_DEF_SPEC`, `EXISTS_IND_SPEC`: standard logical connectives and quantifiers.
+  - `NAT_IND_SPEC`, `NAT_ADD_DEF_SPEC`, `NAT_SUB_DEF_SPEC`, `NAT_MUL_DEF_SPEC`, `NAT_DIV_DEF_SPEC`, `NAT_MOD_DEF_SPEC`: inductive `Nat` and recursive arithmetic definitions.
+  - `QUOT_DECLARATION`, `QUOT_MK_DECLARATION`, `QUOT_LIFT_DECLARATION`, `QUOT_IND_DECLARATION`, `QUOT_SOUND_DECLARATION`: quotient primitives.
+  - Other core inductive specifications: `BOOL_IND_SPEC`, `EMPTY_IND_SPEC`, `UNIT_IND_SPEC`, `LIST_IND_SPEC`, `VECTOR_IND_SPEC`, `FIN_IND_SPEC`, `PROD_IND_SPEC`, `SIGMA_IND_SPEC`, `SUM_IND_SPEC`, `OPTION_IND_SPEC`.
+- Environment operations:
+  - `const(env, name)`: creates `EConst` with universe levels automatically populated from the declaration registered in `env`.
+- `create_standard_environment()`: factory initializing all standard inductive types, definitions, and quotient declarations into a fresh `Environment`.
 
 #### Kernel (`kernel/`)
 
@@ -132,7 +159,7 @@ This section explains how proof construction and verification flow through the s
 - `ProofManager`: stable facade used by tactics and `TacticMixin`.
 - `typecheck.py` & `eval.py`:
   - `infer_type`: bidirectional type inference for all expression forms.
-  - `whnf`: reduction to weak head normal form. Supports constant unfolding, beta-reduction, match-reduction, and generic **$\iota$-reduction for recursors** (`RecursorDeclaration`). This allows definitions based on recursors (such as `Nat.mod` or `Nat.add`) to compute definitionally during `whnf`, enabling tactics like `rfl()` to close computational equalities automatically.
+  - `whnf`: reduction to weak head normal form. Supports constant unfolding, beta-reduction, and generic **$\iota$-reduction for recursors** (`RecursorDeclaration`). This allows definitions based on recursors (such as `Nat.mod` or `Nat.add`) to compute definitionally during `whnf`, enabling tactics like `rfl()` to close computational equalities automatically.
   - `is_def_eq` / `unify`: definitional equality and higher-order pattern unification.
 - `declare.py`:
   - Kernel registration: `register_axiom`, `register_definition`, `register_theorem`, `register_inductive`, `register_quotient`.
@@ -146,13 +173,26 @@ This section explains how proof construction and verification flow through the s
 #### Framework (`framework/`)
 
 - `TacticMixin`: mixin class supplying method-style tactic invocations (`intro`, `apply`, `exact`, `rfl`, `cases`, `induction`, `rewrite`, etc.) on `Theorem` and `Example`. Transparently converts `ExprLike` (`Expr | Prop | Inductive | str`) arguments to expressions.
+- `bound_var.py`: infrastructure for bound variables in quantifiers and binders:
+  - `BoundVar = tuple[str, Expr]`
+  - `BoundVarLike = Sequence[BoundVar | BindableMixin] | BoundVar | BindableMixin`
+  - `normalize_bound_vars`: normalizes bound variable inputs into sequence of `(name, type)` tuples.
+  - `abstract_over_bound_vars`: abstracts free variables into de Bruijn bound variables.
+  - `instantiate_binder_body`: substitutes de Bruijn indices with argument expressions.
+  - `BindableMixin`: mixin for bindable DSL objects, providing `.bound_type`, `.bound_value`, `.name`, and `.to_bound_var()`.
 - `Prop` & `Type`: high-level AST wrappers with `BindableMixin`. `Prop.forall` and `Prop.exists` accept single items or sequences of bindable objects directly (e.g. `(p, q)` or `(n,)`).
-- `Theorem`, `Example`, and aliases (`Lemma`, `Proposition`, `Corollary`, `Fact`, `Remark`, `Property`): proof session objects. `Theorem.qed()` registers the completed theorem, while `Example.qed()` only validates.
-- `Inductive`: base class for inductive types, providing `.eq()`, `.type_expr()`, and bindable variable behavior.
+- `Theorem`, `Example`, and aliases (`Lemma`, `Proposition`, `Corollary`, `Fact`, `Remark`, `Property`): proof session objects. `Theorem.qed()` registers the completed theorem in `env`, while `Example.qed()` validates without polluting the caller's environment.
+- `Inductive`: base class for inductive types, providing `.eq(left, right)`, `.type_ref()`, `.type`, `.env()`, and bound variable behavior via `BindableMixin`.
 - `inductive_types/`: concrete inductive DSL wrappers: `Nat` (with operator overloading `+`, `-`, `*`, `//`, `/`, `%`), `Bool`, `List`, `Vector`, `Fin`, `Prod`, `Sigma`, `Sum`, `Option`, `Unit`, `Empty`.
-- `Definition` & `definitions/`: definition wrappers, including `Eq` for declaring equivalence relations.
+- `Definition` & `definitions/`: definition wrappers, including `Eq` for declaring equivalence relations (`Eq(name, bound_vars, type_a, left, right)` with `.declare(env)`).
+- `Axiom`: axiom wrapper (`Axiom(name, statement)` with `.declare(env)`).
 - `Quot`: quotient type DSL using slice syntax `Quot[rel_def]` to provide `mk`, `sound`, `lift`, `ind`, and `eq`.
-- `declaration.py`: high-level declaration helpers (`declare_axiom`, `declare_definition`, `declare_theorem`, `declare_inductive`, `declare_quot`). `declare_inductive` automatically derives and registers the required `RecursorDeclaration` (`.rec`) from constructor signatures.
+- `declaration.py`: high-level declaration helpers:
+  - `declare_inductive(env, spec: InductiveSpec) -> InductiveDeclaration`: automatically derives and registers the required `RecursorDeclaration` (`.rec`) and `casesOn` eliminator (`.casesOn`) from constructor signatures.
+  - `declare_definition(env, spec: DefinitionSpec) -> DefinitionDeclaration`
+  - `declare_axiom(env, spec: AxiomSpec) -> AxiomDeclaration`
+  - `declare_theorem(env, spec: TheoremSpec) -> TheoremDeclaration`
+  - `declare_quot(env) -> QuotientDeclaration`
 
 ### CLI Surface
 
@@ -180,8 +220,8 @@ This section explains how to extend the system safely without breaking layering 
   - export the functional tactic in `src/poussins/tactics/__init__.py`
   - add focused unit tests under `tests/tactics/`
 - Add a new inductive type:
-  - register declarations in `Environment` using `declare_inductive`
-  - define a user-facing DSL wrapper extending `Inductive`
+  - define an `InductiveSpec` and decorate an `Inductive` subclass with `@inductive_type(spec)`
+  - register declarations into `Environment` with `MyType.declare(env)`
   - export the wrapper in `src/poussins/framework/inductive_types/` if adding as a built-in library type
 
 #### Public Import Policy
@@ -193,108 +233,141 @@ The root package `poussins` is intentionally minimal (`__all__ = []`). Always im
    - `Axiom`, `Definition`, `Inductive`, `Quot`
    - `create_environment`, `create_standard_environment`
    - `declare_axiom`, `declare_definition`, `declare_theorem`, `declare_inductive`, `declare_quot`
-2. Use `poussins.framework.inductive_types` for built-in inductive types:
+2. Use `poussins.framework.inductive` for the `Inductive` base class and `@inductive_type` decorator.
+3. Use `poussins.framework.inductive_types` for built-in inductive types:
    - `Nat`, `Bool`, `List`, `Vector`, `Fin`, `Prod`, `Sigma`, `Sum`, `Option`, `Unit`, `Empty`
-3. Use `poussins.framework.definitions` for predefined definition helpers:
+4. Use `poussins.framework.definitions` for predefined definition helpers:
    - `Eq`
-4. Use `poussins.environment` for environment and declaration data types (`Environment`, `AxiomDeclaration`, etc.).
-5. Use `poussins.tactics` for functional tactic functions.
-6. Use `poussins.ast` and `poussins.kernel` for low-level expressions, sorts, unification, and kernel registration/validation.
+5. Use `poussins.environment` for environment, declarations, specifications, and operations:
+   - `Environment`, `AxiomDeclaration`, `DefinitionDeclaration`, `TheoremDeclaration`, `InductiveDeclaration`, `ConstructorDeclaration`, `RecursorDeclaration`, `QuotientDeclaration`
+   - `AxiomSpec`, `DefinitionSpec`, `TheoremSpec`, `InductiveSpec`
+   - `const`
+6. Use `poussins.tactics` for functional tactic functions.
+7. Use `poussins.ast` and `poussins.kernel` for low-level expressions, sorts, unification, and kernel registration/validation.
 
 #### Adding A New Inductive Type
 
-To define a new inductive type, perform the following two steps:
+To define a new inductive type, perform the following steps:
 
-##### Step 1: Register Declarations with `declare_inductive`
+##### Step 1: Define the Specification (`InductiveSpec`)
 
-Call `declare_inductive(env, name, type, constructors, level_params=())` to register the type in the `Environment`. 
+Specify the inductive type name, sort type, and constructor signatures using an `InductiveSpec`.
 
-`declare_inductive` automatically:
-- Creates the `InductiveDeclaration`.
-- Creates `ConstructorDeclaration` instances for each constructor.
-- Derives and validates the recursor (`<name>.rec`), computing the motive type, induction parameters, minor premises, and inductive hypotheses.
-- Registers all declarations into `env` in one atomic operation.
-
+For non-recursive types (e.g. `Color` with nullary constructors):
 ```python
-from poussins.ast import EConst, EPi, Sort
-from poussins.framework import declare_inductive, create_standard_environment
+from poussins.ast import EConst, Sort
+from poussins.environment import InductiveSpec
 
-env = create_standard_environment()
-
-# Define an inductive type, e.g. Color with two nullary constructors
-declare_inductive(
-    env=env,
+color_type = EConst("Color", ())
+color_spec = InductiveSpec(
     name="Color",
     type=Sort.TYPE.sort,
-    constructors=[
-        ("Color.red", EConst("Color", ())),
-        ("Color.blue", EConst("Color", ())),
-    ],
+    constructors=(
+        ("Color.red", color_type),
+        ("Color.blue", color_type),
+    ),
 )
 ```
 
-For recursive types (e.g., custom natural numbers or trees), specify recursive constructor signatures using `EPi`:
-
+For recursive types (e.g., custom natural numbers or trees), specify recursive constructor signatures using `pi`:
 ```python
+from poussins.ast import EConst, Sort, pi
+from poussins.environment import InductiveSpec
+
 my_nat_type = EConst("MyNat", ())
-declare_inductive(
-    env=env,
+my_nat_spec = InductiveSpec(
     name="MyNat",
     type=Sort.TYPE.sort,
-    constructors=[
+    constructors=(
         ("MyNat.zero", my_nat_type),
-        ("MyNat.succ", EPi("n", my_nat_type, my_nat_type)),
-    ],
+        ("MyNat.succ", pi((("n", my_nat_type),), my_nat_type)),
+    ),
 )
 ```
 
-##### Step 2: Create a DSL Wrapper Class Extending `Inductive`
+##### Step 2: Create a DSL Wrapper Class Decorated with `@inductive_type`
 
-Extend `Inductive` to give proof authors an ergonomic Python interface:
-- Inherit from `Inductive` (`BindableMixin` is automatically inherited, enabling variable binding in quantifiers).
-- Set `TYPE_NAME: ClassVar[str]` and `LEVEL_PARAMS: ClassVar[tuple[str, ...]]`.
+Extend `Inductive` and decorate with `@inductive_type(spec=...)`:
+- Inherits `BindableMixin` automatically, enabling bound variable semantics in quantifiers.
+- The decorator sets `NAME`, `TYPE`, and `CONSTRUCTORS` from the specification.
+- Implement `.declare(env)` to register the specification and associate `env` with the class.
 - Define `@classmethod` constructors returning instances wrapped in `cls(...)`.
-- `Inductive` automatically provides `.eq(left, right)`, `.type_expr()`, `.levels()`, and `.sort()`.
+- `Inductive` automatically provides `.eq(left, right)`, `.type_ref()`, `.type`, and bound variable behavior.
 
 ```python
 from dataclasses import dataclass
 from typing import ClassVar
-from poussins.ast import EConst, EApp, Expr
-from poussins.framework import Inductive
+from poussins.ast import Expr, app
+from poussins.environment import Environment, InductiveDeclaration, const
+from poussins.framework import Inductive, declare_inductive
+from poussins.framework.inductive import inductive_type
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=color_spec)
 class Color(Inductive):
     """DSL wrapper for the Color inductive type."""
 
-    TYPE_NAME: ClassVar[str] = "Color"
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = ()
+    RED_IDX: ClassVar[int] = 0
+    BLUE_IDX: ClassVar[int] = 1
+
+    @classmethod
+    def declare(cls, env: Environment) -> InductiveDeclaration:
+        decl = declare_inductive(env, color_spec)
+        cls._env = env
+        return decl
 
     @classmethod
     def red(cls) -> Color:
-        return cls(EConst("Color.red", levels=cls.levels()))
+        env = cls.env()
+        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.RED_IDX][0]))
 
     @classmethod
     def blue(cls) -> Color:
-        return cls(EConst("Color.blue", levels=cls.levels()))
+        env = cls.env()
+        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.BLUE_IDX][0]))
 
 
 @dataclass(frozen=True, init=False)
+@inductive_type(spec=my_nat_spec)
 class MyNat(Inductive):
     """DSL wrapper for recursive MyNat inductive type."""
 
-    TYPE_NAME: ClassVar[str] = "MyNat"
-    LEVEL_PARAMS: ClassVar[tuple[str, ...]] = ()
+    ZERO_IDX: ClassVar[int] = 0
+    SUCC_IDX: ClassVar[int] = 1
+
+    @classmethod
+    def declare(cls, env: Environment) -> InductiveDeclaration:
+        decl = declare_inductive(env, my_nat_spec)
+        cls._env = env
+        return decl
 
     @classmethod
     def zero(cls) -> MyNat:
-        return cls(EConst("MyNat.zero", levels=cls.levels()))
+        env = cls.env()
+        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.ZERO_IDX][0]))
 
     @classmethod
     def succ(cls, n: MyNat | Expr) -> MyNat:
-        return cls(EApp(EConst("MyNat.succ", levels=cls.levels()), cls.to_expr(n)))
+        env = cls.env()
+        return cls(app(const(env=env, name=cls.CONSTRUCTORS[cls.SUCC_IDX][0]), cls.to_expr(n)))
 ```
 
-##### Step 3: Using the New Inductive Type in Proofs
+##### Step 3: Register in the Environment with `.declare(env)`
+
+Call `.declare(env)` on the class. This automatically:
+- Registers the `InductiveDeclaration` and all `ConstructorDeclaration` instances into `env`.
+- Derives and registers the recursor (`<name>.rec`) and the `.casesOn` eliminator definition into `env`.
+- Sets `cls._env = env` so that `cls.env()` resolves the environment.
+
+```python
+from poussins.framework import create_standard_environment
+
+env = create_standard_environment()
+Color.declare(env)
+MyNat.declare(env)
+```
+
+##### Step 4: Using the New Inductive Type in Proofs
 
 The wrapper class works immediately with tactics such as `cases`, `induction`, and quantifiers:
 
@@ -321,9 +394,10 @@ ex_nat.qed()
 ```
 
 If the type is intended as a permanent library type:
-- Place the wrapper under `src/poussins/framework/inductive_types/<name>.py`.
-- Re-export it from `src/poussins/framework/inductive_types/__init__.py`.
-- Pre-register it in `create_standard_environment()` or an enum in `src/poussins/environment/library/`.
+- Define the specification under `src/poussins/environment/library/<name>.py`.
+- Re-export it from `src/poussins/environment/library/__init__.py`.
+- Pre-register it in `create_standard_environment()` in `src/poussins/framework/environment.py`.
+- Place the wrapper under `src/poussins/framework/inductive_types/<name>.py` and re-export it from `src/poussins/framework/inductive_types/__init__.py`.
 
 #### Tactic Implementation Rules
 
