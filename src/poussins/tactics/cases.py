@@ -13,6 +13,7 @@ from ..ast import (
     UnivLevelParam,
     app,
     decompose_app,
+    instantiate_binder,
     lam,
     substitute_var,
 )
@@ -22,7 +23,6 @@ from ..environment import (
     RecursorDeclaration,
 )
 from ..errors import TacticError
-from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
     const_head_name,
@@ -52,7 +52,7 @@ def _build_constructor_pattern(
         current_context[var_name] = current_type.domain
         branch_binders.append((var_name, current_type.domain))
         pattern = EApp(pattern, EFVar(var_name))
-        current_type = instantiate_binder_body(
+        current_type = instantiate_binder(
             current_type.body, EFVar(var_name)
         )
 

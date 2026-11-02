@@ -124,31 +124,6 @@ def decompose_app(expr: Expr) -> tuple[Expr, tuple[Expr, ...]]:
 # ------------------------------------------------------------------
 # Universe Utilities
 # ------------------------------------------------------------------
-def collect_univ_levels(expr: Expr) -> tuple[UnivLevel, ...]:
-    """Collect all unique universe levels present in the expression."""
-    ordered_levels: list[UnivLevel] = []
-
-    def _collect(e: Expr) -> None:
-        match e:
-            case ESort(level):
-                if level not in ordered_levels:
-                    ordered_levels.append(level)
-            case EConst(_, levels):
-                for lvl in levels:
-                    if lvl not in ordered_levels:
-                        ordered_levels.append(lvl)
-            case EFVar(_) | EBVar(_) | EMetaVar(_):
-                pass
-            case EPi(_, domain, body) | ELam(_, domain, body):
-                _collect(domain)
-                _collect(body)
-            case EApp(fn, arg):
-                _collect(fn)
-                _collect(arg)
-    _collect(expr)
-
-    return tuple(ordered_levels)
-
 def collect_univ_level_params(
     expr: Expr,
     base: Sequence[str] | None = None

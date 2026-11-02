@@ -16,6 +16,7 @@ from ..ast import (
     app,
     collect_univ_level_params,
     decompose_app,
+    instantiate_binder,
     lam,
     pi,
     substitute_var,
@@ -52,7 +53,6 @@ from ..kernel import (
     register_theorem,
     whnf,
 )
-from .bound_var import instantiate_binder_body
 
 
 def declare_axiom(
@@ -482,7 +482,7 @@ def _open_pi_binders(
     while isinstance(current, EPi):
         opened_name = _fresh_name(current.var, local_used)
         binders.append((opened_name, current.domain))
-        current = instantiate_binder_body(current.body, EFVar(opened_name))
+        current = instantiate_binder(current.body, EFVar(opened_name))
     used_names.update(local_used)
     return binders, current
 

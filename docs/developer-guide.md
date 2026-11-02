@@ -171,8 +171,6 @@ This section explains how proof construction and verification flow through the s
   - `BoundVar = tuple[str, Expr]`
   - `BoundVarLike = Sequence[BoundVar | BindableMixin] | BoundVar | BindableMixin`
   - `normalize_bound_vars`: normalizes bound variable inputs into sequence of `(name, type)` tuples.
-  - `abstract_over_bound_vars`: abstracts free variables into de Bruijn bound variables.
-  - `instantiate_binder_body`: substitutes de Bruijn indices with argument expressions.
   - `BindableMixin`: mixin for bindable DSL objects, providing `.bound_type`, `.bound_value`, `.name`, and `.to_bound_var()`.
 - `Prop` & `Type`: high-level AST wrappers with `BindableMixin`. `Prop.forall` and `Prop.exists` accept single items or sequences of bindable objects directly (e.g. `(p, q)` or `(n,)`).
 - `Theorem`, `Example`, and aliases (`Lemma`, `Proposition`, `Corollary`, `Fact`, `Remark`, `Property`): proof session objects. `Theorem.qed()` registers the completed theorem in `env`, while `Example.qed()` validates without polluting the caller's environment.

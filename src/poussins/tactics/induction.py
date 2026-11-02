@@ -10,6 +10,7 @@ from ..ast import (
     Expr,
     app,
     decompose_app,
+    instantiate_binder,
     lam,
     substitute_var,
     univ_levels,
@@ -20,7 +21,6 @@ from ..environment import (
     RecursorDeclaration,
 )
 from ..errors import TacticError
-from ..framework.bound_var import instantiate_binder_body
 from ..kernel import Goal, ProofManager, whnf
 from .helpers import (
     const_head_name,
@@ -94,7 +94,7 @@ def induction(manager: ProofManager, hyp_name: str) -> None:  # noqa: PLR0915
             )
             branch_binders.append((var_name, current_type.domain))
             branch_expr = EApp(branch_expr, EFVar(var_name))
-            current_type = instantiate_binder_body(
+            current_type = instantiate_binder(
                 current_type.body, EFVar(var_name)
             )
 
