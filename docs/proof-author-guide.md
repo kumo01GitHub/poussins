@@ -275,7 +275,7 @@ You can define custom inductive types by decorating an `Inductive` subclass with
 2. **Define the DSL Class with `@inductive_type`**:
    Decorate the `Inductive` subclass with `@inductive_type(spec=...)`. The decorator automatically sets the inductive metadata and constructor specifications.
 3. **Define `.declare(env)` and Register**:
-   Implement `.declare(env)` on the class using `declare_inductive(env, spec)` and setting `cls._env = env`. Calling `MyNat.declare(env)` registers the inductive type, all constructors, recursor (`.rec`), and `.casesOn` eliminator into `env`.
+   Calling `MyNat.declare(env)` registers the inductive type, all constructors, recursor (`.rec`), and `.casesOn` eliminator into `env`.
 
 ### Example: Custom Inductive Type with Induction
 
@@ -289,9 +289,8 @@ from poussins.framework import (
     Inductive,
     Prop,
     create_standard_environment,
-    declare_inductive,
+    inductive_type,
 )
-from poussins.framework.inductive import inductive_type
 
 env = create_standard_environment()
 
@@ -314,20 +313,14 @@ class MyNat(Inductive):
     SUCC_IDX: ClassVar[int] = 1
 
     @classmethod
-    def declare(cls, env: Environment) -> InductiveDeclaration:
-        decl = declare_inductive(env, my_nat_spec)
-        cls._env = env
-        return decl
-
-    @classmethod
     def zero(cls) -> MyNat:
         env = cls.env()
-        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.ZERO_IDX][0]))
+        return cls(const(env=env, name=cls.SPEC.constructors[cls.ZERO_IDX][0]))
 
     @classmethod
     def succ(cls, n: MyNat | Expr) -> MyNat:
         env = cls.env()
-        return cls(app(const(env=env, name=cls.CONSTRUCTORS[cls.SUCC_IDX][0]), cls.to_expr(n)))
+        return cls(app(const(env=env, name=cls.SPEC.constructors[cls.SUCC_IDX][0]), cls.to_expr(n)))
 
 # 3. Register the inductive type into the environment
 MyNat.declare(env)

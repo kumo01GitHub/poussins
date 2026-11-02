@@ -9,7 +9,7 @@ from .declaration import (
 )
 from .definition import Definition
 from .environment import create_environment, create_standard_environment
-from .inductive import Inductive
+from .inductive import Inductive, inductive_type
 from .prop import Prop
 from .quot import Quot
 from .theorem import (
@@ -48,6 +48,7 @@ __all__ = [
     "Example",
     # Inductive
     "Inductive",
+    "inductive_type",
     # Quotient
     "Quot",
     # Expression Wrappers

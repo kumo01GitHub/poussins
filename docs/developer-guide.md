@@ -269,8 +269,8 @@ my_nat_spec = InductiveSpec(
 
 Extend `Inductive` and decorate with `@inductive_type(spec=...)`:
 - Inherits `BindableMixin` automatically, enabling bound variable semantics in quantifiers.
-- The decorator sets `NAME`, `TYPE`, and `CONSTRUCTORS` from the specification.
-- Implement `.declare(env)` to register the specification and associate `env` with the class.
+- The decorator sets `SPEC` for the class and initializes class-local declaration state.
+- Do **not** re-implement `.declare(env)`; use the base `Inductive.declare(env)`.
 - Define `@classmethod` constructors returning instances wrapped in `cls(...)`.
 - `Inductive` automatically provides `.eq(left, right)`, `.type_ref()`, `.type`, and bound variable behavior.
 
@@ -278,9 +278,8 @@ Extend `Inductive` and decorate with `@inductive_type(spec=...)`:
 from dataclasses import dataclass
 from typing import ClassVar
 from poussins.ast import Expr, app
-from poussins.environment import Environment, InductiveDeclaration, const
-from poussins.framework import Inductive, declare_inductive
-from poussins.framework.inductive import inductive_type
+from poussins.environment import const
+from poussins.framework import Inductive, inductive_type
 
 @dataclass(frozen=True, init=False)
 @inductive_type(spec=color_spec)
@@ -291,20 +290,14 @@ class Color(Inductive):
     BLUE_IDX: ClassVar[int] = 1
 
     @classmethod
-    def declare(cls, env: Environment) -> InductiveDeclaration:
-        decl = declare_inductive(env, color_spec)
-        cls._env = env
-        return decl
-
-    @classmethod
     def red(cls) -> Color:
         env = cls.env()
-        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.RED_IDX][0]))
+        return cls(const(env=env, name=cls.constructor_name(cls.RED_IDX)))
 
     @classmethod
     def blue(cls) -> Color:
         env = cls.env()
-        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.BLUE_IDX][0]))
+        return cls(const(env=env, name=cls.constructor_name(cls.BLUE_IDX)))
 
 
 @dataclass(frozen=True, init=False)
@@ -316,20 +309,14 @@ class MyNat(Inductive):
     SUCC_IDX: ClassVar[int] = 1
 
     @classmethod
-    def declare(cls, env: Environment) -> InductiveDeclaration:
-        decl = declare_inductive(env, my_nat_spec)
-        cls._env = env
-        return decl
-
-    @classmethod
     def zero(cls) -> MyNat:
         env = cls.env()
-        return cls(const(env=env, name=cls.CONSTRUCTORS[cls.ZERO_IDX][0]))
+        return cls(const(env=env, name=cls.constructor_name(cls.ZERO_IDX)))
 
     @classmethod
     def succ(cls, n: MyNat | Expr) -> MyNat:
         env = cls.env()
-        return cls(app(const(env=env, name=cls.CONSTRUCTORS[cls.SUCC_IDX][0]), cls.to_expr(n)))
+        return cls(app(const(env=env, name=cls.constructor_name(cls.SUCC_IDX)), cls.to_expr(n)))
 ```
 
 ##### Step 3: Register in the Environment with `.declare(env)`
@@ -337,7 +324,7 @@ class MyNat(Inductive):
 Call `.declare(env)` on the class. This automatically:
 - Registers the `InductiveDeclaration` and all `ConstructorDeclaration` instances into `env`.
 - Derives and registers the recursor (`<name>.rec`) and the `.casesOn` eliminator definition into `env`.
-- Sets `cls._env = env` so that `cls.env()` resolves the environment.
+- Sets the declaring subclass's `_env` so that `cls.env()` resolves that class-local environment.
 
 ```python
 from poussins.framework import create_standard_environment
