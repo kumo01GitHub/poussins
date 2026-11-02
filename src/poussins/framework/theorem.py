@@ -59,7 +59,7 @@ class Theorem(TacticMixin):
                 f"Theorem '{self.name}' cannot be closed: The proof is not finished."
             )
 
-        proof_term = self.manager.current_proof_term
+        proof_term = self.manager.current_term
         if proof_term is None:
             raise FrameworkError(
                 f"Theorem '{self.name}' internal error: "

@@ -54,7 +54,7 @@ class SparkProofScript(Theorem):
                 f"Task '{self.name}' cannot be closed: Proof is not finished."
             )
 
-        if self.manager.current_proof_term is None:
+        if self.manager.current_term is None:
             raise SparkIntegrationError(
                 f"Task '{self.name}' internal error: Failed to extract proof term."
             )
@@ -63,13 +63,13 @@ class SparkProofScript(Theorem):
             name=self.name,
             level_params=self.level_params,
             type=self.statement,
-            value=self.manager.current_proof_term,
+            value=self.manager.current_term,
         )
 
         try:
             validate_theorem(self.env, declaration)
             self.logger.info(f"'{self.name}' is successfully proved: {self.statement}")
-            self.logger.info(f"==> {self.manager.current_proof_term}")
+            self.logger.info(f"==> {self.manager.current_term}")
         except Exception as e:
             raise SparkIntegrationError("Failed to validate theorem") from e
 

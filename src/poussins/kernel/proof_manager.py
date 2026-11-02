@@ -37,7 +37,7 @@ class ProofManager:
         return self.session.is_closed
 
     @property
-    def current_proof_term(self) -> Expr | None:
+    def current_term(self) -> Expr | None:
         """Return the current proof term."""
         if self.root_metavar_id is None:
             return None
