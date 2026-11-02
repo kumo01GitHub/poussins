@@ -59,8 +59,8 @@ class Theorem(TacticMixin):
                 f"Theorem '{self.name}' cannot be closed: The proof is not finished."
             )
 
-        proof_term = self.manager.current_term
-        if proof_term is None:
+        term = self.manager.current_term
+        if term is None:
             raise FrameworkError(
                 f"Theorem '{self.name}' internal error: "
                 + "Failed to extract a valid proof term."
@@ -71,13 +71,13 @@ class Theorem(TacticMixin):
             TheoremSpec(
                 name=self.name,
                 statement=self.statement,
-                term=proof_term,
+                term=term,
             )
         )
         self.logger.info(
             f"Theorem '{self.name}' is successfully proved: {self.statement}"
         )
-        self.logger.info(f"==> {proof_term}")
+        self.logger.info(f"==> {term}")
 
         return declaration
 
@@ -106,6 +106,6 @@ class Example(Theorem):
         Theorem.__init__(
             self,
             name=f"__example:{uuid4()}__",
-            env=deepcopy(env),
             statement=statement,
+            env=deepcopy(env),
         )

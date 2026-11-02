@@ -56,9 +56,8 @@ class ProofOrchestrator:
             try:
                 rdd = self.spark.sparkContext.parallelize(stage)
                 results: list[TaskExecutionResult] = rdd.map(
-                    lambda task, benv=broadcast_env: ProofTaskExecutor().execute_task(
-                        task, benv.value
-                    )
+                    lambda task, benv=broadcast_env:
+                        ProofTaskExecutor(task, benv.value).execute()
                 ).collect()
             finally:
                 broadcast_env.unpersist()

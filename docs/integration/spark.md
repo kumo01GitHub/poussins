@@ -112,19 +112,16 @@ flowchart TD
             direction LR
             subgraph Worker1["Worker Node 1"]
                 Exec1["ProofTaskExecutor"]
-                Script1["SparkProofScript"]
                 Kernel1["Poussins Kernel"]
             end
 
             subgraph Worker2["Worker Node 2"]
                 Exec2["ProofTaskExecutor"]
-                Script2["SparkProofScript"]
                 Kernel2["Poussins Kernel"]
             end
 
             subgraph Worker3["Worker Node 3"]
                 Exec3["ProofTaskExecutor"]
-                Script3["SparkProofScript"]
                 Kernel3["Poussins Kernel"]
             end
         end
@@ -137,12 +134,9 @@ flowchart TD
     Orchestrator -->|5. Broadcast Env| Workers
     Orchestrator -->|6. Submit Stage Tasks| Master
     Master -->|7. Schedule Partitions| Workers
-    Worker1 -->|Execute| Script1
-    Worker2 -->|Execute| Script2
-    Worker3 -->|Execute| Script3
-    Script1 -->|Validate| Kernel1
-    Script2 -->|Validate| Kernel2
-    Script3 -->|Validate| Kernel3
+    Exec1 -->|Tactic execution & validate| Kernel1
+    Exec2 -->|Tactic execution & validate| Kernel2
+    Exec3 -->|Tactic execution & validate| Kernel3
     Workers -->|8. Return Declarations| Orchestrator
     Orchestrator -->|9. Register in Env| DriverEnv
 ```
@@ -157,8 +151,8 @@ sequenceDiagram
     participant DAG as ProofTaskDAG
     participant Orch as ProofOrchestrator
     participant SC as SparkContext
-    participant Worker as ProofTaskExecutor (Worker)
-    participant Kernel as SparkProofScript / Kernel
+    participant Worker as ProofTaskExecutor (Worker, TacticMixin)
+    participant Kernel as Poussins Kernel
 
     Driver->>Runner: run(registry, env, main_theorem_name)
     Runner->>DAG: validate()
@@ -169,8 +163,8 @@ sequenceDiagram
     loop For each Stage in stages
         Orch->>SC: broadcast(env)
         Orch->>SC: parallelize(stage_tasks)
-        SC->>Worker: map(ProofTaskExecutor.execute_task)
-        Worker->>Kernel: SparkProofScript.execute_plan() & qed()
+        SC->>Worker: map(lambda task: ProofTaskExecutor(task, broadcast_env.value).execute())
+        Worker->>Kernel: execute_plan() & declare()
         Kernel-->>Worker: TheoremDeclaration
         Worker-->>SC: TaskExecutionResult
         SC-->>Orch: collect()
@@ -195,8 +189,7 @@ The integration code resides under `src/poussins/integration/spark/`. The table 
 | `ProofTaskRegistry` | `registry.py` | Driver | Fluent builder for authoring, registering, and organizing proof tasks. |
 | `ProofRunner` | `runner.py` | Driver | High-level facade managing `SparkSession` lifecycle and execution invocation. |
 | `ProofOrchestrator` | `orchestrator.py` | Driver | Coordinates staged broadcast, task dispatch, error collection, and environment staging. |
-| `ProofTaskExecutor` | `task_executor.py` | Worker | Isolated worker task harness returning structured `TaskExecutionResult` objects. |
-| `SparkProofScript` | `proof_script.py` | Worker | Specialized `Theorem` subclass executing serialized tactic plans and yielding `TheoremDeclaration` terms. |
+| `ProofTaskExecutor` | `task_executor.py` | Worker | `TacticMixin`-based worker harness that deep-copies `Environment`, executes tactic plans, and declares the theorem for kernel validation before returning `TaskExecutionResult`. |
 
 ### 1. `ProofTaskNode`
 - **Location**: [`src/poussins/integration/spark/task.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/task.py)
@@ -236,20 +229,21 @@ The integration code resides under `src/poussins/integration/spark/`. The table 
 - **Workflow per Stage**:
   1. Broadcasts the current `Environment` to all workers via `sparkContext.broadcast(self.env)`.
   2. Distributes the stage's `ProofTaskNode` list across workers using `sparkContext.parallelize(stage)`.
-  3. Maps `ProofTaskExecutor().execute_task(...)` on worker nodes.
+  3. Maps `ProofTaskExecutor(task, broadcast_env.value).execute()` on worker nodes.
   4. Collects results back to the driver with `.collect()`.
   5. Unpersists the broadcast variable from memory (`broadcast_env.unpersist()`).
   6. Checks every `TaskExecutionResult`: if any task failed, raises `SparkIntegrationError`.
   7. Inserts completed `TheoremDeclaration` objects into the local `Environment` via `register_theorem`.
 
-### 6. `ProofTaskExecutor` & `SparkProofScript`
-- **Location**: [`src/poussins/integration/spark/task_executor.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/task_executor.py) & [`proof_script.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/proof_script.py)
+### 6. `ProofTaskExecutor`
+- **Location**: [`src/poussins/integration/spark/task_executor.py`](file:///Users/kumo01/Projects/poussins/src/poussins/integration/spark/task_executor.py)
 - **Role**: Worker-side execution engine.
 - **Workflow**:
-  1. Instantiates `SparkProofScript(node, env)`.
-  2. Invokes `execute_plan()`, which maps each tuple in `tactic_plan` to its corresponding method on `SparkProofScript` (inherited via `TacticMixin`, e.g. `rfl`, `exact`, `intro`).
-  3. Invokes `qed()`, which validates the proof term using `validate_theorem` and returns the verified `TheoremDeclaration`.
-  4. Returns a `TaskExecutionResult` containing the verified `TheoremDeclaration`.
+  1. Constructs `ProofTaskExecutor(task, env)` on each worker task.
+  2. Constructor deep-copies the broadcast `Environment` and initializes a `ProofManager` through `TacticMixin`.
+  3. Calls `execute_plan()`, mapping each tuple in `tactic_plan` to its corresponding tactic method (`rfl`, `exact`, `intro`, etc.).
+  4. Calls `declare()`, which checks closure and declares the theorem into the worker-local environment (kernel validation + registration) and returns the resulting `TheoremDeclaration`.
+  5. Returns a `TaskExecutionResult` containing the verified `TheoremDeclaration`.
 
 ---
 
