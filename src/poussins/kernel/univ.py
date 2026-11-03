@@ -7,6 +7,7 @@ from ..ast import (
     EConst,
     EFVar,
     ELam,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -169,6 +170,13 @@ def instantiate_univ(expr: Expr, param_assignment: dict[str, UnivLevel]) -> Expr
                 name,
                 instantiate_univ(type_, param_assignment),
                 instantiate_univ(body, param_assignment)
+            )
+        case ELet(name, var_type, value, body):
+            return ELet(
+                name,
+                instantiate_univ(var_type, param_assignment),
+                instantiate_univ(value, param_assignment),
+                instantiate_univ(body, param_assignment),
             )
         case EPi(name, type_, body):
             return EPi(

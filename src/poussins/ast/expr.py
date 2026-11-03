@@ -111,6 +111,20 @@ class EApp:
 
 
 @dataclass(frozen=True)
+class ELet:
+    """Local let-binding, e.g. let x : T := v in b."""
+
+    var: str
+    type: Expr
+    value: Expr
+    body: Expr
+
+    @override
+    def __str__(self) -> str:
+        return f"(let {self.var} : {self.type} := {self.value} in {self.body})"
+
+
+@dataclass(frozen=True)
 class EMetaVar:
     """Meta-variable, e.g. ?m."""
 
@@ -129,5 +143,6 @@ Expr = (
     | EPi
     | ELam
     | EApp
+    | ELet
     | EMetaVar
 )

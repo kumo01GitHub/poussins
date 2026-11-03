@@ -7,6 +7,7 @@ from ..ast import (
     EConst,
     EFVar,
     ELam,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -135,6 +136,36 @@ def _infer_lam(
     return pi(((expr.var, expr.domain),), body_type)
 
 
+def _infer_let(
+    expr: ELet,
+    context: dict[str, Expr],
+    metavars: dict[str, MetaVar],
+    env: Environment | None,
+    bound_context: list[Expr],
+) -> Expr:
+    """Infer the type of a let-expression."""
+    declared_type_type = _infer_type(expr.type, context, metavars, env, bound_context)
+    if not isinstance(whnf(declared_type_type, metavars, env), ESort):
+        raise KernelTypeError("The type annotation of a let must be a Sort.")
+
+    value_type = _infer_type(expr.value, context, metavars, env, bound_context)
+    if not is_def_eq(value_type, expr.type, context, metavars, env):
+        raise KernelTypeError(
+            "Let-bound value type mismatch. "
+            + f"Expected: {expr.type}, Found: {value_type}"
+        )
+
+    extended_context = context | {expr.var: expr.type}
+    opened_body = instantiate_binder(expr.body, expr.value)
+    return _infer_type(
+        opened_body,
+        extended_context,
+        metavars,
+        env,
+        bound_context,
+    )
+
+
 def _infer_app(
     expr: EApp,
     context: dict[str, Expr],
@@ -186,6 +217,8 @@ def _infer_type(
             return _infer_pi(expr, context, metavars, env, bound_context)
         case ELam():
             return _infer_lam(expr, context, metavars, env, bound_context)
+        case ELet():
+            return _infer_let(expr, context, metavars, env, bound_context)
         case EApp():
             return _infer_app(expr, context, metavars, env, bound_context)
 

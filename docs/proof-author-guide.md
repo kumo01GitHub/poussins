@@ -113,7 +113,7 @@ You can call tactics as methods on `Example`/`Theorem`. Tactic arguments accepti
 | `rcases(at, with_)` | Recursively destruct an inductive hypothesis | Works well with nested constructor patterns `with_` on hypothesis `at`. |
 | `induction(at)` | Apply structural induction on an inductive hypothesis | Produces constructor-specific subgoals for hypothesis `at`. |
 | **4. Equality, Reduction & Unfolding** | | |
-| `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Computes weak head normal forms (including recursor reductions $\iota$-reduction and constant unfolding) to close reflexive equalities ($a = a$). |
+| `reflexivity()` / `rfl()` | Solve an equality goal when both sides are definitionally equal | Computes weak head normal forms (including constant unfolding, beta/zeta through typed `let`, and recursor reductions $\iota$-reduction) to close reflexive equalities ($a = a$). |
 | `symmetry()` / `symm()` | Reverse an equality goal | Converts `a = b` into `b = a`. |
 | `transitivity(via)` / `trans(via)` | Split an equality goal with an intermediate term | Converts `a = c` into `a = b` and `b = c` using middle term `via`. |
 | `rewrite(via, *, at=None, on=None, symm=False)` / `rw(...)` | Rewrite using an equality hypothesis or theorem | Replaces LHS with RHS using `via`. Can target hypothesis `at` or subexpression `on`. |

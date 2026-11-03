@@ -7,6 +7,7 @@ from ..ast import (
     EConst,
     EFVar,
     ELam,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -14,6 +15,7 @@ from ..ast import (
     app,
     decompose_app,
     instantiate_binder,
+    shift_bvars,
     substitute_metavar,
 )
 from ..environment import (
@@ -53,6 +55,30 @@ def whnf(
     unfolding: frozenset[str] | None = None,
 ) -> Expr:
     """Reduce an expression to weak head normal form."""
+    def contains_outer_bvar(expr: Expr, depth: int = 0) -> bool:
+        """Return True when the expression contains `EBVar(depth)`."""
+        match expr:
+            case EBVar(index):
+                return index == depth
+            case EApp(fn, arg):
+                return (
+                    contains_outer_bvar(fn, depth)
+                    or contains_outer_bvar(arg, depth)
+                )
+            case ELam(_, domain, body) | EPi(_, domain, body):
+                return (
+                    contains_outer_bvar(domain, depth)
+                    or contains_outer_bvar(body, depth + 1)
+                )
+            case ELet(_, var_type, value, body):
+                return (
+                    contains_outer_bvar(var_type, depth)
+                    or contains_outer_bvar(value, depth)
+                    or contains_outer_bvar(body, depth + 1)
+                )
+            case _:
+                return False
+
     def occurs_in(target_name: str, expr: Expr) -> bool:
         """Recursively check if `target_name` (as EConst) occurs in `expr`."""
         match expr:
@@ -60,6 +86,12 @@ def whnf(
                 return True
             case EPi(_, domain, body) | ELam(_, domain, body):
                 return occurs_in(target_name, domain) or occurs_in(target_name, body)
+            case ELet(_, var_type, value, body):
+                return (
+                    occurs_in(target_name, var_type)
+                    or occurs_in(target_name, value)
+                    or occurs_in(target_name, body)
+                )
             case EApp(fn, arg):
                 return occurs_in(target_name, fn) or occurs_in(target_name, arg)
             case ESort(_) | EFVar(_) | EBVar(_) | EMetaVar(_) | EConst(_):
@@ -163,9 +195,47 @@ def whnf(
             # 2. Standard Application beta-reduction
             fn_whnf = whnf(fn, metavars, env, unfolding)
             if isinstance(fn_whnf, ELam):
-                new_expr = instantiate_binder(fn_whnf.body, arg)
+                new_expr = ELet(
+                    fn_whnf.var,
+                    fn_whnf.domain,
+                    arg,
+                    fn_whnf.body,
+                )
                 return whnf(new_expr, metavars, env, unfolding)
+            if isinstance(fn_whnf, ELet):
+                pushed_app = ELet(
+                    fn_whnf.var,
+                    fn_whnf.type,
+                    fn_whnf.value,
+                    EApp(fn_whnf.body, shift_bvars(arg, 1)),
+                )
+                return whnf(pushed_app, metavars, env, unfolding)
             return EApp(fn_whnf, arg)
+
+        case ELet(var, var_type, value, body):
+            body_whnf = whnf(body, metavars, env, unfolding)
+            if not contains_outer_bvar(body_whnf):
+                return whnf(shift_bvars(body_whnf, -1), metavars, env, unfolding)
+
+            head, _ = decompose_app(body_whnf)
+            if isinstance(head, EBVar) and head.index == 0:
+                return whnf(
+                    instantiate_binder(body_whnf, value),
+                    metavars,
+                    env,
+                    unfolding,
+                )
+
+            if isinstance(body_whnf, (ELam, EPi)):
+                return ELet(var, var_type, value, body_whnf)
+
+            return whnf(
+                instantiate_binder(body_whnf, value),
+                metavars,
+                env,
+                unfolding,
+            )
+
 
         case (
             ESort(_)
@@ -199,6 +269,13 @@ def normalize(
             return ELam(
                 var,
                 normalize(domain, actual_metavars, env, unfolding),
+                normalize(body, actual_metavars, env, unfolding),
+            )
+        case ELet(var, var_type, value, body):
+            return ELet(
+                var,
+                normalize(var_type, actual_metavars, env, unfolding),
+                normalize(value, actual_metavars, env, unfolding),
                 normalize(body, actual_metavars, env, unfolding),
             )
         case EPi(var, domain, body):

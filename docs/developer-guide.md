@@ -67,7 +67,7 @@ In practice:
 
 - **Pure kernel state transitions**: proof steps produce new immutable `ProofState` snapshots.
 - **Thin tactics layer**: tactics orchestrate `ProofManager`, while correctness is strictly enforced by kernel checks.
-- **Full computational reduction**: `whnf` in the kernel evaluates definition unfolding, beta reduction, and recursor $\iota$-reduction (e.g. `Nat.rec` and `Nat.casesOn` execution).
+- **Full computational reduction**: `whnf` in the kernel evaluates definition unfolding, beta reduction, typed-let zeta reduction, and recursor $\iota$-reduction (e.g. `Nat.rec` and `Nat.casesOn` execution). Beta steps are represented with shared `let` bindings to keep demand-driven (lazy) evaluation behavior.
 - **Friendly frontend DSL**: `Prop`, `Type`, `Example`, `Theorem`, and `Quot` hide low-level expression trees from users.
 - **Explicit environment model**: declarations are validated and registered in `Environment` and referenced by name.
 - **Dynamic environment sync**: active goals are refreshed from the latest environment view before each kernel transition.
@@ -96,7 +96,7 @@ This section explains how proof construction and verification flow through the s
 2. `ProofManager` creates an initial goal and metavariable state through `ProofEngine.create_initial_state`.
 3. Tactic methods (provided via `TacticMixin`) convert user inputs (`ExprLike`) into AST nodes and invoke tactical functions in `poussins.tactics`.
 4. The tactical functions construct proof skeletons and ask `ProofManager` to refine, change, or close goals.
-5. The kernel validates typing, unification, and definitional equality via `whnf` (evaluating delta unfolding, beta reductions, and recursor applications).
+5. The kernel validates typing, unification, and definitional equality via `whnf` (evaluating delta unfolding, beta reductions through shared typed `let`, zeta reductions, and recursor applications).
 6. On `Theorem.qed()`, the complete proof term is validated and permanently registered in `Environment` via `declare_theorem` (wrapping kernel `register_theorem`). In an `Example.qed()`, the proof term is verified against an isolated copy of the environment without polluting the caller's global environment.
 
 ### Key Components
@@ -110,6 +110,7 @@ This section explains how proof construction and verification flow through the s
   - `EPi`: Dependent function type ($\Pi x : A, B$).
   - `ELam`: Lambda abstraction ($\lambda x : A, t$).
   - `EApp`: Function application ($f\ a$).
+  - `ELet`: Typed let-binding (`let x : T := v in b`).
   - `EMetaVar`: Metavariable standing for an unproven goal.
   - `ESort`: Sort universe (`Prop` or `Type u`).
   *(Note: pattern matching expression `EMatch` was removed; case analysis and pattern reduction are evaluated via recursors and derived `.casesOn` definitions).*
@@ -118,6 +119,7 @@ This section explains how proof construction and verification flow through the s
 - Exposes expression builders and utilities in `ops.py`:
   - `app`: builds left-associated application chains. Accepts `Expr | str` (strings are converted to `EFVar`).
   - `lam`: builds nested lambda abstractions from `(name, domain)` binders and automatically abstracts variable occurrences into de Bruijn indices (`EBVar`).
+  - `let_`: builds typed let-bindings from `(name, type, value, body)` and abstracts body occurrences into de Bruijn indices (`EBVar`).
   - `pi`: builds nested Pi types from `(name, domain)` binders and automatically abstracts variable occurrences into de Bruijn indices (`EBVar`).
   - `decompose_app`: decomposes application chain into head and arguments.
   - `shift_bvars`, `substitute_bvar`, `substitute_bvar_top`, `instantiate_binder`: de Bruijn index operations.
@@ -153,7 +155,7 @@ This section explains how proof construction and verification flow through the s
 - `ProofManager`: stable facade used by tactics and `TacticMixin`.
 - `typecheck.py` & `eval.py`:
   - `infer_type`: bidirectional type inference for all expression forms.
-  - `whnf`: reduction to weak head normal form. Supports constant unfolding, beta-reduction, and generic **$\iota$-reduction for recursors** (`RecursorDeclaration`). This allows definitions based on recursors (such as `Nat.mod` or `Nat.add`) to compute definitionally during `whnf`, enabling tactics like `rfl()` to close computational equalities automatically.
+  - `whnf`: reduction to weak head normal form. Supports constant unfolding, beta-reduction via shared typed `let` nodes, zeta reduction, and generic **$\iota$-reduction for recursors** (`RecursorDeclaration`). This allows definitions based on recursors (such as `Nat.mod` or `Nat.add`) to compute definitionally during `whnf`, while preserving lazy sharing for lambda applications, enabling tactics like `rfl()` to close computational equalities automatically.
   - `is_def_eq` / `unify`: definitional equality and higher-order pattern unification.
 - `declare.py`:
   - Kernel registration: `register_axiom`, `register_definition`, `register_theorem`, `register_inductive`, `register_quotient`.

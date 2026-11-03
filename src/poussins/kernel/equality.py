@@ -7,6 +7,7 @@ from ..ast import (
     EConst,
     EFVar,
     ELam,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -39,6 +40,12 @@ def is_alpha_eq(
             result = g1 == g2
         case (EPi(_, d1, b1), EPi(_, d2, b2)) | (ELam(_, d1, b1), ELam(_, d2, b2)):
             result = is_alpha_eq(d1, d2) and is_alpha_eq(b1, b2)
+        case (ELet(_, t1, v1, b1), ELet(_, t2, v2, b2)):
+            result = (
+                is_alpha_eq(t1, t2)
+                and is_alpha_eq(v1, v2)
+                and is_alpha_eq(b1, b2)
+            )
         case (EApp(f1, a1), EApp(f2, a2)):
             result = is_alpha_eq(f1, f2) and is_alpha_eq(a1, a2)
         case _:
@@ -57,6 +64,12 @@ def _contains_outer_bvar(expr: Expr, depth: int = 0) -> bool:
         case ELam(_, domain, body) | EPi(_, domain, body):
             return (
                 _contains_outer_bvar(domain, depth)
+                or _contains_outer_bvar(body, depth + 1)
+            )
+        case ELet(_, var_type, value, body):
+            return (
+                _contains_outer_bvar(var_type, depth)
+                or _contains_outer_bvar(value, depth)
                 or _contains_outer_bvar(body, depth + 1)
             )
         case _:
@@ -124,6 +137,12 @@ def _is_def_eq_same_shape(
             if not domains_eq:
                 return False
             return is_def_eq(b1, b2, context, metavars, env)
+        case (ELet(_, t1, v1, b1), ELet(_, t2, v2, b2)):
+            return (
+                is_def_eq(t1, t2, context, metavars, env)
+                and is_def_eq(v1, v2, context, metavars, env)
+                and is_def_eq(b1, b2, context, metavars, env)
+            )
         case _:
             return False
 

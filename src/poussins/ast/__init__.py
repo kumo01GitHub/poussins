@@ -1,5 +1,5 @@
 """Abstract Syntax Tree (AST) module."""
-from .expr import EApp, EBVar, EConst, EFVar, ELam, EMetaVar, EPi, ESort, Expr
+from .expr import EApp, EBVar, EConst, EFVar, ELam, ELet, EMetaVar, EPi, ESort, Expr
 from .ops import (
     app,
     collect_free_vars,
@@ -10,6 +10,7 @@ from .ops import (
     has_metavar,
     instantiate_binder,
     lam,
+    let_,
     pi,
     shift_bvars,
     sort,
@@ -40,6 +41,7 @@ __all__ = [
     "EPi",
     "ELam",
     "EApp",
+    "ELet",
     "EMetaVar",
     "ESort",
     # Universe level classes
@@ -57,6 +59,7 @@ __all__ = [
     "sort",
     "app",
     "lam",
+    "let_",
     "pi",
     "decompose_app",
     "substitute_var",

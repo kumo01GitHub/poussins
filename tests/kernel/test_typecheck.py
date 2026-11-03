@@ -8,6 +8,7 @@ from poussins.ast import (
     EBVar,
     EConst,
     EFVar,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -18,6 +19,7 @@ from poussins.ast import (
     UnivLevelZero,
     app,
     lam,
+    let_,
     pi,
 )
 from poussins.environment import AxiomDeclaration
@@ -125,6 +127,26 @@ class TestInferType:
         with pytest.raises(
             KernelTypeError,
         ):
+            infer_type(expr, context, {})
+
+    def test_typed_let_expression_infers_body_type(self):
+        """Typed let expressions infer by checking annotation then opening body."""
+        expr = let_("x", self.prop, EFVar("y"), "x")
+        context: dict[str, Expr] = {"y": self.prop}
+        assert infer_type(expr, context, {}) == self.prop
+
+    def test_typed_let_expression_rejects_value_type_mismatch(self):
+        """Typed let rejects values that do not match annotation."""
+        expr = let_("x", self.type0, EFVar("y"), "x")
+        context: dict[str, Expr] = {"y": self.prop}
+        with pytest.raises(KernelTypeError):
+            infer_type(expr, context, {})
+
+    def test_typed_let_expression_requires_well_typed_annotation(self):
+        """Typed let requires annotation itself to be a type."""
+        expr = ELet("x", EFVar("A"), EFVar("y"), EBVar(0))
+        context: dict[str, Expr] = {"A": EFVar("B"), "B": self.prop, "y": self.prop}
+        with pytest.raises(KernelTypeError):
             infer_type(expr, context, {})
 
     def test_application_elimination_rule(self):

@@ -5,11 +5,13 @@ from poussins.ast import (
     EApp,
     EConst,
     EFVar,
+    ELet,
     EMetaVar,
     ESort,
     UnivLevelZero,
     app,
     lam,
+    let_,
 )
 from poussins.environment import DefinitionDeclaration
 from poussins.framework import create_environment, create_standard_environment
@@ -59,6 +61,31 @@ class TestWhnfConversionSoundness:
     def test_beta_reduction_at_head(self):
         """Head beta-redex reduces to substituted body."""
         expr = EApp(lam((("x", self.sort_prop),), "x"), EFVar("y"))
+        assert whnf(expr, {}) == EFVar("y")
+
+    def test_beta_reduction_keeps_shared_let_under_lambda(self):
+        """Beta-reduction keeps a shared let when only lambda body needs binder."""
+        expr = EApp(
+            lam((("x", self.sort_prop), ("y", self.sort_prop)), "x"),
+            EFVar("a"),
+        )
+        reduced = whnf(expr, {})
+        assert isinstance(reduced, ELet)
+
+    def test_application_continues_through_deferred_let(self):
+        """Deferred let does not block subsequent head reduction."""
+        expr = EApp(
+            EApp(
+                lam((("x", self.sort_prop), ("y", self.sort_prop)), "x"),
+                EFVar("a"),
+            ),
+            EFVar("b"),
+        )
+        assert whnf(expr, {}) == EFVar("a")
+
+    def test_zeta_reduction_for_let(self):
+        """Let-bindings reduce by zeta-substitution at weak head."""
+        expr = let_("x", self.sort_prop, EFVar("y"), "x")
         assert whnf(expr, {}) == EFVar("y")
 
     def test_delta_then_beta_on_head_constant(self):

@@ -9,6 +9,7 @@ from .expr import (
     EConst,
     EFVar,
     ELam,
+    ELet,
     EMetaVar,
     EPi,
     ESort,
@@ -37,6 +38,13 @@ def _abstract_name_to_bvar(expr: Expr, name: str) -> Expr:
                 return EApp(_go(fn, depth), _go(arg, depth))
             case ELam(var, domain, body):
                 return ELam(var, _go(domain, depth), _go(body, depth + 1))
+            case ELet(var, var_type, value, body):
+                return ELet(
+                    var,
+                    _go(var_type, depth),
+                    _go(value, depth),
+                    _go(body, depth + 1),
+                )
             case EPi(var, domain, body):
                 return EPi(var, _go(domain, depth), _go(body, depth + 1))
             case ESort() | EConst() | EBVar() | EMetaVar():
@@ -96,6 +104,24 @@ def lam(
         result = ELam(var_name, dom, abstracted)
     return result
 
+
+def let_(
+    var_name: str,
+    var_type: Expr | str,
+    value: Expr | str,
+    body: Expr | str,
+) -> Expr:
+    """Build a let-binding expression with a single variable."""
+    var_type_expr = var_type if isinstance(var_type, Expr) else EFVar(var_type)
+    value_expr = value if isinstance(value, Expr) else EFVar(value)
+    result = body if isinstance(body, Expr) else EFVar(body)
+    abstracted = (
+        _abstract_name_to_bvar(result, var_name)
+        if var_name != "_" else result
+    )
+    return ELet(var_name, var_type_expr, value_expr, abstracted)
+
+
 def pi(
     binders: Sequence[tuple[str, Expr | str]],
     body: Expr | str,
@@ -153,6 +179,10 @@ def collect_univ_level_params(
                     _collect_from_univ_level(lvl)
             case EPi(_, domain, body) | ELam(_, domain, body):
                 _collect_from_expr(domain)
+                _collect_from_expr(body)
+            case ELet(_, var_type, value, body):
+                _collect_from_expr(var_type)
+                _collect_from_expr(value)
                 _collect_from_expr(body)
             case EApp(fn, arg):
                 _collect_from_expr(fn)
@@ -214,6 +244,26 @@ def substitute_var(expr: Expr, var_name: str, replacement: Expr) -> Expr:
 
                 return ELam(var, new_domain, _subst(body))
 
+            case ELet(var, var_type, value, body):
+                new_var_type = _subst(var_type)
+                new_value = _subst(value)
+                if var == var_name:
+                    return ELet(var, new_var_type, new_value, body)
+
+                if var in replacement_fvs:
+                    new_var = var + "_"
+                    while new_var in replacement_fvs or new_var == var_name:
+                        new_var += "_"
+                    alpha_body = substitute_var(body, var, EFVar(new_var))
+                    return ELet(
+                        new_var,
+                        new_var_type,
+                        new_value,
+                        substitute_var(alpha_body, var_name, replacement)
+                    )
+
+                return ELet(var, new_var_type, new_value, _subst(body))
+
             case EApp(fn, arg):
                 return EApp(_subst(fn), _subst(arg))
 
@@ -228,6 +278,12 @@ def collect_free_vars(expr: Expr) -> set[str]:
             return set()
         case EPi(var, domain, body) | ELam(var, domain, body):
             return collect_free_vars(domain) | (collect_free_vars(body) - {var})
+        case ELet(var, var_type, value, body):
+            return (
+                collect_free_vars(var_type)
+                | collect_free_vars(value)
+                | (collect_free_vars(body) - {var})
+            )
         case EApp(fn, arg):
             return collect_free_vars(fn) | collect_free_vars(arg)
 
@@ -244,6 +300,12 @@ def has_metavar(expr: Expr) -> bool:
             return False
         case EPi(_, domain, body) | ELam(_, domain, body):
             return has_metavar(domain) or has_metavar(body)
+        case ELet(_, var_type, value, body):
+            return (
+                has_metavar(var_type)
+                or has_metavar(value)
+                or has_metavar(body)
+            )
         case EApp(fn, arg):
             return has_metavar(fn) or has_metavar(arg)
 
@@ -272,6 +334,13 @@ def substitute_metavar(
                 substitute_metavar(domain, target_goal_id, replacement),
                 substitute_metavar(body, target_goal_id, replacement)
             )
+        case ELet(var, var_type, value, body):
+            return ELet(
+                var,
+                substitute_metavar(var_type, target_goal_id, replacement),
+                substitute_metavar(value, target_goal_id, replacement),
+                substitute_metavar(body, target_goal_id, replacement)
+            )
         case EApp(fn, arg):
             return EApp(
                 substitute_metavar(fn, target_goal_id, replacement),
@@ -291,6 +360,10 @@ def collect_metavar_ids(expr: Expr) -> list[str]:
                 pass
             case EPi(_, domain, body) | ELam(_, domain, body):
                 _collect(domain)
+                _collect(body)
+            case ELet(_, var_type, value, body):
+                _collect(var_type)
+                _collect(value)
                 _collect(body)
             case EApp(fn, arg):
                 _collect(fn)
@@ -320,6 +393,13 @@ def substitute_expr(expr: Expr, target: Expr, replacement: Expr) -> Expr:
                 substitute_expr(var_type, target, replacement),
                 substitute_expr(body, target, replacement),
             )
+        case ELet(var_name, var_type, value, body):
+            return ELet(
+                var_name,
+                substitute_expr(var_type, target, replacement),
+                substitute_expr(value, target, replacement),
+                substitute_expr(body, target, replacement),
+            )
         case EPi(var_name, var_type, body):
             return EPi(
                 var_name,
@@ -342,6 +422,13 @@ def shift_bvars(expr: Expr, delta: int, cutoff: int = 0) -> Expr:
                 return EApp(_shift(fn, depth), _shift(arg, depth))
             case ELam(var, domain, body):
                 return ELam(var, _shift(domain, depth), _shift(body, depth + 1))
+            case ELet(var, var_type, value, body):
+                return ELet(
+                    var,
+                    _shift(var_type, depth),
+                    _shift(value, depth),
+                    _shift(body, depth + 1),
+                )
             case EPi(var, domain, body):
                 return EPi(var, _shift(domain, depth), _shift(body, depth + 1))
             case _:
@@ -362,6 +449,13 @@ def substitute_bvar(expr: Expr, index: int, replacement: Expr) -> Expr:
                 return EApp(_subst(fn, depth), _subst(arg, depth))
             case ELam(var, domain, body):
                 return ELam(var, _subst(domain, depth), _subst(body, depth + 1))
+            case ELet(var, var_type, value, body):
+                return ELet(
+                    var,
+                    _subst(var_type, depth),
+                    _subst(value, depth),
+                    _subst(body, depth + 1),
+                )
             case EPi(var, domain, body):
                 return EPi(var, _subst(domain, depth), _subst(body, depth + 1))
             case _:
