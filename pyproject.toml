@@ -52,7 +52,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [tool.maturin]
-module-name = "poussins._poussins"
+module-name = "poussins._core"
 
 [dependency-groups]
 dev = [

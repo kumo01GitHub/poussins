@@ -6,7 +6,7 @@ pub fn add(left: u64, right: u64) -> u64 {
 }
 
 #[pymodule]
-fn _poussins(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     Ok(())
 }
