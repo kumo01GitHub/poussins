@@ -46,7 +46,7 @@ class Theorem(TacticMixin):
             logger=get_logger(__name__),
         )
 
-        self.logger.info(f"Theorem '{self.name}': {self.statement}")
+        self.logger.info("Theorem '%s': %s", self.name, self.statement)
 
     def qed(self) -> TheoremDeclaration:
         """Qualify the theorem.
@@ -75,9 +75,11 @@ class Theorem(TacticMixin):
             )
         )
         self.logger.info(
-            f"Theorem '{self.name}' is successfully proved: {self.statement}"
+            "Theorem '%s' is successfully proved: %s",
+            self.name,
+            self.statement,
         )
-        self.logger.info(f"==> {term}")
+        self.logger.info("==> %s", term)
 
         return declaration
 

@@ -66,21 +66,26 @@ def log_tactic[**TacticParams](
         *args: TacticParams.args,
         **kwargs: TacticParams.kwargs
     ) -> None:
-        self.logger.info(f"Executing '{func.__name__}' tactic with: {args} {kwargs}")
+        self.logger.info(
+            "Executing '%s' tactic with: %s %s",
+            func.__name__,
+            args,
+            kwargs,
+        )
 
         result = func(self, *args, **kwargs)
 
-        self.logger.info(f"After '{func.__name__}'")
+        self.logger.info("After '%s'", func.__name__)
         current_goal = self.current_state.current_goal
         if current_goal is None:
             self.logger.info("==> None (proof is closed)")
         else:
-            self.logger.info(f"==> Current goal ID: {current_goal.id}")
-            self.logger.info(f"    {current_goal.statement}")
+            self.logger.info("==> Current goal ID: %s", current_goal.id)
+            self.logger.info("    %s", current_goal.statement)
             self.logger.info("-" * 50)
             if current_goal.local_context:
                 for name, expr in current_goal.local_context.items():
-                    self.logger.info(f"    {name}: {expr}")
+                    self.logger.info("    %s: %s", name, expr)
 
         return result
 

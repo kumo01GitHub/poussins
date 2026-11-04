@@ -25,22 +25,22 @@ class Environment:
 
     def add(self, declaration: Declaration):
         """Add a declaration to the environment."""
-        self.logger.debug(f"Adding declaration: {declaration}")
+        self.logger.debug("Adding declaration: %s", declaration)
         if declaration.name in self.declarations:
             raise ValueError(
                 f"Declaration with name '{declaration.name}' already exists."
             )
         self.declarations[declaration.name] = declaration
-        self.logger.debug(f"Added declaration: {declaration}")
+        self.logger.debug("Added declaration: %s", declaration)
 
     def get(self, name: str) -> Declaration | None:
         """Return the declaration with the given name, if it exists."""
-        self.logger.debug(f"Retrieving declaration for name: {name}")
+        self.logger.debug("Retrieving declaration for name: %s", name)
         decl = self.declarations.get(name)
-        self.logger.debug(
-            f"Retrieved declaration: {decl}" if decl is not None
-            else f"No declaration found for name: {name}"
-        )
+        if decl is not None:
+            self.logger.debug("Retrieved declaration: %s", decl)
+        else:
+            self.logger.debug("No declaration found for name: %s", name)
         return decl
 
     def get_ctors(
@@ -48,36 +48,36 @@ class Environment:
         for_: str | InductiveDeclaration
     ) -> tuple[ConstructorDeclaration]:
         """Return all constructor declarations for a given inductive type."""
-        self.logger.debug(f"Retrieving constructors for: {for_}")
+        self.logger.debug("Retrieving constructors for: %s", for_)
         inductive = self.get(for_) if isinstance(for_, str) else for_
         if isinstance(inductive, InductiveDeclaration):
-            self.logger.debug(f"Found inductive declaration: {inductive}")
+            self.logger.debug("Found inductive declaration: %s", inductive)
             ctors = []
             for ctor_name in inductive.constructor_names:
-                self.logger.debug(f"Retrieving constructor: {ctor_name}")
+                self.logger.debug("Retrieving constructor: %s", ctor_name)
                 ctor_decl = self.get(ctor_name)
                 if isinstance(ctor_decl, ConstructorDeclaration):
-                    self.logger.debug(f"Found constructor declaration: {ctor_decl}")
+                    self.logger.debug("Found constructor declaration: %s", ctor_decl)
                     ctors.append(ctor_decl)
                 else:
                     raise ValueError(
                         f"Constructor '{ctor_name}' for inductive"
                         + f" '{for_}' is not valid."
                     )
-            self.logger.debug(f"Retrieved constructors: {ctors}")
+            self.logger.debug("Retrieved constructors: %s", ctors)
             return tuple(ctors)
         else:
             raise ValueError(f"'{for_}' is not a valid InductiveDeclaration.")
 
     def get_recs(self, for_: str | InductiveDeclaration) -> tuple[RecursorDeclaration]:
         """Return all recursor declarations for a given inductive type."""
-        self.logger.debug(f"Retrieving recursors for: {for_}")
+        self.logger.debug("Retrieving recursors for: %s", for_)
         inductive = self.get(for_) if isinstance(for_, str) else for_
         if isinstance(inductive, InductiveDeclaration):
-            self.logger.debug(f"Found inductive declaration: {inductive}")
+            self.logger.debug("Found inductive declaration: %s", inductive)
             recs = []
             for rec_name in inductive.recursor_names:
-                self.logger.debug(f"Retrieving recursor: {rec_name}")
+                self.logger.debug("Retrieving recursor: %s", rec_name)
                 rec_decl = self.get(rec_name)
                 if isinstance(rec_decl, RecursorDeclaration):
                     recs.append(rec_decl)
@@ -85,7 +85,7 @@ class Environment:
                     raise ValueError(
                         f"Recursor '{rec_name}' for inductive '{for_}' is not valid."
                     )
-            self.logger.debug(f"Retrieved recursors: {recs}")
+            self.logger.debug("Retrieved recursors: %s", recs)
             return tuple(recs)
         else:
             raise ValueError(f"'{for_}' is not a valid InductiveDeclaration.")
@@ -124,10 +124,10 @@ class Environment:
         stage_id = id_ if id_ is not None else str(uuid.uuid4())
 
         if stage_id not in self.stages:
-            self.logger.debug(f"Creating new stage with ID: {stage_id}")
+            self.logger.debug("Creating new stage with ID: %s", stage_id)
             self.stages[stage_id] = {}
         else:
-            self.logger.debug(f"Using existing stage with ID: {stage_id}")
+            self.logger.debug("Using existing stage with ID: %s", stage_id)
 
         for decl in declarations:
             if decl.name in self.declarations or decl.name in self.stages[stage_id]:
@@ -138,7 +138,9 @@ class Environment:
             self.stages[stage_id][decl.name] = decl
 
         self.logger.debug(
-            f"Staged declarations under ID '{stage_id}': {self.stages[stage_id]}"
+            "Staged declarations under ID '%s': %s",
+            stage_id,
+            self.stages[stage_id],
         )
         return stage_id
 
@@ -155,8 +157,11 @@ class Environment:
         staged_decls = self.stages.pop(id_)
         for name, decl in staged_decls.items():
             self.logger.debug(
-                f"Committing declaration '{name}'"
-                + f" from stage '{id_}' to main environment.: {decl}"
+                "Committing declaration '%s' from stage '%s' "
+                + "to main environment.: %s",
+                name,
+                id_,
+                decl,
             )
             if name in self.declarations:
                 raise ValueError(
@@ -164,14 +169,19 @@ class Environment:
                     + " in environment during commit."
                 )
             self.logger.debug(
-                f"Committing declaration '{name}'"
-                + f" from stage '{id_}' to main environment."
+                "Committing declaration '%s' from stage '%s' to main environment.",
+                name,
+                id_,
             )
             self.declarations[name] = decl
 
     def rollback(self, id_: str):
         """Discard a staging area without affecting the main environment."""
-        self.logger.debug(f"Rolling back stage with ID {id_}: {self.stages.get(id_)}")
+        self.logger.debug(
+            "Rolling back stage with ID %s: %s",
+            id_,
+            self.stages.get(id_),
+        )
         self.stages.pop(id_, None)
 
     def get_staging(self, id_: str) -> Environment:
