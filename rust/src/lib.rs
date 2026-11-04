@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 
+pub mod ast;
+
 #[pyfunction]
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
@@ -8,6 +10,9 @@ pub fn add(left: u64, right: u64) -> u64 {
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
+
+    ast::register(m)?;
+
     Ok(())
 }
 
