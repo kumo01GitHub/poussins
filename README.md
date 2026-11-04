@@ -49,5 +49,6 @@ git clone https://github.com/kumo01GitHub/poussins.git
 cd poussins
 
 uv sync
+uv run maturin develop
 uv run example/hilbert_s.py
 ```
