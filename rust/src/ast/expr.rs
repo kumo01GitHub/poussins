@@ -3,6 +3,14 @@ use pyo3::types::PyAny;
 
 use super::univ_level;
 
+#[derive(Clone)]
+pub enum Literal {
+    Nat(u64),
+    Float(f64),
+    String(String),
+    Array(Vec<Expr>),
+}
+
 /// Expression
 ///
 /// - Sort(u)                  --- The type of types at universe level `u`.
@@ -13,6 +21,7 @@ use super::univ_level;
 /// - Lam(var, t, body)        --- Lambda abstraction with variable `var`, type `T`, and body `body`.
 /// - Pi(var, t, body)         --- Dependent function type with variable `var`, type `T`, and body `body`.
 /// - Let(var, t, value, body) --- Let binding with variable `var`, type `T`, value `val`, and body `body`.
+/// - Lit(lit)                 --- Literal value `lit`.
 /// - MVar(id)                 --- Metavariable with identifier `id`.
 #[derive(Clone)]
 pub enum Expr {
@@ -24,6 +33,7 @@ pub enum Expr {
     Lam(String, Box<Expr>, Box<Expr>),
     Pi(String, Box<Expr>, Box<Expr>),
     Let(String, Box<Expr>, Box<Expr>, Box<Expr>),
+    Lit(Literal),
     MVar(String),
 }
 
@@ -158,6 +168,31 @@ impl PyLet {
     }
 }
 
+#[pyclass(name = "ELit")]
+struct PyLit {
+    lit: Literal,
+}
+
+#[pymethods]
+impl PyLit {
+    #[getter]
+    fn lit(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        match &self.lit {
+            Literal::Nat(val) => Ok(val.into_pyobject(py)?.into_any().unbind()),
+            Literal::Float(val) => Ok(val.into_pyobject(py)?.into_any().unbind()),
+            Literal::String(val) => Ok(val.into_pyobject(py)?.into_any().unbind()),
+            Literal::Array(vals) => {
+                let py_list = vals
+                    .iter()
+                    .map(|expr| to_pyresult(py, expr.clone()))
+                    .collect::<PyResult<Vec<_>>>()?;
+
+                Ok(py_list.into_pyobject(py)?.into_any().unbind())
+            }
+        }
+    }
+}
+
 #[pyclass(name = "EMVar")]
 struct PyMVar {
     #[pyo3(get)]
@@ -186,6 +221,7 @@ pub fn to_pyresult(py: Python<'_>, expr: Expr) -> PyResult<Py<PyAny>> {
         )?
         .into_any()
         .unbind()),
+        Expr::Lit(lit) => Ok(Bound::new(py, PyLit { lit })?.into_any().unbind()),
         Expr::MVar(id) => Ok(Bound::new(py, PyMVar { id })?.into_any().unbind()),
     }
 }
@@ -199,6 +235,7 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyLam>()?;
     m.add_class::<PyPi>()?;
     m.add_class::<PyLet>()?;
+    m.add_class::<PyLit>()?;
     m.add_class::<PyMVar>()?;
 
     Ok(())
