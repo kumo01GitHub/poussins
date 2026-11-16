@@ -1,6 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use uuid::Uuid;
 
@@ -11,7 +9,7 @@ use crate::ast::expr::Expr;
 /// The stored `context` is the merged global+local view used by the kernel,
 /// while `local_hypothesis_names` tracks which entries are local binders or
 /// hypotheses and may shadow globals.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Goal {
     pub id: String,
     pub statement: Expr,
@@ -116,17 +114,3 @@ impl PartialEq for Goal {
 }
 
 impl Eq for Goal {}
-
-impl Hash for Goal {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
-    }
-}
-
-impl fmt::Debug for Goal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Goal")
-            .field("id", &self.id)
-            .finish()
-    }
-}

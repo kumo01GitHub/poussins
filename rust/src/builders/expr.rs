@@ -7,7 +7,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple};
 
-use crate::ast::expr::{to_pyresult, Expr, Literal};
+use crate::ast::expr::{Expr, Literal};
 use crate::builders::univ_level::extract_univ_level;
 
 fn extract_expr(obj: &Bound<'_, PyAny>) -> PyResult<Expr> {
@@ -115,16 +115,16 @@ fn extract_expr_or_var(obj: &Bound<'_, PyAny>) -> PyResult<Expr> {
 #[pyo3(signature = (level))]
 pub fn sort(py: Python<'_>, level: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     let lvl = extract_univ_level(level)?;
-    to_pyresult(py, Expr::Sort(lvl))
+    Expr::Sort(lvl).into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build a free variable expression from a name.
 #[pyfunction]
 #[pyo3(signature = (name))]
 pub fn var(py: Python<'_>, name: String) -> PyResult<Py<PyAny>> {
-    to_pyresult(py, Expr::FVar(name))
+    Expr::FVar(name).into_pyobject(py).map(|obj| obj.unbind())
 }
-
+    
 /// Explicit alias for `var`, emphasizing that this creates a free variable.
 #[pyfunction]
 #[pyo3(signature = (name))]
@@ -145,7 +145,7 @@ pub fn app(
         let arg_expr = extract_expr_or_var(&arg)?;
         result = Expr::App(Box::new(result), Box::new(arg_expr));
     }
-    to_pyresult(py, result)
+    result.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build nested lambda abstractions from binders and a body.
@@ -174,7 +174,7 @@ pub fn lam(
         result = Expr::Lam(var_name, Box::new(domain), Box::new(abstracted));
     }
 
-    to_pyresult(py, result)
+    result.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build a let-binding expression with a single variable.
@@ -204,7 +204,7 @@ pub fn let_(
         Box::new(abstracted),
     );
 
-    to_pyresult(py, result)
+    result.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build nested Pi (dependent function) types from binders and a body.
@@ -233,7 +233,7 @@ pub fn pi(
         result = Expr::Pi(var_name, Box::new(domain), Box::new(abstracted));
     }
 
-    to_pyresult(py, result)
+    result.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Create an `Expr::Const` expression for a declaration in the environment.
@@ -261,7 +261,7 @@ pub fn const_(py: Python<'_>, env: &Bound<'_, PyAny>, name: &str) -> PyResult<Py
     }
 
     let expr = Expr::Const(decl_name, levels);
-    to_pyresult(py, expr)
+    expr.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Abstract a free variable name to a de Bruijn index.

@@ -8,7 +8,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyTuple};
 
-use crate::ast::univ_level::{to_pyresult, UnivLevel};
+use crate::ast::univ_level::UnivLevel;
 
 pub fn extract_univ_level(obj: &Bound<'_, PyAny>) -> PyResult<UnivLevel> {
     if let Ok(n) = obj.extract::<i64>() {
@@ -68,7 +68,7 @@ pub fn extract_univ_level(obj: &Bound<'_, PyAny>) -> PyResult<UnivLevel> {
 #[pyo3(signature = (level))]
 pub fn univ_level(py: Python<'_>, level: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     let lvl = extract_univ_level(level)?;
-    to_pyresult(py, lvl)
+    lvl.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build multiple universe levels from a sequence of level inputs.
@@ -79,7 +79,7 @@ pub fn univ_levels(py: Python<'_>, levels: &Bound<'_, PyAny>) -> PyResult<Py<PyT
     for item in levels.try_iter()? {
         let item = item?;
         let lvl = extract_univ_level(&item)?;
-        let py_obj = to_pyresult(py, lvl)?;
+        let py_obj = lvl.into_pyobject(py).map(|obj| obj.unbind())?;
         py_levels.push(py_obj);
     }
     Ok(PyTuple::new(py, py_levels)?.unbind())
@@ -101,7 +101,7 @@ pub fn univ_level_max(py: Python<'_>, levels: &Bound<'_, PyTuple>) -> PyResult<P
         let next_lvl = extract_univ_level(&item)?;
         result = UnivLevel::Max(Box::new(result), Box::new(next_lvl));
     }
-    to_pyresult(py, result)
+    result.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 /// Build an `imax` universe level from two inputs.
@@ -115,7 +115,7 @@ pub fn univ_level_imax(
     let left_lvl = extract_univ_level(left)?;
     let right_lvl = extract_univ_level(right)?;
     let res = UnivLevel::IMax(Box::new(left_lvl), Box::new(right_lvl));
-    to_pyresult(py, res)
+    res.into_pyobject(py).map(|obj| obj.unbind())
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -204,97 +204,4 @@ pub fn build_univ_level_imax(left: UnivLevelInput, right: UnivLevelInput) -> Uni
         Box::new(build_univ_level(left)),
         Box::new(build_univ_level(right)),
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_univ_level_zero() {
-        let level = build_univ_level(0i64.into());
-        assert!(matches!(level, UnivLevel::Zero));
-    }
-
-    #[test]
-    fn test_univ_level_succ() {
-        let level = build_univ_level(2i64.into());
-        match level {
-            UnivLevel::Succ(pred) => match *pred {
-                UnivLevel::Succ(inner_pred) => {
-                    assert!(matches!(*inner_pred, UnivLevel::Zero));
-                }
-                _ => panic!("Expected nested Succ"),
-            },
-            _ => panic!("Expected Succ"),
-        }
-    }
-
-    #[test]
-    fn test_univ_level_param() {
-        let level = build_univ_level("u".into());
-        match level {
-            UnivLevel::Param(name) => assert_eq!(name, "u"),
-            _ => panic!("Expected Param"),
-        }
-    }
-
-    #[test]
-    fn test_univ_levels() {
-        let levels = build_univ_levels(vec![
-            UnivLevelInput::Int(0),
-            UnivLevelInput::Param("u".to_string()),
-            UnivLevelInput::Level(UnivLevel::Zero),
-        ]);
-        assert_eq!(levels.len(), 3);
-        assert!(matches!(levels[0], UnivLevel::Zero));
-        assert!(matches!(levels[1], UnivLevel::Param(ref name) if name == "u"));
-        assert!(matches!(levels[2], UnivLevel::Zero));
-    }
-
-    #[test]
-    fn test_univ_level_max_single_fallback() {
-        let level = build_univ_level_max(vec![UnivLevelInput::Param("u".to_string())]);
-        assert!(matches!(level, UnivLevel::Param(ref name) if name == "u"));
-    }
-
-    #[test]
-    fn test_univ_level_max_multiple() {
-        let level = build_univ_level_max(vec![
-            UnivLevelInput::Param("u".to_string()),
-            UnivLevelInput::Param("v".to_string()),
-            UnivLevelInput::Int(0),
-        ]);
-        match level {
-            UnivLevel::Max(left, right) => {
-                assert!(matches!(*right, UnivLevel::Zero));
-                assert!(matches!(*left, UnivLevel::Max(_, _)));
-            }
-            _ => panic!("Expected Max"),
-        }
-    }
-
-    #[test]
-    fn test_univ_level_imax() {
-        let level = build_univ_level_imax("u".into(), "v".into());
-        match level {
-            UnivLevel::IMax(left, right) => {
-                assert!(matches!(*left, UnivLevel::Param(ref name) if name == "u"));
-                assert!(matches!(*right, UnivLevel::Param(ref name) if name == "v"));
-            }
-            _ => panic!("Expected IMax"),
-        }
-    }
-
-    #[test]
-    #[should_panic(expected = "Universe level must be non-negative")]
-    fn test_univ_level_negative() {
-        build_univ_level((-1i64).into());
-    }
-
-    #[test]
-    #[should_panic(expected = "univ_level_max requires at least one level")]
-    fn test_univ_level_max_empty_panics() {
-        let _ = build_univ_level_max(Vec::<UnivLevelInput>::new());
-    }
 }

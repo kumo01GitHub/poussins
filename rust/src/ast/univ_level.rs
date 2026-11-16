@@ -1,7 +1,8 @@
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum UnivLevel {
     Zero,
     Succ(Box<UnivLevel>),
@@ -15,15 +16,8 @@ struct PyUnivLevelZero {}
 
 #[pyclass(name = "UnivLevelSucc")]
 struct PyUnivLevelSucc {
-    pred: Box<UnivLevel>,
-}
-
-#[pymethods]
-impl PyUnivLevelSucc {
-    #[getter]
-    fn pred(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        to_pyresult(py, *self.pred.clone())
-    }
+    #[pyo3(get)]
+    pred: UnivLevel,
 }
 
 #[pyclass(name = "UnivLevelParam")]
@@ -34,57 +28,73 @@ struct PyUnivLevelParam {
 
 #[pyclass(name = "UnivLevelMax")]
 struct PyUnivLevelMax {
-    left: Box<UnivLevel>,
-    right: Box<UnivLevel>,
-}
-
-#[pymethods]
-impl PyUnivLevelMax {
-    #[getter]
-    fn left(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        to_pyresult(py, *self.left.clone())
-    }
-
-    #[getter]
-    fn right(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        to_pyresult(py, *self.right.clone())
-    }
+    #[pyo3(get)]
+    left: UnivLevel,
+    #[pyo3(get)]
+    right: UnivLevel,
 }
 
 #[pyclass(name = "UnivLevelIMax")]
 struct PyUnivLevelIMax {
-    left: Box<UnivLevel>,
-    right: Box<UnivLevel>,
+    #[pyo3(get)]
+    left: UnivLevel,
+    #[pyo3(get)]
+    right: UnivLevel,
 }
 
-#[pymethods]
-impl PyUnivLevelIMax {
-    #[getter]
-    fn left(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        to_pyresult(py, *self.left.clone())
-    }
+impl<'py> IntoPyObject<'py> for UnivLevel {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
 
-    #[getter]
-    fn right(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
-        to_pyresult(py, *self.right.clone())
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self {
+            UnivLevel::Zero => Ok(Bound::new(py, PyUnivLevelZero {})?.into_any()),
+            UnivLevel::Succ(pred) => Ok(Bound::new(py, PyUnivLevelSucc { pred: *pred })?.into_any()),
+            UnivLevel::Param(name) => Ok(Bound::new(py, PyUnivLevelParam { name })?.into_any()),
+            UnivLevel::Max(left, right) => Ok(Bound::new(
+                py,
+                PyUnivLevelMax {
+                    left: *left,
+                    right: *right,
+                },
+            )?
+            .into_any()),
+            UnivLevel::IMax(left, right) => Ok(Bound::new(
+                py,
+                PyUnivLevelIMax {
+                    left: *left,
+                    right: *right,
+                },
+            )?
+            .into_any()),
+        }
     }
 }
 
-pub fn to_pyresult(py: Python<'_>, level: UnivLevel) -> PyResult<Py<PyAny>> {
-    match level {
-        UnivLevel::Zero => Ok(Bound::new(py, PyUnivLevelZero {})?.into_any().unbind()),
-        UnivLevel::Succ(pred) => Ok(Bound::new(py, PyUnivLevelSucc { pred })?
-            .into_any()
-            .unbind()),
-        UnivLevel::Param(name) => Ok(Bound::new(py, PyUnivLevelParam { name })?
-            .into_any()
-            .unbind()),
-        UnivLevel::Max(left, right) => Ok(Bound::new(py, PyUnivLevelMax { left, right })?
-            .into_any()
-            .unbind()),
-        UnivLevel::IMax(left, right) => Ok(Bound::new(py, PyUnivLevelIMax { left, right })?
-            .into_any()
-            .unbind()),
+impl<'a, 'py> FromPyObject<'a, 'py> for UnivLevel {
+    type Error = PyErr;
+
+    fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if ob.is_instance_of::<PyUnivLevelZero>() {
+            Ok(UnivLevel::Zero)
+        } else if let Ok(s) = ob.extract::<PyRef<'_, PyUnivLevelSucc>>() {
+            Ok(UnivLevel::Succ(Box::new(s.pred.clone())))
+        } else if let Ok(p) = ob.extract::<PyRef<'_, PyUnivLevelParam>>() {
+            Ok(UnivLevel::Param(p.name.clone()))
+        } else if let Ok(m) = ob.extract::<PyRef<'_, PyUnivLevelMax>>() {
+            Ok(UnivLevel::Max(
+                Box::new(m.left.clone()),
+                Box::new(m.right.clone()),
+            ))
+        } else if let Ok(im) = ob.extract::<PyRef<'_, PyUnivLevelIMax>>() {
+            Ok(UnivLevel::IMax(
+                Box::new(im.left.clone()),
+                Box::new(im.right.clone()),
+            ))
+        } else {
+            Err(PyTypeError::new_err("Expected a UnivLevel instance"))
+        }
     }
 }
 
@@ -94,6 +104,5 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyUnivLevelParam>()?;
     m.add_class::<PyUnivLevelMax>()?;
     m.add_class::<PyUnivLevelIMax>()?;
-
     Ok(())
 }
