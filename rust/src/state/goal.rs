@@ -1,5 +1,8 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 
+use pyo3::prelude::*;
 use uuid::Uuid;
 
 use crate::ast::expr::Expr;
@@ -9,14 +12,20 @@ use crate::ast::expr::Expr;
 /// The stored `context` is the merged global+local view used by the kernel,
 /// while `local_hypothesis_names` tracks which entries are local binders or
 /// hypotheses and may shadow globals.
+#[pyclass(module = "poussins._core", eq)]
 #[derive(Clone, Debug)]
 pub struct Goal {
+    #[pyo3(get)]
     pub id: String,
+    #[pyo3(get)]
     pub statement: Expr,
+    #[pyo3(get)]
     pub context: HashMap<String, Expr>,
+    #[pyo3(get)]
     pub local_hypothesis_names: Option<HashSet<String>>,
 }
 
+/// Constructors for the `Goal` struct.
 impl Goal {
     /// Create a new goal with a generated unique ID.
     pub fn new(
@@ -32,21 +41,35 @@ impl Goal {
         }
     }
 
-    /// Create a new goal with a specific ID.
-    pub fn with_id(
-        id: impl Into<String>,
-        statement: Expr,
+    /// Return a goal with the same identifier and context but a new statement.
+    pub fn with_statement(&self, statement: Expr) -> Self {
+        Self {
+            id: self.id.clone(),
+            statement,
+            context: self.context.clone(),
+            local_hypothesis_names: self.local_hypothesis_names.clone(),
+        }
+    }
+
+    /// Return a goal with the same identifier and statement but a new context.
+    pub fn with_context(
+        &self,
         context: HashMap<String, Expr>,
         local_hypothesis_names: Option<HashSet<String>>,
     ) -> Self {
         Self {
-            id: id.into(),
-            statement,
+            id: self.id.clone(),
+            statement: self.statement.clone(),
             context,
-            local_hypothesis_names,
+            local_hypothesis_names: local_hypothesis_names
+                .or_else(|| self.local_hypothesis_names.clone()),
         }
     }
+}
 
+/// Reference methods for the `Goal` struct exposed to Python.
+#[pymethods]
+impl Goal {
     /// Return the local hypotheses and binders in scope for this goal.
     pub fn local_context(&self) -> HashMap<String, Expr> {
         match &self.local_hypothesis_names {
@@ -81,29 +104,14 @@ impl Goal {
         }
     }
 
-    /// Return a goal with the same identifier and context but a new statement.
-    pub fn with_statement(&self, statement: Expr) -> Self {
-        Self {
-            id: self.id.clone(),
-            statement,
-            context: self.context.clone(),
-            local_hypothesis_names: self.local_hypothesis_names.clone(),
-        }
+    fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 
-    /// Return a goal with the same identifier and statement but a new context.
-    pub fn with_context(
-        &self,
-        context: HashMap<String, Expr>,
-        local_hypothesis_names: Option<HashSet<String>>,
-    ) -> Self {
-        Self {
-            id: self.id.clone(),
-            statement: self.statement.clone(),
-            context,
-            local_hypothesis_names: local_hypothesis_names
-                .or_else(|| self.local_hypothesis_names.clone()),
-        }
+    fn __repr__(&self) -> String {
+        format!("Goal(id={:?})", self.id)
     }
 }
 
@@ -114,3 +122,9 @@ impl PartialEq for Goal {
 }
 
 impl Eq for Goal {}
+
+impl Hash for Goal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
