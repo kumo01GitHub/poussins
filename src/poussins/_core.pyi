@@ -6,18 +6,24 @@ class UnivLevelZero:
     pass
 
 class UnivLevelSucc:
-    pred: UnivLevel
+    @property
+    def pred(self) -> UnivLevel: ...
 
 class UnivLevelParam:
-    name: str
+    @property
+    def name(self) -> str: ...
 
 class UnivLevelMax:
-    left: UnivLevel
-    right: UnivLevel
+    @property
+    def left(self) -> UnivLevel: ...
+    @property
+    def right(self) -> UnivLevel: ...
 
 class UnivLevelIMax:
-    left: UnivLevel
-    right: UnivLevel
+    @property
+    def left(self) -> UnivLevel: ...
+    @property
+    def right(self) -> UnivLevel: ...
 
 type UnivLevel = (
     UnivLevelZero
@@ -28,43 +34,62 @@ type UnivLevel = (
 )
 
 class ESort:
-    level: UnivLevel
+    @property
+    def level(self) -> UnivLevel: ...
 
 class EFVar:
-    name: str
+    @property
+    def name(self) -> str: ...
 
 class EBVar:
-    idx: int
+    @property
+    def idx(self) -> int: ...
 
 class EConst:
-    name: str
-    levels: list[UnivLevel]
+    @property
+    def name(self) -> str: ...
+    @property
+    def levels(self) -> list[UnivLevel]: ...
 
 class EApp:
-    f: Expr
-    arg: Expr
+    @property
+    def f(self) -> Expr: ...
+    @property
+    def arg(self) -> Expr: ...
 
 class ELam:
-    var: str
-    t: Expr
-    body: Expr
+    @property
+    def var(self) -> str: ...
+    @property
+    def t(self) -> Expr: ...
+    @property
+    def body(self) -> Expr: ...
 
 class EPi:
-    var: str
-    t: Expr
-    body: Expr
+    @property
+    def var(self) -> str: ...
+    @property
+    def t(self) -> Expr: ...
+    @property
+    def body(self) -> Expr: ...
 
 class ELet:
-    var: str
-    t: Expr
-    value: Expr
-    body: Expr
+    @property
+    def var(self) -> str: ...
+    @property
+    def t(self) -> Expr: ...
+    @property
+    def value(self) -> Expr: ...
+    @property
+    def body(self) -> Expr: ...
 
 class ELit:
-    lit: Literal
+    @property
+    def lit(self) -> Literal: ...
 
 class EMVar:
-    id: str
+    @property
+    def id(self) -> str: ...
 
 type Literal = int | float | str | list[Expr]
 type Expr = ESort | EFVar | EBVar | EConst | EApp | ELam | EPi | ELet | ELit | EMVar
