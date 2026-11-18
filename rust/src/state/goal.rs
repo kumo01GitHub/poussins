@@ -1,4 +1,3 @@
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use pyo3::prelude::*;
@@ -11,7 +10,7 @@ use crate::ast::expr::Expr;
 ///
 /// Global declarations live in `Environment` rather than being duplicated in
 /// every goal.
-#[pyclass(module = "poussins._core", eq, frozen, get_all)]
+#[pyclass(module = "poussins._core", eq, frozen, hash, get_all)]
 #[derive(Clone, Debug)]
 pub struct Goal {
     pub id: String,
@@ -82,12 +81,6 @@ impl Goal {
     /// Look up the type of the most recent local hypothesis with the given name.
     pub fn get_local_hypothesis(&self, name: &str) -> Option<Expr> {
         self.lookup_local(name).cloned()
-    }
-
-    fn __hash__(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish()
     }
 
     fn __repr__(&self) -> String {
