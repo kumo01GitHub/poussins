@@ -12,16 +12,12 @@ use crate::ast::expr::Expr;
 /// The stored `context` is the merged global+local view used by the kernel,
 /// while `local_hypothesis_names` tracks which entries are local binders or
 /// hypotheses and may shadow globals.
-#[pyclass(module = "poussins._core", eq)]
+#[pyclass(module = "poussins._core", eq, frozen, get_all)]
 #[derive(Clone, Debug)]
 pub struct Goal {
-    #[pyo3(get)]
     pub id: String,
-    #[pyo3(get)]
     pub statement: Expr,
-    #[pyo3(get)]
     pub context: HashMap<String, Expr>,
-    #[pyo3(get)]
     pub local_hypothesis_names: Option<HashSet<String>>,
 }
 
@@ -108,10 +104,6 @@ impl Goal {
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
         hasher.finish()
-    }
-
-    fn __repr__(&self) -> String {
-        format!("Goal(id={:?})", self.id)
     }
 }
 
