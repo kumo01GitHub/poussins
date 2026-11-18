@@ -4,7 +4,7 @@
 /// drawing inspiration from the Python implementations in ast/ops.py.
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyTuple};
+use pyo3::types::PyAny;
 
 use crate::ast::expr::Expr;
 use crate::builders::univ_level::{try_build_univ_level, UnivLevelInput};
@@ -68,13 +68,10 @@ pub fn free_var(name: String) -> Expr {
 /// Build a left-associated application chain from a head function and arguments.
 #[pyfunction]
 #[pyo3(signature = (r#fn, *args))]
-pub fn app(r#fn: ExprInput, args: &Bound<'_, PyTuple>) -> PyResult<Expr> {
-    let mut result = r#fn.0;
-    for arg in args {
-        let arg_expr = arg.extract::<ExprInput>()?.0;
-        result = Expr::App(Box::new(result), Box::new(arg_expr));
-    }
-    Ok(result)
+pub fn app(r#fn: ExprInput, args: Vec<ExprInput>) -> Expr {
+    args.into_iter().fold(r#fn.0, |acc, arg| {
+        Expr::App(Box::new(acc), Box::new(arg.0))
+    })
 }
 
 /// Build nested lambda abstractions from binders and a body.

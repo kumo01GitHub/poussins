@@ -1,14 +1,44 @@
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::PyAny;
-
+use pyo3::types::{PyAny, PyBool, PyFloat, PyInt, PyList, PyString};
 use super::univ_level;
 
-#[derive(Clone, Debug, FromPyObject)]
+#[derive(Clone, Debug)]
 pub enum Literal {
     Nat(u64),
     Float(f64),
     String(String),
     Array(Vec<Expr>),
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Literal {
+    type Error = PyErr;
+
+    fn extract(ob: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        if ob.is_instance_of::<PyBool>() {
+            Err(PyTypeError::new_err(
+                "Expected int (non-negative), float, str, or list for Literal, got bool",
+            ))
+        } else if ob.is_instance_of::<PyInt>() {
+            let val = ob.extract::<u64>().map_err(|_| {
+                PyValueError::new_err(
+                    "Natural number literal must be a non-negative integer within u64 range.",
+                )
+            })?;
+            Ok(Literal::Nat(val))
+        } else if ob.is_instance_of::<PyFloat>() {
+            Ok(Literal::Float(ob.extract::<f64>()?))
+        } else if ob.is_instance_of::<PyString>() {
+            Ok(Literal::String(ob.extract::<String>()?))
+        } else if ob.is_instance_of::<PyList>() {
+            Ok(Literal::Array(ob.extract::<Vec<Expr>>()?))
+        } else {
+            let type_name = ob.get_type().name()?;
+            Err(PyTypeError::new_err(format!(
+                "Expected int (non-negative), float, str, or list for Literal, got {type_name}"
+            )))
+        }
+    }
 }
 
 impl<'py> IntoPyObject<'py> for Literal {

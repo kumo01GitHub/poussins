@@ -5,7 +5,7 @@
 /// expression builders.
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyTuple};
+use pyo3::types::{PyAny, PyBool, PyTuple};
 
 use crate::ast::univ_level::UnivLevel;
 
@@ -44,7 +44,9 @@ impl<'a, 'py> FromPyObject<'a, 'py> for UnivLevelInput {
     type Error = PyErr;
 
     fn extract(ob: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
-        if let Ok(n) = ob.extract::<i64>() {
+        if ob.is_instance_of::<PyBool>() {
+            Err(PyTypeError::new_err("Expected int, str, or UnivLevel, got bool"))
+        } else if let Ok(n) = ob.extract::<i64>() {
             Ok(Self::Int(n))
         } else if let Ok(s) = ob.extract::<String>() {
             Ok(Self::Param(s))
@@ -81,6 +83,21 @@ pub fn try_build_univ_level(level: UnivLevelInput) -> PyResult<UnivLevel> {
     }
 }
 
+/// Try to build a `max` universe level from one or more inputs.
+pub fn try_build_univ_level_max(
+    levels: impl IntoIterator<Item = UnivLevelInput>,
+) -> PyResult<UnivLevel> {
+    let mut iter = levels.into_iter();
+    let first = iter
+        .next()
+        .ok_or_else(|| PyValueError::new_err("univ_level_max requires at least one level."))?;
+    let mut result = try_build_univ_level(first)?;
+    for level in iter {
+        result = UnivLevel::Max(Box::new(result), Box::new(try_build_univ_level(level)?));
+    }
+    Ok(result)
+}
+
 /// Build a universe level from Rust input (panics on negative integer).
 pub fn build_univ_level(level: UnivLevelInput) -> UnivLevel {
     try_build_univ_level(level).unwrap_or_else(|e| panic!("{}", e))
@@ -93,15 +110,7 @@ pub fn build_univ_levels(levels: impl IntoIterator<Item = UnivLevelInput>) -> Ve
 
 /// Build a `max` universe level from Rust inputs.
 pub fn build_univ_level_max(levels: impl IntoIterator<Item = UnivLevelInput>) -> UnivLevel {
-    let mut iter = levels.into_iter();
-    let first = iter
-        .next()
-        .unwrap_or_else(|| panic!("univ_level_max requires at least one level."));
-    let mut result = build_univ_level(first);
-    for level in iter {
-        result = UnivLevel::Max(Box::new(result), Box::new(build_univ_level(level)));
-    }
-    result
+    try_build_univ_level_max(levels).unwrap_or_else(|e| panic!("{}", e))
 }
 
 /// Build an `imax` universe level from two Rust inputs.
@@ -124,32 +133,19 @@ pub fn univ_level(level: UnivLevelInput) -> PyResult<UnivLevel> {
 
 /// Build multiple universe levels from a sequence of level inputs.
 #[pyfunction]
-pub fn univ_levels(levels: &Bound<'_, PyAny>) -> PyResult<Py<PyTuple>> {
-    let py = levels.py();
-    let mut out = Vec::new();
-    for item in levels.try_iter()? {
-        let input: UnivLevelInput = item?.extract()?;
-        out.push(try_build_univ_level(input)?);
-    }
+pub fn univ_levels(py: Python<'_>, levels: Vec<UnivLevelInput>) -> PyResult<Py<PyTuple>> {
+    let out = levels
+        .into_iter()
+        .map(try_build_univ_level)
+        .collect::<PyResult<Vec<_>>>()?;
     Ok(PyTuple::new(py, out)?.unbind())
 }
 
 /// Build a `max` universe level from one or more inputs.
 #[pyfunction]
 #[pyo3(signature = (*levels))]
-pub fn univ_level_max(levels: &Bound<'_, PyTuple>) -> PyResult<UnivLevel> {
-    if levels.is_empty() {
-        return Err(PyValueError::new_err(
-            "univ_level_max requires at least one level.",
-        ));
-    }
-    let mut iter = levels.iter();
-    let mut result = try_build_univ_level(iter.next().unwrap().extract()?)?;
-    for item in iter {
-        let next_lvl = try_build_univ_level(item.extract()?)?;
-        result = UnivLevel::Max(Box::new(result), Box::new(next_lvl));
-    }
-    Ok(result)
+pub fn univ_level_max(levels: Vec<UnivLevelInput>) -> PyResult<UnivLevel> {
+    try_build_univ_level_max(levels)
 }
 
 /// Build an `imax` universe level from two inputs.
