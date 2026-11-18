@@ -26,11 +26,6 @@ impl Session {
         self.current_snapshot().is_closed()
     }
 
-    /// Return the slice of proof snapshots in the history.
-    pub fn history(&self) -> &[Snapshot] {
-        &self.history
-    }
-
     /// Update the proof session with a new snapshot, appending it to the history.
     pub fn update_snapshot(&mut self, next_snapshot: Snapshot) {
         self.history.push(next_snapshot);
