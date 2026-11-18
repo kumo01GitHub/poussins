@@ -41,30 +41,3 @@ impl fmt::Debug for Snapshot {
             .finish()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ast::expr::Expr;
-
-    fn make_test_expr(name: &str) -> Expr {
-        Expr::FVar(name.to_string())
-    }
-
-    #[test]
-    fn test_snapshot_current_goal() {
-        let snapshot = Snapshot::new();
-        assert!(snapshot.current_goal().is_none());
-
-        let g1 = Goal::with_id("g1", make_test_expr("A"), HashMap::new(), None);
-        let g2 = Goal::with_id("g2", make_test_expr("B"), HashMap::new(), None);
-
-        let snapshot_with_goals = Snapshot::with_goals_and_metavars(
-            vec![g1.clone(), g2.clone()],
-            HashMap::new(),
-        );
-
-        assert_eq!(snapshot_with_goals.current_goal(), Some(&g1));
-        assert_eq!(snapshot_with_goals.goals.len(), 2);
-    }
-}

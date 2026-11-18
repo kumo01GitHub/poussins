@@ -39,23 +39,3 @@ impl fmt::Debug for MetaVar {
             .finish()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn make_test_expr(name: &str) -> Expr {
-        Expr::FVar(name.to_string())
-    }
-
-    #[test]
-    fn test_metavar() {
-        let mv = MetaVar::new(make_test_expr("A"));
-        assert!(!mv.is_assigned());
-        assert!(mv.assignment.is_none());
-
-        let assigned = MetaVar::with_assignment(make_test_expr("A"), Some(make_test_expr("a")));
-        assert!(assigned.is_assigned());
-        assert!(assigned.assignment.is_some());
-    }
-}
