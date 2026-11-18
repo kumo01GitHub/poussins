@@ -1,27 +1,7 @@
-use std::fmt;
-
 use super::snapshot::Snapshot;
 
-/// Error when attempting an invalid session operation.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SessionError {
-    CannotUndoInitialState,
-}
-
-impl fmt::Display for SessionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CannotUndoInitialState => {
-                write!(f, "Cannot undo beyond the initial proof state.")
-            }
-        }
-    }
-}
-
-impl std::error::Error for SessionError {}
-
 /// Proof session that manages the history of proof snapshots.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Session {
     history: Vec<Snapshot>,
 }
@@ -43,7 +23,7 @@ impl Session {
 
     /// Check if the proof session is closed (i.e., no active goals remain).
     pub fn is_closed(&self) -> bool {
-        self.current_snapshot().goals.is_empty()
+        self.current_snapshot().is_closed()
     }
 
     /// Return the slice of proof snapshots in the history.
@@ -56,21 +36,11 @@ impl Session {
         self.history.push(next_snapshot);
     }
 
-    /// Undo the last proof snapshot, reverting to the previous snapshot in the history.
-    pub fn undo(&mut self) -> Result<Snapshot, SessionError> {
+    pub fn undo(&mut self) -> Result<Snapshot, &'static str> {
         if self.history.len() > 1 {
             Ok(self.history.pop().unwrap())
         } else {
-            Err(SessionError::CannotUndoInitialState)
+            Err("Cannot undo beyond the initial proof state.")
         }
-    }
-}
-
-impl fmt::Debug for Session {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Session")
-            .field("history_len", &self.history.len())
-            .field("is_closed", &self.is_closed())
-            .finish()
     }
 }

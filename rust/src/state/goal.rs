@@ -7,9 +7,6 @@ use crate::ast::expr::Expr;
 
 /// A single proof subgoal, consisting of a target statement and an ordered
 /// local context of hypotheses and binders.
-///
-/// Global declarations live in `Environment` rather than being duplicated in
-/// every goal.
 #[pyclass(module = "poussins._core", eq, frozen, hash, get_all)]
 #[derive(Clone, Debug)]
 pub struct Goal {
@@ -18,7 +15,6 @@ pub struct Goal {
     pub local_context: Vec<(String, Expr)>,
 }
 
-/// Constructors and immutable update helpers for `Goal`.
 impl Goal {
     /// Create a new goal with a generated unique ID.
     pub fn new(statement: Expr, local_context: Vec<(String, Expr)>) -> Self {
@@ -42,24 +38,6 @@ impl Goal {
         }
     }
 
-    /// Return a goal with the same identifier and local context, but a new statement.
-    pub fn with_statement(&self, statement: Expr) -> Self {
-        Self {
-            id: self.id.clone(),
-            statement,
-            local_context: self.local_context.clone(),
-        }
-    }
-
-    /// Return a goal with the same identifier and statement, but a new local context.
-    pub fn with_local_context(&self, local_context: Vec<(String, Expr)>) -> Self {
-        Self {
-            id: self.id.clone(),
-            statement: self.statement.clone(),
-            local_context,
-        }
-    }
-
     /// Look up the type of the most recent local hypothesis with the given name.
     pub fn lookup_local(&self, name: &str) -> Option<&Expr> {
         self.local_context
@@ -70,21 +48,14 @@ impl Goal {
     }
 }
 
-/// Methods exposed to Python.
 #[pymethods]
 impl Goal {
-    /// Return whether a local hypothesis or binder with the given name is in scope.
     pub fn has_local_hypothesis(&self, name: &str) -> bool {
         self.local_context.iter().any(|(n, _)| n == name)
     }
 
-    /// Look up the type of the most recent local hypothesis with the given name.
     pub fn get_local_hypothesis(&self, name: &str) -> Option<Expr> {
         self.lookup_local(name).cloned()
-    }
-
-    fn __repr__(&self) -> String {
-        format!("Goal(id={:?})", self.id)
     }
 }
 
