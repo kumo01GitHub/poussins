@@ -2,11 +2,13 @@
 ///
 /// This module provides ergonomic builder functions to construct expressions,
 /// drawing inspiration from the Python implementations in ast/ops.py.
+use std::sync::Arc;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
-use crate::ast::expr::Expr;
+use crate::ast::expr::{Expr, Literal};
 use crate::builders::univ_level::{try_build_univ_level, UnivLevelInput};
 
 /// Input wrapper accepting either an `Expr` or a `str` (coerced into `Expr::FVar`).
@@ -26,7 +28,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExprInput {
 
 fn fold_binders<F>(binders: &Bound<'_, PyAny>, body: ExprInput, constructor: F) -> PyResult<Expr>
 where
-    F: Fn(String, Box<Expr>, Box<Expr>) -> Expr,
+    F: Fn(String, Arc<Expr>, Arc<Expr>) -> Expr,
 {
     let mut binders_vec: Vec<(String, Expr)> = Vec::new();
     for item in binders.try_iter()? {
@@ -41,7 +43,7 @@ where
         } else {
             abstract_name_to_bvar(&result, &var_name)
         };
-        result = constructor(var_name, Box::new(domain), Box::new(abstracted));
+        result = constructor(var_name, Arc::new(domain), Arc::new(abstracted));
     }
     Ok(result)
 }
@@ -70,7 +72,7 @@ pub fn var(name: String) -> Expr {
 #[pyo3(signature = (r#fn, *args))]
 pub fn app(r#fn: ExprInput, args: Vec<ExprInput>) -> Expr {
     args.into_iter().fold(r#fn.0, |acc, arg| {
-        Expr::App(Box::new(acc), Box::new(arg.0))
+        Expr::App(Arc::new(acc), Arc::new(arg.0))
     })
 }
 
@@ -90,9 +92,9 @@ pub fn let_(var_name: String, var_type: ExprInput, value: ExprInput, body: ExprI
     };
     Expr::Let(
         var_name,
-        Box::new(var_type.0),
-        Box::new(value.0),
-        Box::new(abstracted),
+        Arc::new(var_type.0),
+        Arc::new(value.0),
+        Arc::new(abstracted),
     )
 }
 
@@ -111,59 +113,118 @@ pub fn const_(env: &Bound<'_, PyAny>, name: &str) -> PyResult<Expr> {
             "Declaration with name '{name}' does not exist in the environment."
         )));
     }
+
     let decl_name: String = if let Ok(n) = decl.getattr("name") {
         n.extract()?
     } else {
         name.to_string()
     };
+
     let level_params = decl.getattr("level_params")?;
     let mut levels = Vec::new();
     for param in level_params.try_iter()? {
         let input: UnivLevelInput = param?.extract()?;
         levels.push(try_build_univ_level(input)?);
     }
+
     Ok(Expr::Const(decl_name, levels))
 }
 
-/// Abstract a free variable name to a de Bruijn index.
+/// Abstract a free variable name to a de Bruijn index iteratively (stack-safe).
 ///
-/// Recursively traverses the expression, replacing all occurrences of the named
-/// free variable with de Bruijn indices relative to the binding depth.
+/// Traverses the expression using an explicit stack, replacing all occurrences
+/// of the named free variable with de Bruijn indices relative to the binding depth.
 pub fn abstract_name_to_bvar(expr: &Expr, name: &str) -> Expr {
-    fn go(expr: &Expr, name: &str, depth: usize) -> Expr {
-        match expr {
-            Expr::FVar(n) => {
-                if n == name {
-                    Expr::BVar(depth)
-                } else {
-                    expr.clone()
+    enum Task<'a> {
+        Visit(&'a Expr, usize),
+        BuildApp,
+        BuildLam(String),
+        BuildPi(String),
+        BuildLet(String),
+        BuildLitArray(usize),
+    }
+
+    let mut tasks = vec![Task::Visit(expr, 0)];
+    let mut results: Vec<Arc<Expr>> = Vec::new();
+
+    while let Some(task) = tasks.pop() {
+        match task {
+            Task::Visit(cur, depth) => match cur {
+                Expr::FVar(n) => {
+                    if n == name {
+                        results.push(Arc::new(Expr::BVar(depth)));
+                    } else {
+                        results.push(Arc::new(cur.clone()));
+                    }
                 }
+                Expr::BVar(_) | Expr::Sort(_) | Expr::Const(_, _) | Expr::MVar(_) => {
+                    results.push(Arc::new(cur.clone()));
+                }
+                Expr::Lit(Literal::Array(items)) => {
+                    tasks.push(Task::BuildLitArray(items.len()));
+                    for item in items.iter().rev() {
+                        tasks.push(Task::Visit(item, depth));
+                    }
+                }
+                Expr::Lit(_) => {
+                    results.push(Arc::new(cur.clone()));
+                }
+                Expr::App(fn_expr, arg) => {
+                    tasks.push(Task::BuildApp);
+                    tasks.push(Task::Visit(arg, depth));
+                    tasks.push(Task::Visit(fn_expr, depth));
+                }
+                Expr::Lam(var, domain, body) => {
+                    tasks.push(Task::BuildLam(var.clone()));
+                    tasks.push(Task::Visit(body, depth + 1));
+                    tasks.push(Task::Visit(domain, depth));
+                }
+                Expr::Pi(var, domain, body) => {
+                    tasks.push(Task::BuildPi(var.clone()));
+                    tasks.push(Task::Visit(body, depth + 1));
+                    tasks.push(Task::Visit(domain, depth));
+                }
+                Expr::Let(var, var_type, value, body) => {
+                    tasks.push(Task::BuildLet(var.clone()));
+                    tasks.push(Task::Visit(body, depth + 1));
+                    tasks.push(Task::Visit(value, depth));
+                    tasks.push(Task::Visit(var_type, depth));
+                }
+            },
+            Task::BuildApp => {
+                let arg = results.pop().unwrap();
+                let fn_expr = results.pop().unwrap();
+                results.push(Arc::new(Expr::App(fn_expr, arg)));
             }
-            Expr::BVar(_) | Expr::Sort(_) | Expr::Const(_, _) | Expr::Lit(_) | Expr::MVar(_) => {
-                expr.clone()
+            Task::BuildLam(var) => {
+                let body = results.pop().unwrap();
+                let domain = results.pop().unwrap();
+                results.push(Arc::new(Expr::Lam(var, domain, body)));
             }
-            Expr::App(fn_expr, arg) => {
-                Expr::App(Box::new(go(fn_expr, name, depth)), Box::new(go(arg, name, depth)))
+            Task::BuildPi(var) => {
+                let body = results.pop().unwrap();
+                let domain = results.pop().unwrap();
+                results.push(Arc::new(Expr::Pi(var, domain, body)));
             }
-            Expr::Lam(var, domain, body) => Expr::Lam(
-                var.clone(),
-                Box::new(go(domain, name, depth)),
-                Box::new(go(body, name, depth + 1)),
-            ),
-            Expr::Let(var, var_type, value, body) => Expr::Let(
-                var.clone(),
-                Box::new(go(var_type, name, depth)),
-                Box::new(go(value, name, depth)),
-                Box::new(go(body, name, depth + 1)),
-            ),
-            Expr::Pi(var, domain, body) => Expr::Pi(
-                var.clone(),
-                Box::new(go(domain, name, depth)),
-                Box::new(go(body, name, depth + 1)),
-            ),
+            Task::BuildLet(var) => {
+                let body = results.pop().unwrap();
+                let value = results.pop().unwrap();
+                let var_type = results.pop().unwrap();
+                results.push(Arc::new(Expr::Let(var, var_type, value, body)));
+            }
+            Task::BuildLitArray(len) => {
+                let start = results.len() - len;
+                let items: Vec<Expr> = results
+                    .drain(start..)
+                    .map(|arc| Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone()))
+                    .collect();
+                results.push(Arc::new(Expr::Lit(Literal::Array(items))));
+            }
         }
     }
-    go(expr, name, 0)
+
+    let root = results.pop().unwrap();
+    Arc::try_unwrap(root).unwrap_or_else(|arc| (*arc).clone())
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

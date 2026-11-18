@@ -3,6 +3,8 @@
 /// This module provides ergonomic universe-level constructors, matching the
 /// Python-side builder style while keeping universe logic separate from
 /// expression builders.
+use std::sync::Arc;
+
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyBool, PyTuple};
@@ -45,7 +47,9 @@ impl<'a, 'py> FromPyObject<'a, 'py> for UnivLevelInput {
 
     fn extract(ob: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         if ob.is_instance_of::<PyBool>() {
-            Err(PyTypeError::new_err("Expected int, str, or UnivLevel, got bool"))
+            Err(PyTypeError::new_err(
+                "Expected int, str, or UnivLevel, got bool",
+            ))
         } else if let Ok(n) = ob.extract::<i64>() {
             Ok(Self::Int(n))
         } else if let Ok(s) = ob.extract::<String>() {
@@ -74,7 +78,7 @@ pub fn try_build_univ_level(level: UnivLevelInput) -> PyResult<UnivLevel> {
             }
             let mut result = UnivLevel::Zero;
             for _ in 0..n {
-                result = UnivLevel::Succ(Box::new(result));
+                result = UnivLevel::Succ(Arc::new(result));
             }
             Ok(result)
         }
@@ -93,7 +97,7 @@ pub fn try_build_univ_level_max(
         .ok_or_else(|| PyValueError::new_err("univ_level_max requires at least one level."))?;
     let mut result = try_build_univ_level(first)?;
     for level in iter {
-        result = UnivLevel::Max(Box::new(result), Box::new(try_build_univ_level(level)?));
+        result = UnivLevel::Max(Arc::new(result), Arc::new(try_build_univ_level(level)?));
     }
     Ok(result)
 }
@@ -116,8 +120,8 @@ pub fn build_univ_level_max(levels: impl IntoIterator<Item = UnivLevelInput>) ->
 /// Build an `imax` universe level from two Rust inputs.
 pub fn build_univ_level_imax(left: UnivLevelInput, right: UnivLevelInput) -> UnivLevel {
     UnivLevel::IMax(
-        Box::new(build_univ_level(left)),
-        Box::new(build_univ_level(right)),
+        Arc::new(build_univ_level(left)),
+        Arc::new(build_univ_level(right)),
     )
 }
 
@@ -152,8 +156,8 @@ pub fn univ_level_max(levels: Vec<UnivLevelInput>) -> PyResult<UnivLevel> {
 #[pyfunction]
 pub fn univ_level_imax(left: UnivLevelInput, right: UnivLevelInput) -> PyResult<UnivLevel> {
     Ok(UnivLevel::IMax(
-        Box::new(try_build_univ_level(left)?),
-        Box::new(try_build_univ_level(right)?),
+        Arc::new(try_build_univ_level(left)?),
+        Arc::new(try_build_univ_level(right)?),
     ))
 }
 
