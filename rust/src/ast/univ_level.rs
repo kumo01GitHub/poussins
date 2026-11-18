@@ -1,4 +1,3 @@
-use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
@@ -14,31 +13,25 @@ pub enum UnivLevel {
 #[pyclass(name = "UnivLevelZero")]
 struct PyUnivLevelZero {}
 
-#[pyclass(name = "UnivLevelSucc")]
+#[pyclass(name = "UnivLevelSucc", get_all)]
 struct PyUnivLevelSucc {
-    #[pyo3(get)]
     pred: UnivLevel,
 }
 
-#[pyclass(name = "UnivLevelParam")]
+#[pyclass(name = "UnivLevelParam", get_all)]
 struct PyUnivLevelParam {
-    #[pyo3(get)]
     name: String,
 }
 
-#[pyclass(name = "UnivLevelMax")]
+#[pyclass(name = "UnivLevelMax", get_all)]
 struct PyUnivLevelMax {
-    #[pyo3(get)]
     left: UnivLevel,
-    #[pyo3(get)]
     right: UnivLevel,
 }
 
-#[pyclass(name = "UnivLevelIMax")]
+#[pyclass(name = "UnivLevelIMax", get_all)]
 struct PyUnivLevelIMax {
-    #[pyo3(get)]
     left: UnivLevel,
-    #[pyo3(get)]
     right: UnivLevel,
 }
 
@@ -72,28 +65,32 @@ impl<'py> IntoPyObject<'py> for UnivLevel {
     }
 }
 
+#[derive(FromPyObject)]
+#[allow(dead_code)]
+enum PyUnivLevel<'py> {
+    Zero(PyRef<'py, PyUnivLevelZero>),
+    Succ(PyRef<'py, PyUnivLevelSucc>),
+    Param(PyRef<'py, PyUnivLevelParam>),
+    Max(PyRef<'py, PyUnivLevelMax>),
+    IMax(PyRef<'py, PyUnivLevelIMax>),
+}
+
 impl<'a, 'py> FromPyObject<'a, 'py> for UnivLevel {
     type Error = PyErr;
 
     fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if ob.is_instance_of::<PyUnivLevelZero>() {
-            Ok(UnivLevel::Zero)
-        } else if let Ok(s) = ob.extract::<PyRef<'_, PyUnivLevelSucc>>() {
-            Ok(UnivLevel::Succ(Box::new(s.pred.clone())))
-        } else if let Ok(p) = ob.extract::<PyRef<'_, PyUnivLevelParam>>() {
-            Ok(UnivLevel::Param(p.name.clone()))
-        } else if let Ok(m) = ob.extract::<PyRef<'_, PyUnivLevelMax>>() {
-            Ok(UnivLevel::Max(
+        match ob.extract::<PyUnivLevel<'py>>()? {
+            PyUnivLevel::Zero(_) => Ok(UnivLevel::Zero),
+            PyUnivLevel::Succ(s) => Ok(UnivLevel::Succ(Box::new(s.pred.clone()))),
+            PyUnivLevel::Param(p) => Ok(UnivLevel::Param(p.name.clone())),
+            PyUnivLevel::Max(m) => Ok(UnivLevel::Max(
                 Box::new(m.left.clone()),
                 Box::new(m.right.clone()),
-            ))
-        } else if let Ok(im) = ob.extract::<PyRef<'_, PyUnivLevelIMax>>() {
-            Ok(UnivLevel::IMax(
+            )),
+            PyUnivLevel::IMax(im) => Ok(UnivLevel::IMax(
                 Box::new(im.left.clone()),
                 Box::new(im.right.clone()),
-            ))
-        } else {
-            Err(PyTypeError::new_err("Expected a UnivLevel instance"))
+            )),
         }
     }
 }

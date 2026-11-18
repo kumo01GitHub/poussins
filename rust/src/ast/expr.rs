@@ -1,10 +1,9 @@
-use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
 use super::univ_level;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, FromPyObject)]
 pub enum Literal {
     Nat(u64),
     Float(f64),
@@ -23,26 +22,6 @@ impl<'py> IntoPyObject<'py> for Literal {
             Literal::Float(val) => Ok(val.into_pyobject(py)?.into_any()),
             Literal::String(val) => Ok(val.into_pyobject(py)?.into_any()),
             Literal::Array(vals) => Ok(vals.into_pyobject(py)?.into_any()),
-        }
-    }
-}
-
-impl<'a, 'py> FromPyObject<'a, 'py> for Literal {
-    type Error = PyErr;
-
-    fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(val) = ob.extract::<u64>() {
-            Ok(Literal::Nat(val))
-        } else if let Ok(val) = ob.extract::<f64>() {
-            Ok(Literal::Float(val))
-        } else if let Ok(val) = ob.extract::<String>() {
-            Ok(Literal::String(val))
-        } else if let Ok(vals) = ob.extract::<Vec<Expr>>() {
-            Ok(Literal::Array(vals))
-        } else {
-            Err(PyTypeError::new_err(
-                "Expected int, float, str, or list[Expr] for Literal",
-            ))
         }
     }
 }
@@ -73,81 +52,62 @@ pub enum Expr {
     MVar(String),
 }
 
-#[pyclass(name = "ESort")]
+#[pyclass(name = "ESort", get_all)]
 struct PySort {
-    #[pyo3(get)]
     level: univ_level::UnivLevel,
 }
 
-#[pyclass(name = "EFVar")]
+#[pyclass(name = "EFVar", get_all)]
 struct PyFVar {
-    #[pyo3(get)]
     name: String,
 }
 
-#[pyclass(name = "EBVar")]
+#[pyclass(name = "EBVar", get_all)]
 struct PyBVar {
-    #[pyo3(get)]
     idx: usize,
 }
 
-#[pyclass(name = "EConst")]
+#[pyclass(name = "EConst", get_all)]
 struct PyConst {
-    #[pyo3(get)]
     name: String,
-    #[pyo3(get)]
     levels: Vec<univ_level::UnivLevel>,
 }
 
-#[pyclass(name = "EApp")]
+#[pyclass(name = "EApp", get_all)]
 struct PyApp {
-    #[pyo3(get)]
     f: Expr,
-    #[pyo3(get)]
     arg: Expr,
 }
 
-#[pyclass(name = "ELam")]
+#[pyclass(name = "ELam", get_all)]
 struct PyLam {
-    #[pyo3(get)]
     var: String,
-    #[pyo3(get)]
     t: Expr,
-    #[pyo3(get)]
     body: Expr,
 }
 
-#[pyclass(name = "EPi")]
+#[pyclass(name = "EPi", get_all)]
 struct PyPi {
-    #[pyo3(get)]
     var: String,
-    #[pyo3(get)]
     t: Expr,
-    #[pyo3(get)]
     body: Expr,
 }
 
-#[pyclass(name = "ELet")]
+#[pyclass(name = "ELet", get_all)]
 struct PyLet {
-    #[pyo3(get)]
     var: String,
-    #[pyo3(get)]
     t: Expr,
-    #[pyo3(get)]
     value: Expr,
-    #[pyo3(get)]
     body: Expr,
 }
 
-#[pyclass(name = "ELit")]
+#[pyclass(name = "ELit", get_all)]
 struct PyLit {
-    #[pyo3(get)]
     lit: Literal,
 }
 
-#[pyclass(name = "EMVar")]
+#[pyclass(name = "EMVar", get_all)]
 struct PyMVar {
-    #[pyo3(get)]
     id: String,
 }
 
@@ -161,7 +121,9 @@ impl<'py> IntoPyObject<'py> for Expr {
             Expr::Sort(level) => Ok(Bound::new(py, PySort { level })?.into_any()),
             Expr::FVar(name) => Ok(Bound::new(py, PyFVar { name })?.into_any()),
             Expr::BVar(idx) => Ok(Bound::new(py, PyBVar { idx })?.into_any()),
-            Expr::Const(name, levels) => Ok(Bound::new(py, PyConst { name, levels })?.into_any()),
+            Expr::Const(name, levels) => {
+                Ok(Bound::new(py, PyConst { name, levels })?.into_any())
+            }
             Expr::App(f, arg) => Ok(Bound::new(
                 py,
                 PyApp {
@@ -204,48 +166,48 @@ impl<'py> IntoPyObject<'py> for Expr {
     }
 }
 
+#[derive(FromPyObject)]
+enum PyExpr<'py> {
+    Sort(PyRef<'py, PySort>),
+    FVar(PyRef<'py, PyFVar>),
+    BVar(PyRef<'py, PyBVar>),
+    Const(PyRef<'py, PyConst>),
+    App(PyRef<'py, PyApp>),
+    Lam(PyRef<'py, PyLam>),
+    Pi(PyRef<'py, PyPi>),
+    Let(PyRef<'py, PyLet>),
+    Lit(PyRef<'py, PyLit>),
+    MVar(PyRef<'py, PyMVar>),
+}
+
 impl<'a, 'py> FromPyObject<'a, 'py> for Expr {
     type Error = PyErr;
 
     fn extract(ob: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(s) = ob.extract::<PyRef<'_, PySort>>() {
-            Ok(Expr::Sort(s.level.clone()))
-        } else if let Ok(v) = ob.extract::<PyRef<'_, PyFVar>>() {
-            Ok(Expr::FVar(v.name.clone()))
-        } else if let Ok(v) = ob.extract::<PyRef<'_, PyBVar>>() {
-            Ok(Expr::BVar(v.idx))
-        } else if let Ok(c) = ob.extract::<PyRef<'_, PyConst>>() {
-            Ok(Expr::Const(c.name.clone(), c.levels.clone()))
-        } else if let Ok(a) = ob.extract::<PyRef<'_, PyApp>>() {
-            Ok(Expr::App(
-                Box::new(a.f.clone()),
-                Box::new(a.arg.clone()),
-            ))
-        } else if let Ok(l) = ob.extract::<PyRef<'_, PyLam>>() {
-            Ok(Expr::Lam(
+        match ob.extract::<PyExpr<'py>>()? {
+            PyExpr::Sort(s) => Ok(Expr::Sort(s.level.clone())),
+            PyExpr::FVar(v) => Ok(Expr::FVar(v.name.clone())),
+            PyExpr::BVar(b) => Ok(Expr::BVar(b.idx)),
+            PyExpr::Const(c) => Ok(Expr::Const(c.name.clone(), c.levels.clone())),
+            PyExpr::App(a) => Ok(Expr::App(Box::new(a.f.clone()), Box::new(a.arg.clone()))),
+            PyExpr::Lam(l) => Ok(Expr::Lam(
                 l.var.clone(),
                 Box::new(l.t.clone()),
                 Box::new(l.body.clone()),
-            ))
-        } else if let Ok(p) = ob.extract::<PyRef<'_, PyPi>>() {
-            Ok(Expr::Pi(
+            )),
+            PyExpr::Pi(p) => Ok(Expr::Pi(
                 p.var.clone(),
                 Box::new(p.t.clone()),
                 Box::new(p.body.clone()),
-            ))
-        } else if let Ok(l) = ob.extract::<PyRef<'_, PyLet>>() {
-            Ok(Expr::Let(
+            )),
+            PyExpr::Let(l) => Ok(Expr::Let(
                 l.var.clone(),
                 Box::new(l.t.clone()),
                 Box::new(l.value.clone()),
                 Box::new(l.body.clone()),
-            ))
-        } else if let Ok(l) = ob.extract::<PyRef<'_, PyLit>>() {
-            Ok(Expr::Lit(l.lit.clone()))
-        } else if let Ok(m) = ob.extract::<PyRef<'_, PyMVar>>() {
-            Ok(Expr::MVar(m.id.clone()))
-        } else {
-            Err(PyTypeError::new_err("Expected an Expr instance"))
+            )),
+            PyExpr::Lit(l) => Ok(Expr::Lit(l.lit.clone())),
+            PyExpr::MVar(m) => Ok(Expr::MVar(m.id.clone())),
         }
     }
 }
