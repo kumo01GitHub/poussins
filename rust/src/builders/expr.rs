@@ -55,14 +55,14 @@ pub fn sort(level: UnivLevelInput) -> PyResult<Expr> {
 
 /// Build a free variable expression from a name.
 #[pyfunction]
-pub fn var(name: String) -> Expr {
+pub fn free_var(name: String) -> Expr {
     Expr::FVar(name)
 }
 
-/// Explicit alias for `var`, emphasizing that this creates a free variable.
+/// Shorthand alias for `free_var`.
 #[pyfunction]
-pub fn free_var(name: String) -> Expr {
-    Expr::FVar(name)
+pub fn var(name: String) -> Expr {
+    free_var(name)
 }
 
 /// Build a left-associated application chain from a head function and arguments.
