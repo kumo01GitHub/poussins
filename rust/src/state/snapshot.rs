@@ -15,6 +15,7 @@ impl Snapshot {
         Self { goals, metavars }
     }
 
+    /// Check if the snapshot has no active goals.
     pub fn is_closed(&self) -> bool {
         self.goals.is_empty()
     }
