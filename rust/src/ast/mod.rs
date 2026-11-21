@@ -1,4 +1,5 @@
 pub mod expr;
+pub mod ops;
 pub mod univ_level;
 
 use pyo3::prelude::*;
