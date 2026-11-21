@@ -127,6 +127,12 @@ class Goal:
     def get_local_hypothesis(self, name: str) -> Expr | None: ...
     def __hash__(self) -> int: ...
 
+def subgoal(
+    statement: Expr | str,
+    local_context: Sequence[tuple[str, Expr | str]] | None = None,
+    id: str | None = None,
+) -> tuple[Goal, EMVar]: ...
+
 __all__ = [
     # AST classes
     "Expr",
@@ -147,6 +153,8 @@ __all__ = [
     "ELet",
     "ELit",
     "EMVar",
+    # Goal class
+    "Goal",
     # Builder functions
     "univ_level",
     "univ_levels",
@@ -160,6 +168,5 @@ __all__ = [
     "let_",
     "pi",
     "const_",
-    # Goal class
-    "Goal",
+    "subgoal",
 ]

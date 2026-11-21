@@ -24,6 +24,7 @@ impl Session {
     /// Check if the proof session is closed (i.e., no active goals remain).
     pub fn is_closed(&self) -> bool {
         self.current_snapshot().is_closed()
+        // TODO: Consider other factors
     }
 
     /// Update the proof session with a new snapshot, appending it to the history.
