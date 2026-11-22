@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 
-use crate::ast::expr::Expr;
+use crate::ast::expr::{EMVar, Expr};
 use crate::builders::expr::ExprInput;
 use crate::state::goal::Goal;
 
@@ -19,13 +19,13 @@ pub fn subgoal(
         .into_iter()
         .map(|(name, ty)| (name, ty.0))
         .collect();
-
     let goal = match id {
         Some(explicit_id) => Goal::with_id(explicit_id, statement.0, ctx),
         None => Goal::new(statement.0, ctx),
     };
-    let mvar = Expr::MVar(goal.id.clone());
-
+    let mvar = Expr::MVar(EMVar {
+        id: goal.id.clone(),
+    });
     (goal, mvar)
 }
 

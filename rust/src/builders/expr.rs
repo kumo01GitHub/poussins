@@ -1,7 +1,3 @@
-/// Builder functions for constructing AST expressions.
-///
-/// This module provides ergonomic builder functions to construct expressions,
-/// drawing inspiration from the Python implementations in ast/ops.py.
 use std::sync::Arc;
 
 use pyo3::exceptions::PyValueError;
@@ -20,7 +16,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExprInput {
 
     fn extract(ob: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
         if let Ok(s) = ob.extract::<String>() {
-            Ok(Self(Expr::FVar(s)))
+            Ok(Self(Expr::fvar(s)))
         } else {
             ob.extract::<Expr>().map(Self)
         }
@@ -36,7 +32,6 @@ where
         let (var_name, dom): (String, ExprInput) = item?.extract()?;
         binders_vec.push((var_name, dom.0));
     }
-
     let mut result = body.0;
     for (var_name, domain) in binders_vec.into_iter().rev() {
         let abstracted = if var_name == "_" {
@@ -53,13 +48,13 @@ where
 #[pyfunction]
 pub fn sort(level: UnivLevelInput) -> PyResult<Expr> {
     let lvl = try_build_univ_level(level)?;
-    Ok(Expr::Sort(lvl))
+    Ok(Expr::sort(lvl))
 }
 
 /// Build a free variable expression from a name.
 #[pyfunction]
 pub fn free_var(name: String) -> Expr {
-    Expr::FVar(name)
+    Expr::fvar(name)
 }
 
 /// Shorthand alias for `free_var`.
@@ -73,14 +68,14 @@ pub fn var(name: String) -> Expr {
 #[pyo3(signature = (r#fn, *args))]
 pub fn app(r#fn: ExprInput, args: Vec<ExprInput>) -> Expr {
     args.into_iter().fold(r#fn.0, |acc, arg| {
-        Expr::App(Arc::new(acc), Arc::new(arg.0))
+        Expr::app(Arc::new(acc), Arc::new(arg.0))
     })
 }
 
 /// Build nested lambda abstractions from binders and a body.
 #[pyfunction]
 pub fn lam(binders: &Bound<'_, PyAny>, body: ExprInput) -> PyResult<Expr> {
-    fold_binders(binders, body, Expr::Lam)
+    fold_binders(binders, body, Expr::lam)
 }
 
 /// Build a let-binding expression with a single variable.
@@ -91,7 +86,7 @@ pub fn let_(var_name: String, var_type: ExprInput, value: ExprInput, body: ExprI
     } else {
         bind(&body.0, &var_name)
     };
-    Expr::Let(
+    Expr::let_(
         var_name,
         Arc::new(var_type.0),
         Arc::new(value.0),
@@ -102,7 +97,7 @@ pub fn let_(var_name: String, var_type: ExprInput, value: ExprInput, body: ExprI
 /// Build nested Pi (dependent function) types from binders and a body.
 #[pyfunction]
 pub fn pi(binders: &Bound<'_, PyAny>, body: ExprInput) -> PyResult<Expr> {
-    fold_binders(binders, body, Expr::Pi)
+    fold_binders(binders, body, Expr::pi)
 }
 
 /// Create an `Expr::Const` expression for a declaration in the environment.
@@ -114,21 +109,18 @@ pub fn const_(env: &Bound<'_, PyAny>, name: &str) -> PyResult<Expr> {
             "Declaration with name '{name}' does not exist in the environment."
         )));
     }
-
     let decl_name: String = if let Ok(n) = decl.getattr("name") {
         n.extract()?
     } else {
         name.to_string()
     };
-
     let level_params = decl.getattr("level_params")?;
     let mut levels = Vec::new();
     for param in level_params.try_iter()? {
         let input: UnivLevelInput = param?.extract()?;
         levels.push(try_build_univ_level(input)?);
     }
-
-    Ok(Expr::Const(decl_name, levels))
+    Ok(Expr::const_(decl_name, levels))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
