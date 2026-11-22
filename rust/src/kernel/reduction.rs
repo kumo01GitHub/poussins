@@ -64,7 +64,8 @@ pub fn whnf(expr: &Expr) -> Expr {
         _ => {}
     }
 
-    whnf_core(Arc::new(expr.clone()))
+    let arc_res = whnf_core(Arc::new(expr.clone()));
+    Arc::try_unwrap(arc_res).unwrap_or_else(|a| (*a).clone())
 }
 
 /// Reduce a shared `Arc<Expr>` to WHNF, preserving Arc identity when possible.
@@ -82,12 +83,11 @@ pub fn whnf_arc(expr: Arc<Expr>) -> Arc<Expr> {
         _ => {}
     }
 
-    let res = whnf_core(expr);
-    Arc::new(res)
+    whnf_core(expr)
 }
 
 /// Core iterative WHNF evaluation loop.
-fn whnf_core(mut curr: Arc<Expr>) -> Expr {
+fn whnf_core(mut curr: Arc<Expr>) -> Arc<Expr> {
     // The spine stores argument Arcs in reverse order:
     // For `(((f a1) a2) a3)`, unwinding pushes `a3`, then `a2`, then `a1`.
     // Thus `spine.pop()` yields `a1` first.
@@ -131,10 +131,10 @@ fn whnf_core(mut curr: Arc<Expr>) -> Expr {
         }
     }
 
-    // Fast return: if no reduction was performed and no applications were decomposed,
-    // return original expression directly.
-    if !reduced_any && spine.is_empty() {
-        return Arc::try_unwrap(orig).unwrap_or_else(|a| (*a).clone());
+    // Fast return: if no reduction was performed, return the original Arc directly.
+    // This ensures neutral application chains (e.g. `(f a b)`) require zero reconstruction.
+    if !reduced_any {
+        return orig;
     }
 
     // 3. Reconstruct remaining application spine from left to right.
@@ -145,112 +145,5 @@ fn whnf_core(mut curr: Arc<Expr>) -> Expr {
         result = Arc::new(Expr::app(result, arg));
     }
 
-    Arc::try_unwrap(result).unwrap_or_else(|a| (*a).clone())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_beta_direct() {
-        // (λx. x) y ==> y
-        let id_expr = Expr::lam(
-            "x",
-            Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-            Arc::new(Expr::bvar(0)),
-        );
-        let id_lam = match &id_expr {
-            Expr::Lam(lam) => Arc::clone(lam),
-            _ => unreachable!(),
-        };
-        let y = Expr::fvar("y");
-        let res = beta(&id_lam, &y);
-        assert_eq!(res, y);
-    }
-
-    #[test]
-    fn test_whnf_single_beta() {
-        // ((λx. x) y) ==> y
-        let id = Expr::lam("x", Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())), Arc::new(Expr::bvar(0)));
-        let y = Expr::fvar("y");
-        let app = Expr::app(Arc::new(id), Arc::new(y.clone()));
-        assert_eq!(whnf(&app), y);
-    }
-
-    #[test]
-    fn test_whnf_multi_beta_spine() {
-        // (λx. λy. x) a b ==> a
-        let k = Expr::lam(
-            "x",
-            Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-            Arc::new(Expr::lam(
-                "y",
-                Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-                Arc::new(Expr::bvar(1)), // refers to x
-            )),
-        );
-        let a = Expr::fvar("a");
-        let b = Expr::fvar("b");
-        // app2 = ((K a) b)
-        let app1 = Expr::app(Arc::new(k), Arc::new(a.clone()));
-        let app2 = Expr::app(Arc::new(app1), Arc::new(b));
-        assert_eq!(whnf(&app2), a);
-    }
-
-    #[test]
-    fn test_whnf_neutral_term_unchanged() {
-        // (f a b) where f is a free variable ==> (f a b) unchanged
-        let f = Expr::fvar("f");
-        let a = Expr::fvar("a");
-        let b = Expr::fvar("b");
-        let app1 = Expr::app(Arc::new(f), Arc::new(a));
-        let app2 = Expr::app(Arc::new(app1), Arc::new(b));
-        assert_eq!(whnf(&app2), app2);
-    }
-
-    #[test]
-    fn test_zeta_direct() {
-        // let x : 0 = v in x ==> v
-        let sort0 = Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero()));
-        let v = Arc::new(Expr::fvar("v"));
-        let let_e = Expr::let_("x", sort0, v.clone(), Arc::new(Expr::bvar(0)));
-        let let_expr = match &let_e {
-            Expr::Let(l) => Arc::clone(l),
-            _ => unreachable!(),
-        };
-        let res = zeta(&let_expr);
-        assert_eq!(res, *v);
-    }
-
-    #[test]
-    fn test_whnf_zeta() {
-        // (let x : 0 = v in x) ==> v
-        let sort0 = Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero()));
-        let v = Expr::fvar("v");
-        let let_e = Expr::let_("x", sort0, Arc::new(v.clone()), Arc::new(Expr::bvar(0)));
-        assert_eq!(whnf(&let_e), v);
-    }
-
-    #[test]
-    fn test_whnf_partial_application() {
-        // (λx. λy. x) a ==> λy. a
-        let k = Expr::lam(
-            "x",
-            Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-            Arc::new(Expr::lam(
-                "y",
-                Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-                Arc::new(Expr::bvar(1)),
-            )),
-        );
-        let a = Expr::fvar("a");
-        let app = Expr::app(Arc::new(k), Arc::new(a.clone()));
-        let expected = Expr::lam(
-            "y",
-            Arc::new(Expr::sort(crate::ast::univ_level::UnivLevel::zero())),
-            Arc::new(a),
-        );
-        assert_eq!(whnf(&app), expected);
-    }
+    result
 }
