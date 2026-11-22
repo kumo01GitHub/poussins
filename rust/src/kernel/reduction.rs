@@ -91,9 +91,12 @@ pub(crate) fn iota(env: &Environment, rec_const: &EConst, spine: &mut Vec<Arc<Ex
     let Expr::Const(ref ctor_const) = *ctor_head else {
         return None;
     };
-    let Declaration::Constructor(_) = env.get(&ctor_const.name)? else {
+    let Declaration::Constructor(ctor_decl) = env.get(&ctor_const.name)? else {
         return None;
     };
+    if ctor_decl.level_params.len() != ctor_const.levels.len() {
+        return None;
+    }
 
     let rule = rec
         .rules
@@ -121,9 +124,7 @@ pub(crate) fn iota(env: &Environment, rec_const: &EConst, spine: &mut Vec<Arc<Ex
     }
 
     // Discard `indices` and `major` from `spine`.
-    for _ in 0..(rec.num_indices + 1) {
-        spine.pop();
-    }
+    spine.truncate(spine.len() - (rec.num_indices + 1));
 
     // Apply constructor fields (skipping the first `rec.num_params` inductive parameters).
     for field in ctor_args.into_iter().skip(rec.num_params) {
