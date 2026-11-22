@@ -72,17 +72,16 @@ pub fn try_build_univ_level(level: UnivLevelInput) -> PyResult<UnivLevel> {
         UnivLevelInput::Int(n) => {
             if n < 0 {
                 return Err(PyValueError::new_err(format!(
-                    "Universe level must be non-negative, got {}",
-                    n
+                    "Universe level must be non-negative, got {n}"
                 )));
             }
-            let mut result = UnivLevel::Zero;
+            let mut result = UnivLevel::zero();
             for _ in 0..n {
-                result = UnivLevel::Succ(Arc::new(result));
+                result = UnivLevel::succ(Arc::new(result));
             }
             Ok(result)
         }
-        UnivLevelInput::Param(name) => Ok(UnivLevel::Param(name)),
+        UnivLevelInput::Param(name) => Ok(UnivLevel::param(name)),
         UnivLevelInput::Level(level) => Ok(level),
     }
 }
@@ -97,7 +96,7 @@ pub fn try_build_univ_level_max(
         .ok_or_else(|| PyValueError::new_err("univ_level_max requires at least one level."))?;
     let mut result = try_build_univ_level(first)?;
     for level in iter {
-        result = UnivLevel::Max(Arc::new(result), Arc::new(try_build_univ_level(level)?));
+        result = UnivLevel::max(Arc::new(result), Arc::new(try_build_univ_level(level)?));
     }
     Ok(result)
 }
@@ -119,7 +118,7 @@ pub fn build_univ_level_max(levels: impl IntoIterator<Item = UnivLevelInput>) ->
 
 /// Build an `imax` universe level from two Rust inputs.
 pub fn build_univ_level_imax(left: UnivLevelInput, right: UnivLevelInput) -> UnivLevel {
-    UnivLevel::IMax(
+    UnivLevel::imax(
         Arc::new(build_univ_level(left)),
         Arc::new(build_univ_level(right)),
     )
@@ -155,7 +154,7 @@ pub fn univ_level_max(levels: Vec<UnivLevelInput>) -> PyResult<UnivLevel> {
 /// Build an `imax` universe level from two inputs.
 #[pyfunction]
 pub fn univ_level_imax(left: UnivLevelInput, right: UnivLevelInput) -> PyResult<UnivLevel> {
-    Ok(UnivLevel::IMax(
+    Ok(UnivLevel::imax(
         Arc::new(try_build_univ_level(left)?),
         Arc::new(try_build_univ_level(right)?),
     ))

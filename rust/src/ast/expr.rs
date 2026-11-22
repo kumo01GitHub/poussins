@@ -14,6 +14,32 @@ pub enum Literal {
     Array(Vec<Expr>),
 }
 
+impl PartialEq for Literal {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Nat(a), Self::Nat(b)) => a == b,
+            (Self::Float(a), Self::Float(b)) => a.to_bits() == b.to_bits(),
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::Array(a), Self::Array(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Literal {}
+
+impl std::hash::Hash for Literal {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            Self::Nat(n) => n.hash(state),
+            Self::Float(f) => f.to_bits().hash(state),
+            Self::String(s) => s.hash(state),
+            Self::Array(a) => a.hash(state),
+        }
+    }
+}
+
 impl<'py> IntoPyObject<'py> for Literal {
     type Target = PyAny;
     type Output = Bound<'py, Self::Target>;
@@ -70,28 +96,28 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Literal {
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ESort {
     #[pyo3(get)]
     pub level: univ_level::UnivLevel,
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EFVar {
     #[pyo3(get)]
     pub name: String,
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EBVar {
     #[pyo3(get)]
     pub idx: usize,
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EConst {
     #[pyo3(get)]
     pub name: String,
@@ -104,6 +130,23 @@ pub struct EConst {
 pub struct EApp {
     pub f: Arc<Expr>,
     pub arg: Arc<Expr>,
+    pub loose_bvars: usize,
+}
+
+impl PartialEq for EApp {
+    fn eq(&self, other: &Self) -> bool {
+        self.loose_bvars == other.loose_bvars
+            && (Arc::ptr_eq(&self.f, &other.f) || self.f == other.f)
+            && (Arc::ptr_eq(&self.arg, &other.arg) || self.arg == other.arg)
+    }
+}
+impl Eq for EApp {}
+
+impl std::hash::Hash for EApp {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.f.hash(state);
+        self.arg.hash(state);
+    }
 }
 
 #[pymethods]
@@ -126,6 +169,25 @@ pub struct ELam {
     pub var: String,
     pub t: Arc<Expr>,
     pub body: Arc<Expr>,
+    pub loose_bvars: usize,
+}
+
+impl PartialEq for ELam {
+    fn eq(&self, other: &Self) -> bool {
+        self.var == other.var
+            && self.loose_bvars == other.loose_bvars
+            && (Arc::ptr_eq(&self.t, &other.t) || self.t == other.t)
+            && (Arc::ptr_eq(&self.body, &other.body) || self.body == other.body)
+    }
+}
+impl Eq for ELam {}
+
+impl std::hash::Hash for ELam {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.var.hash(state);
+        self.t.hash(state);
+        self.body.hash(state);
+    }
 }
 
 #[pymethods]
@@ -148,6 +210,25 @@ pub struct EPi {
     pub var: String,
     pub t: Arc<Expr>,
     pub body: Arc<Expr>,
+    pub loose_bvars: usize,
+}
+
+impl PartialEq for EPi {
+    fn eq(&self, other: &Self) -> bool {
+        self.var == other.var
+            && self.loose_bvars == other.loose_bvars
+            && (Arc::ptr_eq(&self.t, &other.t) || self.t == other.t)
+            && (Arc::ptr_eq(&self.body, &other.body) || self.body == other.body)
+    }
+}
+impl Eq for EPi {}
+
+impl std::hash::Hash for EPi {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.var.hash(state);
+        self.t.hash(state);
+        self.body.hash(state);
+    }
 }
 
 #[pymethods]
@@ -171,6 +252,27 @@ pub struct ELet {
     pub t: Arc<Expr>,
     pub value: Arc<Expr>,
     pub body: Arc<Expr>,
+    pub loose_bvars: usize,
+}
+
+impl PartialEq for ELet {
+    fn eq(&self, other: &Self) -> bool {
+        self.var == other.var
+            && self.loose_bvars == other.loose_bvars
+            && (Arc::ptr_eq(&self.t, &other.t) || self.t == other.t)
+            && (Arc::ptr_eq(&self.value, &other.value) || self.value == other.value)
+            && (Arc::ptr_eq(&self.body, &other.body) || self.body == other.body)
+    }
+}
+impl Eq for ELet {}
+
+impl std::hash::Hash for ELet {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.var.hash(state);
+        self.t.hash(state);
+        self.value.hash(state);
+        self.body.hash(state);
+    }
 }
 
 #[pymethods]
@@ -192,7 +294,7 @@ impl ELet {
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ELit {
     pub lit: Literal,
 }
@@ -206,7 +308,7 @@ impl ELit {
 }
 
 #[pyclass(module = "poussins._core", frozen)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct EMVar {
     #[pyo3(get)]
     pub id: String,
@@ -239,6 +341,26 @@ pub enum Expr {
 }
 
 impl Expr {
+    /// Return the loose de Bruijn variable range of this expression.
+    ///
+    /// If `range == 0`, the expression contains no loose bound variables (it is closed).
+    /// If `range > 0`, all loose bound variables in this expression satisfy `idx < range`.
+    #[inline]
+    pub fn loose_bvar_range(&self) -> usize {
+        match self {
+            Self::BVar(b) => b.idx + 1,
+            Self::App(a) => a.loose_bvars,
+            Self::Lam(l) => l.loose_bvars,
+            Self::Pi(p) => p.loose_bvars,
+            Self::Let(l) => l.loose_bvars,
+            Self::Lit(el) => match &el.lit {
+                Literal::Array(items) => items.iter().map(|e| e.loose_bvar_range()).max().unwrap_or(0),
+                _ => 0,
+            },
+            Self::Sort(_) | Self::FVar(_) | Self::Const(_) | Self::MVar(_) => 0,
+        }
+    }
+
     pub fn sort(level: univ_level::UnivLevel) -> Self {
         Self::Sort(ESort { level })
     }
@@ -259,22 +381,31 @@ impl Expr {
     }
 
     pub fn app(f: Arc<Expr>, arg: Arc<Expr>) -> Self {
-        Self::App(Arc::new(EApp { f, arg }))
+        let loose_bvars = f.loose_bvar_range().max(arg.loose_bvar_range());
+        Self::App(Arc::new(EApp { f, arg, loose_bvars }))
     }
 
     pub fn lam(var: impl Into<String>, t: Arc<Expr>, body: Arc<Expr>) -> Self {
+        let loose_bvars = t
+            .loose_bvar_range()
+            .max(body.loose_bvar_range().saturating_sub(1));
         Self::Lam(Arc::new(ELam {
             var: var.into(),
             t,
             body,
+            loose_bvars,
         }))
     }
 
     pub fn pi(var: impl Into<String>, t: Arc<Expr>, body: Arc<Expr>) -> Self {
+        let loose_bvars = t
+            .loose_bvar_range()
+            .max(body.loose_bvar_range().saturating_sub(1));
         Self::Pi(Arc::new(EPi {
             var: var.into(),
             t,
             body,
+            loose_bvars,
         }))
     }
 
@@ -284,11 +415,16 @@ impl Expr {
         value: Arc<Expr>,
         body: Arc<Expr>,
     ) -> Self {
+        let loose_bvars = t
+            .loose_bvar_range()
+            .max(value.loose_bvar_range())
+            .max(body.loose_bvar_range().saturating_sub(1));
         Self::Let(Arc::new(ELet {
             var: var.into(),
             t,
             value,
             body,
+            loose_bvars,
         }))
     }
 
@@ -299,7 +435,61 @@ impl Expr {
     pub fn mvar(id: impl Into<String>) -> Self {
         Self::MVar(EMVar { id: id.into() })
     }
+
+    /// Decompose an application chain `f a1 a2 ... an` into `(head, [a1, a2, ..., an])`.
+    pub fn decompose_app(&self) -> (&Expr, Vec<&Expr>) {
+        let mut args = Vec::new();
+        let mut curr = self;
+        while let Expr::App(app) = curr {
+            args.push(&*app.arg);
+            curr = &*app.f;
+        }
+        args.reverse();
+        (curr, args)
+    }
 }
+
+impl PartialEq for Expr {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Sort(a), Self::Sort(b)) => a == b,
+            (Self::FVar(a), Self::FVar(b)) => a == b,
+            (Self::BVar(a), Self::BVar(b)) => a == b,
+            (Self::Const(a), Self::Const(b)) => a == b,
+            (Self::App(a), Self::App(b)) => Arc::ptr_eq(a, b) || a == b,
+            (Self::Lam(a), Self::Lam(b)) => Arc::ptr_eq(a, b) || a == b,
+            (Self::Pi(a), Self::Pi(b)) => Arc::ptr_eq(a, b) || a == b,
+            (Self::Let(a), Self::Let(b)) => Arc::ptr_eq(a, b) || a == b,
+            (Self::Lit(a), Self::Lit(b)) => a == b,
+            (Self::MVar(a), Self::MVar(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Expr {}
+
+impl std::hash::Hash for Expr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            Self::Sort(s) => s.hash(state),
+            Self::FVar(f) => f.hash(state),
+            Self::BVar(b) => b.hash(state),
+            Self::Const(c) => c.hash(state),
+            Self::App(a) => a.hash(state),
+            Self::Lam(l) => l.hash(state),
+            Self::Pi(p) => p.hash(state),
+            Self::Let(l) => l.hash(state),
+            Self::Lit(l) => l.hash(state),
+            Self::MVar(m) => m.hash(state),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Iterative Drop — prevents stack overflow on deeply nested expression trees
+// ---------------------------------------------------------------------------
 
 impl Drop for Expr {
     fn drop(&mut self) {
@@ -308,6 +498,8 @@ impl Drop for Expr {
                 Expr::App(app) => {
                     if let Some(inner_app) = Arc::get_mut(app) {
                         if let Some(inner) = Arc::get_mut(&mut inner_app.f) {
+                            // Replace the child with a trivial sentinel (Expr::bvar(0))
+                            // before pushing so the original Arc drops without recursion.
                             stack.push(std::mem::replace(inner, Expr::bvar(0)));
                         }
                         if let Some(inner) = Arc::get_mut(&mut inner_app.arg) {

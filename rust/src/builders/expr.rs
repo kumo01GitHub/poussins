@@ -23,16 +23,19 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExprInput {
     }
 }
 
-fn fold_binders<F>(binders: &Bound<'_, PyAny>, body: ExprInput, constructor: F) -> PyResult<Expr>
+fn fold_binders<F>(
+    binders: impl IntoIterator<Item = (String, ExprInput)>,
+    body: ExprInput,
+    constructor: F,
+) -> Expr
 where
     F: Fn(String, Arc<Expr>, Arc<Expr>) -> Expr,
 {
-    let mut binders_vec: Vec<(String, Expr)> = Vec::new();
-    for item in binders.try_iter()? {
-        let (var_name, dom): (String, ExprInput) = item?.extract()?;
-        binders_vec.push((var_name, dom.0));
-    }
     let mut result = body.0;
+    let binders_vec: Vec<(String, Expr)> = binders
+        .into_iter()
+        .map(|(name, ty)| (name, ty.0))
+        .collect();
     for (var_name, domain) in binders_vec.into_iter().rev() {
         let abstracted = if var_name == "_" {
             result
@@ -41,7 +44,7 @@ where
         };
         result = constructor(var_name, Arc::new(domain), Arc::new(abstracted));
     }
-    Ok(result)
+    result
 }
 
 /// Build a Sort expression from a universe level.
@@ -74,7 +77,7 @@ pub fn app(r#fn: ExprInput, args: Vec<ExprInput>) -> Expr {
 
 /// Build nested lambda abstractions from binders and a body.
 #[pyfunction]
-pub fn lam(binders: &Bound<'_, PyAny>, body: ExprInput) -> PyResult<Expr> {
+pub fn lam(binders: Vec<(String, ExprInput)>, body: ExprInput) -> Expr {
     fold_binders(binders, body, Expr::lam)
 }
 
@@ -96,7 +99,7 @@ pub fn let_(var_name: String, var_type: ExprInput, value: ExprInput, body: ExprI
 
 /// Build nested Pi (dependent function) types from binders and a body.
 #[pyfunction]
-pub fn pi(binders: &Bound<'_, PyAny>, body: ExprInput) -> PyResult<Expr> {
+pub fn pi(binders: Vec<(String, ExprInput)>, body: ExprInput) -> Expr {
     fold_binders(binders, body, Expr::pi)
 }
 
