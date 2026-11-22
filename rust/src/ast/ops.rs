@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::ast::expr::{EApp, EBVar, EFVar, ELet, ELit, ELam, EPi, Expr, Literal};
+use crate::ast::univ_level::UnivLevel;
 
 // ---------------------------------------------------------------------------
 // Common iterative traversal framework with Copy-on-Write (Maximal Sharing)
@@ -14,8 +15,8 @@ fn arc_unwrap_or_clone<T: Clone>(arc: Arc<T>) -> T {
 
 /// A leaf-transform function receives the current expression and a depth
 /// parameter (whose semantics depend on the caller — cutoff for `shift`,
-/// target index for `subst`, binding depth for `bind`). It returns `Some(e)`
-/// to replace the leaf, or `None` to keep it as-is (cloned).
+/// target index for `instantiate_bvar`, binding depth for `bind`). It returns
+/// `Some(e)` to replace the leaf, or `None` to keep it as-is (cloned).
 type LeafFn<'a> = &'a dyn Fn(&Expr, usize) -> Option<Expr>;
 
 /// Generic iterative expression traversal with Copy-on-Write sharing.
@@ -76,6 +77,7 @@ fn traverse(expr: &Expr, initial_depth: usize, leaf_fn: LeafFn<'_>) -> Expr {
                     results.push(Arc::new(result));
                 }
             },
+
             // --- Copy-on-Write Build steps: reuse original Arc if unchanged ---
             Task::ReconstructApp(orig) => {
                 let arg = results.pop().unwrap();
@@ -149,6 +151,86 @@ fn traverse(expr: &Expr, initial_depth: usize, leaf_fn: LeafFn<'_>) -> Expr {
 }
 
 // ---------------------------------------------------------------------------
+// Iterative universe level instantiation
+// ---------------------------------------------------------------------------
+
+/// Instantiate universe level parameters `params` with `args` in `level` iteratively.
+fn instantiate_univ_level(level: &UnivLevel, params: &[String], args: &[UnivLevel]) -> UnivLevel {
+    enum LevelTask<'a> {
+        Visit(&'a UnivLevel),
+        BuildSucc(&'a UnivLevel),
+        BuildMax(&'a UnivLevel),
+        BuildIMax(&'a UnivLevel),
+    }
+
+    let mut tasks = vec![LevelTask::Visit(level)];
+    let mut results: Vec<UnivLevel> = Vec::new();
+
+    while let Some(task) = tasks.pop() {
+        match task {
+            LevelTask::Visit(cur) => match cur {
+                UnivLevel::Zero(_) => results.push(cur.clone()),
+                UnivLevel::Param(p) => {
+                    if let Some(pos) = params.iter().position(|name| name == &p.name) {
+                        results.push(args[pos].clone());
+                    } else {
+                        results.push(cur.clone());
+                    }
+                }
+                UnivLevel::Succ(s) => {
+                    tasks.push(LevelTask::BuildSucc(cur));
+                    tasks.push(LevelTask::Visit(&s.pred));
+                }
+                UnivLevel::Max(m) => {
+                    tasks.push(LevelTask::BuildMax(cur));
+                    tasks.push(LevelTask::Visit(&m.right));
+                    tasks.push(LevelTask::Visit(&m.left));
+                }
+                UnivLevel::IMax(im) => {
+                    tasks.push(LevelTask::BuildIMax(cur));
+                    tasks.push(LevelTask::Visit(&im.right));
+                    tasks.push(LevelTask::Visit(&im.left));
+                }
+            },
+            LevelTask::BuildSucc(orig) => {
+                let pred = results.pop().unwrap();
+                if let UnivLevel::Succ(s) = orig {
+                    if pred == *s.pred {
+                        results.push(orig.clone());
+                        continue;
+                    }
+                }
+                results.push(UnivLevel::succ(Arc::new(pred)));
+            }
+            LevelTask::BuildMax(orig) => {
+                let right = results.pop().unwrap();
+                let left = results.pop().unwrap();
+                if let UnivLevel::Max(m) = orig {
+                    if left == *m.left && right == *m.right {
+                        results.push(orig.clone());
+                        continue;
+                    }
+                }
+                results.push(UnivLevel::max(Arc::new(left), Arc::new(right)));
+            }
+            LevelTask::BuildIMax(orig) => {
+                let right = results.pop().unwrap();
+                let left = results.pop().unwrap();
+                if let UnivLevel::IMax(im) = orig {
+                    if left == *im.left && right == *im.right {
+                        results.push(orig.clone());
+                        continue;
+                    }
+                }
+                results.push(UnivLevel::imax(Arc::new(left), Arc::new(right)));
+            }
+        }
+    }
+
+    results.pop().unwrap()
+}
+
+// ---------------------------------------------------------------------------
 // Public operations built on `traverse`
 // ---------------------------------------------------------------------------
 
@@ -166,7 +248,9 @@ pub fn shift(expr: &Expr, delta: isize, cutoff: usize) -> Expr {
             if *idx >= cur_cutoff {
                 let shifted = idx
                     .checked_add_signed(delta)
-                    .unwrap_or_else(|| panic!("de Bruijn index underflow during shift: idx={idx}, delta={delta}"));
+                    .unwrap_or_else(|| {
+                        panic!("de Bruijn index underflow during shift: idx={idx}, delta={delta}")
+                    });
                 Some(Expr::bvar(shifted))
             } else {
                 None // keep as-is
@@ -176,27 +260,64 @@ pub fn shift(expr: &Expr, delta: isize, cutoff: usize) -> Expr {
     })
 }
 
-/// Substitute `BVar(target)` with `replacement` in `expr`, shifting `replacement`
-/// appropriately under binders and decrementing outer bound variables (`idx > target`) by 1.
+/// Instantiate `BVar(0)` with `replacement` in `expr`, shifting `replacement`
+/// appropriately under binders and decrementing outer bound variables (`idx > 0`) by 1.
 ///
-/// If `expr` has no loose bound variables >= `target + 1`, substitution is a no-op and returns in $O(1)$.
-/// For standard beta-reduction `(λx. body) arg`, call `subst(&body, 0, &arg)`.
-pub fn subst(expr: &Expr, target: usize, replacement: &Expr) -> Expr {
-    // Fast O(1) path: if the expression has no bound variables at or above target,
-    // neither substitution nor decrementing outer variables is needed.
-    if expr.loose_bvar_range() <= target {
+/// If `expr` is closed (`loose_bvar_range() == 0`), instantiation is a no-op and returns in $O(1)$.
+pub fn instantiate_bvar(expr: &Expr, replacement: &Expr) -> Expr {
+    if expr.loose_bvar_range() == 0 {
         return expr.clone();
     }
 
-    traverse(expr, target, &|cur, cur_target| match cur {
+    traverse(expr, 0, &|cur, cur_target| match cur {
         Expr::BVar(EBVar { idx }) => {
             if *idx == cur_target {
-                let depth_offset = (cur_target - target) as isize;
+                let depth_offset = cur_target as isize;
                 Some(shift(replacement, depth_offset, 0))
             } else if *idx > cur_target {
                 Some(Expr::bvar(idx - 1))
             } else {
                 None // keep as-is
+            }
+        }
+        _ => None,
+    })
+}
+
+/// Instantiate universe level parameters `params` with `args` in `expr` iteratively.
+///
+/// Reuses existing `Arc` nodes whenever subexpressions are unaffected (Copy-on-Write).
+pub fn instantiate_level_params(expr: &Expr, params: &[String], args: &[UnivLevel]) -> Expr {
+    if params.is_empty() || params.len() != args.len() {
+        return expr.clone();
+    }
+
+    traverse(expr, 0, &|cur, _depth| match cur {
+        Expr::Sort(s) => {
+            let new_lvl = instantiate_univ_level(&s.level, params, args);
+            if new_lvl == s.level {
+                None
+            } else {
+                Some(Expr::sort(new_lvl))
+            }
+        }
+        Expr::Const(c) => {
+            if c.levels.is_empty() {
+                return None;
+            }
+            let mut changed = false;
+            let mut new_levels = Vec::with_capacity(c.levels.len());
+            for lvl in &c.levels {
+                let inst = instantiate_univ_level(lvl, params, args);
+                if inst != *lvl {
+                    changed = true;
+                }
+                new_levels.push(inst);
+            }
+            if changed {
+                Some(Expr::const_(c.name.clone(), new_levels))
+            } else {
+                None
             }
         }
         _ => None,
