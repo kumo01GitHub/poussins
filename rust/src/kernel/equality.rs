@@ -15,6 +15,8 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use uuid::Uuid;
+
 use crate::ast::expr::{Expr, Literal};
 use crate::ast::ops::instantiate_bvar;
 use crate::ast::univ_level::UnivLevel;
@@ -140,16 +142,11 @@ fn normalize_level(level: &UnivLevel) -> Vec<NormLevel> {
                 return vec![NormLevel::zero()];
             }
             let lefts = normalize_level(&im.left);
-            if rights.iter().all(NormLevel::is_definitely_nonzero) {
-                let mut res = Vec::with_capacity(lefts.len() * rights.len());
-                for l in &lefts {
-                    for r in &rights {
-                        res.push(l.max_with(r));
-                    }
-                }
-                return res;
+            let mut res = Vec::with_capacity(lefts.len() * rights.len() + 1);
+            // If `right` is not guaranteed >= 1, include the `right == 0 => 0` branch.
+            if !rights.iter().all(NormLevel::is_definitely_nonzero) {
+                res.push(NormLevel::zero());
             }
-            let mut res = Vec::with_capacity(lefts.len() * rights.len());
             for l in &lefts {
                 for r in &rights {
                     res.push(l.max_with(r));
@@ -248,18 +245,19 @@ fn subst_level_param(level: &UnivLevel, target: &str, replacement: &UnivLevel) -
 // Expression Definitional Equality (Stage 1: WHNF + Structural + Binder)
 // ---------------------------------------------------------------------------
 
+/// Create a collision-free fresh free variable for opening binders during equality checks.
+#[inline]
+fn fresh_eq_fvar() -> Expr {
+    Expr::fvar(format!("#eq.{}", Uuid::new_v4()))
+}
+
 /// Check whether two expressions `t` and `s` are definitionally equal under `env`.
 pub fn is_def_eq(t: &Expr, s: &Expr, env: &Environment) -> bool {
-    is_def_eq_arc(Arc::new(t.clone()), Arc::new(s.clone()), env, 0)
+    is_def_eq_arc(Arc::new(t.clone()), Arc::new(s.clone()), env)
 }
 
 /// Core definitional equality check operating on shared `Arc<Expr>` nodes.
-pub(crate) fn is_def_eq_arc(
-    t: Arc<Expr>,
-    s: Arc<Expr>,
-    env: &Environment,
-    depth: usize,
-) -> bool {
+pub(crate) fn is_def_eq_arc(t: Arc<Expr>, s: Arc<Expr>, env: &Environment) -> bool {
     // 1. Fast pointer / structural equality check before any reduction.
     if Arc::ptr_eq(&t, &s) || *t == *s {
         return true;
@@ -279,7 +277,7 @@ pub(crate) fn is_def_eq_arc(
     }
 
     // 3. Structural comparison on WHNF heads.
-    if is_def_eq_whnf(&t_whnf, &s_whnf, env, depth) {
+    if is_def_eq_whnf(&t_whnf, &s_whnf, env) {
         return true;
     }
 
@@ -290,7 +288,7 @@ pub(crate) fn is_def_eq_arc(
 }
 
 /// Compare two expressions that are already in Weak Head Normal Form.
-fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment, depth: usize) -> bool {
+fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
     match (t, s) {
         (Expr::Sort(s1), Expr::Sort(s2)) => is_level_def_eq(&s1.level, &s2.level),
 
@@ -310,65 +308,60 @@ fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment, depth: usize) -> bool {
                     .all(|(l1, l2)| is_level_def_eq(l1, l2))
         }
 
-        (Expr::Lit(l1), Expr::Lit(l2)) => is_def_eq_literal(&l1.lit, &l2.lit, env, depth),
+        (Expr::Lit(l1), Expr::Lit(l2)) => is_def_eq_literal(&l1.lit, &l2.lit, env),
 
         (Expr::App(a1), Expr::App(a2)) => {
-            is_def_eq_arc(Arc::clone(&a1.f), Arc::clone(&a2.f), env, depth)
-                && is_def_eq_arc(Arc::clone(&a1.arg), Arc::clone(&a2.arg), env, depth)
+            is_def_eq_arc(Arc::clone(&a1.f), Arc::clone(&a2.f), env)
+                && is_def_eq_arc(Arc::clone(&a1.arg), Arc::clone(&a2.arg), env)
         }
 
         (Expr::Lam(l1), Expr::Lam(l2)) => {
-            if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env, depth) {
+            if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env) {
                 return false;
             }
-            let fvar = Expr::fvar(format!("_eq_x_{depth}"));
+            let fvar = fresh_eq_fvar();
             let body1 = Arc::new(instantiate_bvar(&l1.body, &fvar));
             let body2 = Arc::new(instantiate_bvar(&l2.body, &fvar));
-            is_def_eq_arc(body1, body2, env, depth + 1)
+            is_def_eq_arc(body1, body2, env)
         }
 
         (Expr::Pi(p1), Expr::Pi(p2)) => {
-            if !is_def_eq_arc(Arc::clone(&p1.t), Arc::clone(&p2.t), env, depth) {
+            if !is_def_eq_arc(Arc::clone(&p1.t), Arc::clone(&p2.t), env) {
                 return false;
             }
-            let fvar = Expr::fvar(format!("_eq_x_{depth}"));
+            let fvar = fresh_eq_fvar();
             let body1 = Arc::new(instantiate_bvar(&p1.body, &fvar));
             let body2 = Arc::new(instantiate_bvar(&p2.body, &fvar));
-            is_def_eq_arc(body1, body2, env, depth + 1)
+            is_def_eq_arc(body1, body2, env)
         }
 
         // `whnf_arc` always zeta-reduces `Expr::Let`, so this arm is defensive only.
         (Expr::Let(l1), Expr::Let(l2)) => {
-            if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env, depth)
-                || !is_def_eq_arc(Arc::clone(&l1.value), Arc::clone(&l2.value), env, depth)
+            if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env)
+                || !is_def_eq_arc(Arc::clone(&l1.value), Arc::clone(&l2.value), env)
             {
                 return false;
             }
-            let fvar = Expr::fvar(format!("_eq_x_{depth}"));
+            let fvar = fresh_eq_fvar();
             let body1 = Arc::new(instantiate_bvar(&l1.body, &fvar));
             let body2 = Arc::new(instantiate_bvar(&l2.body, &fvar));
-            is_def_eq_arc(body1, body2, env, depth + 1)
+            is_def_eq_arc(body1, body2, env)
         }
 
         _ => false,
     }
 }
 
-fn is_def_eq_literal(l1: &Literal, l2: &Literal, env: &Environment, depth: usize) -> bool {
+fn is_def_eq_literal(l1: &Literal, l2: &Literal, env: &Environment) -> bool {
     match (l1, l2) {
         (Literal::Nat(a), Literal::Nat(b)) => a == b,
         (Literal::Float(a), Literal::Float(b)) => a.to_bits() == b.to_bits(),
         (Literal::String(a), Literal::String(b)) => a == b,
         (Literal::Array(a), Literal::Array(b)) => {
             a.len() == b.len()
-                && a.iter().zip(b.iter()).all(|(ea, eb)| {
-                    is_def_eq_arc(
-                        Arc::new(ea.clone()),
-                        Arc::new(eb.clone()),
-                        env,
-                        depth,
-                    )
-                })
+                && a.iter()
+                    .zip(b.iter())
+                    .all(|(ea, eb)| is_def_eq_arc(Arc::new(ea.clone()), Arc::new(eb.clone()), env))
         }
         _ => false,
     }
