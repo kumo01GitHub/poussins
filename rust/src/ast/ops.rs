@@ -155,7 +155,7 @@ fn traverse(expr: &Expr, initial_depth: usize, leaf_fn: LeafFn<'_>) -> Expr {
 // ---------------------------------------------------------------------------
 
 /// Instantiate universe level parameters `params` with `args` in `level` iteratively.
-fn instantiate_univ_level(level: &UnivLevel, params: &[String], args: &[UnivLevel]) -> UnivLevel {
+fn instantiate_params(level: &UnivLevel, params: &[String], args: &[UnivLevel]) -> UnivLevel {
     enum LevelTask<'a> {
         Visit(&'a UnivLevel),
         BuildSucc(&'a UnivLevel),
@@ -287,14 +287,14 @@ pub fn instantiate_bvar(expr: &Expr, replacement: &Expr) -> Expr {
 /// Instantiate universe level parameters `params` with `args` in `expr` iteratively.
 ///
 /// Reuses existing `Arc` nodes whenever subexpressions are unaffected (Copy-on-Write).
-pub fn instantiate_level_params(expr: &Expr, params: &[String], args: &[UnivLevel]) -> Expr {
+pub fn instantiate_univ_level(expr: &Expr, params: &[String], args: &[UnivLevel]) -> Expr {
     if params.is_empty() || params.len() != args.len() {
         return expr.clone();
     }
 
     traverse(expr, 0, &|cur, _depth| match cur {
         Expr::Sort(s) => {
-            let new_lvl = instantiate_univ_level(&s.level, params, args);
+            let new_lvl = instantiate_params(&s.level, params, args);
             if new_lvl == s.level {
                 None
             } else {
@@ -308,7 +308,7 @@ pub fn instantiate_level_params(expr: &Expr, params: &[String], args: &[UnivLeve
             let mut changed = false;
             let mut new_levels = Vec::with_capacity(c.levels.len());
             for lvl in &c.levels {
-                let inst = instantiate_univ_level(lvl, params, args);
+                let inst = instantiate_params(lvl, params, args);
                 if inst != *lvl {
                     changed = true;
                 }

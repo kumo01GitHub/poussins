@@ -12,7 +12,7 @@
 use std::sync::Arc;
 
 use crate::ast::expr::{EConst, ELam, ELet, Expr};
-use crate::ast::ops::{instantiate_bvar, instantiate_level_params};
+use crate::ast::ops::{instantiate_bvar, instantiate_univ_level};
 use crate::environment::declaration::Declaration;
 use crate::environment::environment::Environment;
 
@@ -47,7 +47,7 @@ pub(crate) fn delta(env: &Environment, c: &EConst) -> Option<Expr> {
     if def.is_opaque || def.level_params.len() != c.levels.len() {
         return None;
     }
-    Some(instantiate_level_params(
+    Some(instantiate_univ_level(
         &def.value,
         &def.level_params,
         &c.levels,
@@ -109,7 +109,7 @@ pub(crate) fn iota(env: &Environment, rec_const: &EConst, spine: &mut Vec<Arc<Ex
     }
 
     // Instantiate universe level parameters on the rule's right-hand side.
-    let mut rhs = Arc::new(instantiate_level_params(
+    let mut rhs = Arc::new(instantiate_univ_level(
         &rule.rhs,
         &rec.level_params,
         &rec_const.levels,
