@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 
 pub mod ast;
 pub mod builders;
+pub mod elaborator;
 pub mod environment;
 pub mod error;
 pub mod kernel;
