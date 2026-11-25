@@ -1,3 +1,4 @@
+pub(crate) mod declaration;
 pub(crate) mod equality;
 pub(crate) mod inference;
 pub(crate) mod reduction;
