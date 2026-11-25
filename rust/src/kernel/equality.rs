@@ -7,7 +7,7 @@
 //!   2. Weak Head Normal Form (WHNF) reduction via `whnf_arc` (beta, zeta, delta, iota).
 //!   3. Structural head & binder comparison (`Sort`, `Const`, `FVar`, `BVar`, `Lit`, `MVar`, `App`, `Lam`, `Pi`, `Let`).
 //!
-//! Stage 2 TODOs (to be added once `TypeChecker::infer` is in place):
+//! Stage 2 TODOs (to be added once `inference` / type checking is in place):
 //! - Proof irrelevance (`is_prop` check on inferred types).
 //! - Eta-equivalence (`Lam` vs non-`Lam` when type reduces to `Pi`).
 //! - Nat literal vs `Nat.zero` / `Nat.succ` unfolding (paired with `reduction::iota` and `inference`).
@@ -87,7 +87,6 @@ impl NUnivLevel {
     fn max_with(&self, other: &Self) -> Self {
         let const_offset = self.const_offset.max(other.const_offset);
         let mut params = BTreeSet::new();
-
         let mut all_names = BTreeSet::new();
         for (name, _) in &self.params {
             all_names.insert(name.clone());
@@ -95,7 +94,6 @@ impl NUnivLevel {
         for (name, _) in &other.params {
             all_names.insert(name.clone());
         }
-
         for name in all_names {
             let max_off_self = self
                 .params
@@ -109,17 +107,14 @@ impl NUnivLevel {
                 .filter(|(n, _)| n == &name)
                 .map(|(_, off)| *off)
                 .max();
-
             let best = match (max_off_self, max_off_other) {
                 (Some(a), Some(b)) => a.max(b),
                 (Some(a), None) => a,
                 (None, Some(b)) => b,
                 (None, None) => unreachable!(),
             };
-
             params.insert((name, best));
         }
-
         Self {
             const_offset,
             params,
@@ -187,11 +182,9 @@ pub fn is_def_eq_univ_level(l1: &UnivLevel, l2: &UnivLevel) -> bool {
     if l1 == l2 {
         return true;
     }
-
     let mut param_names = BTreeSet::new();
     collect_univ_level_params(l1, &mut param_names);
     collect_univ_level_params(l2, &mut param_names);
-
     let params: Vec<String> = param_names.into_iter().collect();
     is_def_eq_univ_level_with_splits(l1, l2, &params, 0)
 }
@@ -225,8 +218,8 @@ fn is_def_eq_univ_level_with_splits(
     if idx == params.len() {
         return normalize_univ_level(l1) == normalize_univ_level(l2);
     }
-
     let param = &params[idx];
+
     // Branch 1: `param = 0`
     let l1_zero = subst_univ_level_param(l1, param, &UnivLevel::zero());
     let l2_zero = subst_univ_level_param(l2, param, &UnivLevel::zero());
@@ -241,7 +234,11 @@ fn is_def_eq_univ_level_with_splits(
     is_def_eq_univ_level_with_splits(&l1_succ, &l2_succ, params, idx + 1)
 }
 
-fn subst_univ_level_param(level: &UnivLevel, target: &str, replacement: &UnivLevel) -> UnivLevel {
+fn subst_univ_level_param(
+    level: &UnivLevel,
+    target: &str,
+    replacement: &UnivLevel,
+) -> UnivLevel {
     match level {
         UnivLevel::Zero(_) => level.clone(),
         UnivLevel::Param(p) if p.name == target => replacement.clone(),
@@ -310,13 +307,9 @@ pub(crate) fn is_def_eq_arc(t: Arc<Expr>, s: Arc<Expr>, env: &Environment) -> bo
 fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
     match (t, s) {
         (Expr::Sort(s1), Expr::Sort(s2)) => is_def_eq_univ_level(&s1.level, &s2.level),
-
         (Expr::FVar(v1), Expr::FVar(v2)) => v1.name == v2.name,
-
         (Expr::BVar(b1), Expr::BVar(b2)) => b1.idx == b2.idx,
-
         (Expr::MVar(m1), Expr::MVar(m2)) => m1.id == m2.id,
-
         (Expr::Const(c1), Expr::Const(c2)) => {
             c1.name == c2.name
                 && c1.levels.len() == c2.levels.len()
@@ -326,14 +319,11 @@ fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
                     .zip(c2.levels.iter())
                     .all(|(l1, l2)| is_def_eq_univ_level(l1, l2))
         }
-
         (Expr::Lit(l1), Expr::Lit(l2)) => is_def_eq_literal(&l1.lit, &l2.lit, env),
-
         (Expr::App(a1), Expr::App(a2)) => {
             is_def_eq_arc(Arc::clone(&a1.f), Arc::clone(&a2.f), env)
                 && is_def_eq_arc(Arc::clone(&a1.arg), Arc::clone(&a2.arg), env)
         }
-
         (Expr::Lam(l1), Expr::Lam(l2)) => {
             if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env) {
                 return false;
@@ -343,7 +333,6 @@ fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
             let body2 = Arc::new(instantiate_bvar(&l2.body, &fvar));
             is_def_eq_arc(body1, body2, env)
         }
-
         (Expr::Pi(p1), Expr::Pi(p2)) => {
             if !is_def_eq_arc(Arc::clone(&p1.t), Arc::clone(&p2.t), env) {
                 return false;
@@ -353,7 +342,6 @@ fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
             let body2 = Arc::new(instantiate_bvar(&p2.body, &fvar));
             is_def_eq_arc(body1, body2, env)
         }
-
         // `whnf_arc` always zeta-reduces `Expr::Let`, so this arm is defensive only.
         (Expr::Let(l1), Expr::Let(l2)) => {
             if !is_def_eq_arc(Arc::clone(&l1.t), Arc::clone(&l2.t), env)
@@ -366,7 +354,6 @@ fn is_def_eq_whnf(t: &Expr, s: &Expr, env: &Environment) -> bool {
             let body2 = Arc::new(instantiate_bvar(&l2.body, &fvar));
             is_def_eq_arc(body1, body2, env)
         }
-
         _ => false,
     }
 }

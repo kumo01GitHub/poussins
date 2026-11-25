@@ -115,6 +115,13 @@ def let_(
 def pi(binders: Sequence[tuple[str, Expr | str]], body: Expr | str) -> EPi: ...
 def const_(env: object, name: str) -> EConst: ...
 
+def shift(expr: Expr, delta: int, cutoff: int = 0) -> Expr: ...
+def instantiate_bvar(expr: Expr, replacement: Expr) -> Expr: ...
+def instantiate_univ_level(
+    expr: Expr, params: Sequence[str], args: Sequence[UnivLevel]
+) -> Expr: ...
+def bind(expr: Expr, name: str) -> Expr: ...
+
 class Goal:
     @property
     def id(self) -> str: ...
@@ -169,4 +176,9 @@ __all__ = [
     "pi",
     "const_",
     "subgoal",
+    # AST operation functions
+    "shift",
+    "instantiate_bvar",
+    "instantiate_univ_level",
+    "bind",
 ]

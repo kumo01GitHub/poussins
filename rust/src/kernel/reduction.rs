@@ -8,6 +8,10 @@
 //! - Stack safety for arbitrarily deep application chains.
 //! - Batch beta/iota reduction without intermediate App node allocation.
 //! - Copy-on-Write sharing and O(1) early returns via `loose_bvar_range`.
+//!
+//! Stage 2 TODOs:
+//! - [Nat literals in iota] Treat `Literal::Nat(0)` as `Nat.zero` and `Literal::Nat(n + 1)`
+//!   as `Nat.succ n` when matching `Nat.rec` major premises (paired with `equality` & `inference`).
 
 use std::sync::Arc;
 
@@ -146,7 +150,7 @@ pub(crate) fn iota(env: &Environment, rec_const: &EConst, spine: &mut Vec<Arc<Ex
 ///
 /// Deep application chains are flattened onto an explicit spine stack, avoiding
 /// call-stack recursion and eliminating intermediate `EApp` allocations.
-pub fn whnf(expr: &Expr, env: &Environment) -> Expr {
+pub(crate) fn whnf(expr: &Expr, env: &Environment) -> Expr {
     // Fast path: atomic and canonical head forms cannot be reduced at the head.
     match expr {
         Expr::Sort(_)
@@ -166,7 +170,7 @@ pub fn whnf(expr: &Expr, env: &Environment) -> Expr {
 }
 
 /// Reduce a shared `Arc<Expr>` to WHNF under `env`, preserving Arc identity when possible.
-pub fn whnf_arc(expr: Arc<Expr>, env: &Environment) -> Arc<Expr> {
+pub(crate) fn whnf_arc(expr: Arc<Expr>, env: &Environment) -> Arc<Expr> {
     match *expr {
         Expr::Sort(_)
         | Expr::FVar(_)
@@ -208,14 +212,12 @@ fn whnf_core(mut curr: Arc<Expr>, env: &Environment) -> Arc<Expr> {
                 curr = Arc::new(next_term);
                 reduced_any = true;
             }
-
             // --- Zeta reduction: Let-binding expansion ---
             Expr::Let(ref let_expr) => {
                 let next_term = zeta(let_expr);
                 curr = Arc::new(next_term);
                 reduced_any = true;
             }
-
             // --- Delta / Iota reduction: Constant unfolding or Recursor computation ---
             Expr::Const(ref c) => {
                 if let Some(unfolded) = delta(env, c) {
@@ -228,7 +230,6 @@ fn whnf_core(mut curr: Arc<Expr>, env: &Environment) -> Arc<Expr> {
                     break;
                 }
             }
-
             // --- Head is irreducible in WHNF ---
             _ => break,
         }
@@ -245,6 +246,5 @@ fn whnf_core(mut curr: Arc<Expr>, env: &Environment) -> Arc<Expr> {
     while let Some(arg) = spine.pop() {
         result = Arc::new(Expr::app(result, arg));
     }
-
     result
 }

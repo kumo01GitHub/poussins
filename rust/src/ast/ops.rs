@@ -1,3 +1,10 @@
+//! Pure iterative expression and universe level operations with Copy-on-Write sharing.
+//!
+//! Public operations (`shift`, `instantiate_bvar`, `instantiate_univ_level`, `bind`)
+//! are exposed as pure Rust functions so tactics and kernel modules can share them.
+//! Python/PyO3 bindings (if exposed to Python) should live in outer boundary modules
+//! rather than inside `ops.rs`.
+
 use std::sync::Arc;
 
 use crate::ast::expr::{EApp, EBVar, EFVar, ELet, ELit, ELam, EPi, Expr, Literal};
@@ -122,7 +129,12 @@ fn traverse(expr: &Expr, initial_depth: usize, leaf_fn: LeafFn<'_>) -> Expr {
                 {
                     results.push(Arc::new(Expr::Let(Arc::clone(orig))));
                 } else {
-                    results.push(Arc::new(Expr::let_(orig.var.clone(), var_type, value, body)));
+                    results.push(Arc::new(Expr::let_(
+                        orig.var.clone(),
+                        var_type,
+                        value,
+                        body,
+                    )));
                 }
             }
             Task::ReconstructLitArray(orig_items) => {
@@ -155,7 +167,11 @@ fn traverse(expr: &Expr, initial_depth: usize, leaf_fn: LeafFn<'_>) -> Expr {
 // ---------------------------------------------------------------------------
 
 /// Instantiate universe level parameters `params` with `args` in `level` iteratively.
-fn instantiate_params(level: &UnivLevel, params: &[String], args: &[UnivLevel]) -> UnivLevel {
+fn instantiate_params(
+    level: &UnivLevel,
+    params: &[String],
+    args: &[UnivLevel],
+) -> UnivLevel {
     enum LevelTask<'a> {
         Visit(&'a UnivLevel),
         BuildSucc(&'a UnivLevel),
@@ -237,38 +253,34 @@ fn instantiate_params(level: &UnivLevel, params: &[String], args: &[UnivLevel]) 
 /// Shift de Bruijn indices >= `cutoff` by `delta` (supports positive and negative offsets).
 ///
 /// Bound variables with `idx < cutoff` are bound locally inside the expression and remain untouched.
-/// If `expr` has no loose bound variables >= `cutoff`, the expression is returned immediately in $O(1)$.
+/// If `expr` has no loose bound variables >= `cutoff`, the expression is returned immediately in O(1).
 pub fn shift(expr: &Expr, delta: isize, cutoff: usize) -> Expr {
     if delta == 0 || expr.loose_bvar_range() <= cutoff {
         return expr.clone();
     }
-
     traverse(expr, cutoff, &|cur, cur_cutoff| match cur {
         Expr::BVar(EBVar { idx }) => {
             if *idx >= cur_cutoff {
-                let shifted = idx
-                    .checked_add_signed(delta)
-                    .unwrap_or_else(|| {
-                        panic!("de Bruijn index underflow during shift: idx={idx}, delta={delta}")
-                    });
+                let shifted = idx.checked_add_signed(delta).unwrap_or_else(|| {
+                    panic!("de Bruijn index underflow during shift: idx={idx}, delta={delta}")
+                });
                 Some(Expr::bvar(shifted))
             } else {
-                None // keep as-is
+                None
             }
         }
-        _ => None, // Sort, FVar, Const, MVar, non-array Lit — unchanged
+        _ => None,
     })
 }
 
 /// Instantiate `BVar(0)` with `replacement` in `expr`, shifting `replacement`
 /// appropriately under binders and decrementing outer bound variables (`idx > 0`) by 1.
 ///
-/// If `expr` is closed (`loose_bvar_range() == 0`), instantiation is a no-op and returns in $O(1)$.
+/// If `expr` is closed (`loose_bvar_range() == 0`), instantiation is a no-op and returns in O(1).
 pub fn instantiate_bvar(expr: &Expr, replacement: &Expr) -> Expr {
     if expr.loose_bvar_range() == 0 {
         return expr.clone();
     }
-
     traverse(expr, 0, &|cur, cur_target| match cur {
         Expr::BVar(EBVar { idx }) => {
             if *idx == cur_target {
@@ -277,7 +289,7 @@ pub fn instantiate_bvar(expr: &Expr, replacement: &Expr) -> Expr {
             } else if *idx > cur_target {
                 Some(Expr::bvar(idx - 1))
             } else {
-                None // keep as-is
+                None
             }
         }
         _ => None,
@@ -287,11 +299,14 @@ pub fn instantiate_bvar(expr: &Expr, replacement: &Expr) -> Expr {
 /// Instantiate universe level parameters `params` with `args` in `expr` iteratively.
 ///
 /// Reuses existing `Arc` nodes whenever subexpressions are unaffected (Copy-on-Write).
-pub fn instantiate_univ_level(expr: &Expr, params: &[String], args: &[UnivLevel]) -> Expr {
+pub fn instantiate_univ_level(
+    expr: &Expr,
+    params: &[String],
+    args: &[UnivLevel],
+) -> Expr {
     if params.is_empty() || params.len() != args.len() {
         return expr.clone();
     }
-
     traverse(expr, 0, &|cur, _depth| match cur {
         Expr::Sort(s) => {
             let new_lvl = instantiate_params(&s.level, params, args);
