@@ -1,14 +1,13 @@
-//! Metavariable-aware calculation utilities for the poussins elaborator.
+//! Metavariable-aware calculation facade for the poussins elaborator.
 //!
 //! Bridges `state::Snapshot` (metavariable declarations and assignments) and `kernel`
 //! (pure reduction, type inference, and definitional equality):
-//! - `instantiate_mvars` / `instantiate_mvars_arc`: transitively unfold assigned
-//!   expression metavariables with cycle protection and Arc sharing.
-//! - `whnf_mvar` / `whnf_mvar_arc`: instantiate metavariables and reduce to
-//!   Weak Head Normal Form via `kernel::reduction::whnf_arc`.
-//! - `infer_mvar` / `infer_mvar_arc`: infer the type of expressions containing
-//!   unassigned metavariables by consulting `Snapshot::metavars` and `kernel::inference`.
-//! - `is_def_eq_mvar`: check definitional equality after metavariable instantiation.
+//! - `instantiate_mvars`: transitively unfold solved expression metavariables
+//!   with cycle protection and `Arc` sharing.
+//! - `whnf`: instantiate metavariables and reduce to Weak Head Normal Form.
+//! - `is_def_eq`: check definitional equality after metavariable instantiation.
+//! - `infer`: infer the type of expressions containing unassigned metavariables
+//!   by consulting `Snapshot::metavars`.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -20,7 +19,7 @@ use crate::environment::declaration::Declaration;
 use crate::environment::environment::Environment;
 use crate::error::KernelError;
 use crate::kernel::equality::is_def_eq_arc;
-use crate::kernel::reduction::whnf_arc;
+use crate::kernel::reduction::whnf_arc as kernel_whnf_arc;
 use crate::state::snapshot::Snapshot;
 
 // ---------------------------------------------------------------------------
@@ -30,10 +29,7 @@ use crate::state::snapshot::Snapshot;
 /// Transitively instantiate all solved expression metavariables in `expr`.
 ///
 /// Reuses existing `Arc` nodes whenever subtrees contain no solved metavariables.
-pub(crate) fn instantiate_mvars(
-    expr: &Expr,
-    snapshot: &Snapshot,
-) -> Result<Expr, KernelError> {
+pub fn instantiate_mvars(expr: &Expr, snapshot: &Snapshot) -> Result<Expr, KernelError> {
     let arc_res = instantiate_mvars_arc(&Arc::new(expr.clone()), snapshot)?;
     Ok(Arc::try_unwrap(arc_res).unwrap_or_else(|a| (*a).clone()))
 }
@@ -150,27 +146,23 @@ fn instantiate_mvars_inner(
 // ---------------------------------------------------------------------------
 
 /// Reduce `expr` to Weak Head Normal Form after instantiating solved metavariables.
-pub(crate) fn whnf_mvar(
-    expr: &Expr,
-    env: &Environment,
-    snapshot: &Snapshot,
-) -> Result<Expr, KernelError> {
-    let arc_res = whnf_mvar_arc(&Arc::new(expr.clone()), env, snapshot)?;
+pub fn whnf(expr: &Expr, env: &Environment, snapshot: &Snapshot) -> Result<Expr, KernelError> {
+    let arc_res = whnf_arc(&Arc::new(expr.clone()), env, snapshot)?;
     Ok(Arc::try_unwrap(arc_res).unwrap_or_else(|a| (*a).clone()))
 }
 
-/// `Arc<Expr>` version of `whnf_mvar`.
-pub(crate) fn whnf_mvar_arc(
+/// `Arc<Expr>` version of `whnf`.
+pub(crate) fn whnf_arc(
     expr: &Arc<Expr>,
     env: &Environment,
     snapshot: &Snapshot,
 ) -> Result<Arc<Expr>, KernelError> {
     let inst = instantiate_mvars_arc(expr, snapshot)?;
-    Ok(whnf_arc(inst, env))
+    Ok(kernel_whnf_arc(inst, env))
 }
 
 /// Check definitional equality of `t` and `s` after instantiating solved metavariables.
-pub(crate) fn is_def_eq_mvar(
+pub fn is_def_eq(
     t: &Expr,
     s: &Expr,
     env: &Environment,
@@ -222,7 +214,7 @@ impl<'a> ElabScope<'a> {
 ///
 /// Unlike `kernel::inference::infer`, unassigned `Expr::MVar(id)` nodes succeed by
 /// looking up `id`'s declared statement in `snapshot.metavars`.
-pub(crate) fn infer_mvar(
+pub fn infer(
     expr: &Expr,
     env: &Environment,
     local_context: &[(String, Expr)],
@@ -230,12 +222,12 @@ pub(crate) fn infer_mvar(
 ) -> Result<Expr, KernelError> {
     let inst = instantiate_mvars_arc(&Arc::new(expr.clone()), snapshot)?;
     let mut scope = ElabScope::new(local_context);
-    let ty = infer_mvar_arc(&inst, env, &mut scope, snapshot)?;
+    let ty = infer_arc(&inst, env, &mut scope, snapshot)?;
     let ty_inst = instantiate_mvars_arc(&ty, snapshot)?;
     Ok(Arc::try_unwrap(ty_inst).unwrap_or_else(|a| (*a).clone()))
 }
 
-fn infer_mvar_arc(
+fn infer_arc(
     expr: &Arc<Expr>,
     env: &Environment,
     scope: &mut ElabScope<'_>,
@@ -260,7 +252,7 @@ fn infer_mvar_arc(
                 })?;
             if let Some(assigned) = &mvar.assignment {
                 let inst = instantiate_mvars_arc(&Arc::new(assigned.clone()), snapshot)?;
-                return infer_mvar_arc(&inst, env, scope, snapshot);
+                return infer_arc(&inst, env, scope, snapshot);
             }
             instantiate_mvars_arc(&Arc::new(mvar.statement.clone()), snapshot)
         }
@@ -296,15 +288,15 @@ fn infer_mvar_arc(
             Ok(Arc::new(inst_ty))
         }
         Expr::App(app) => {
-            let fn_ty = infer_mvar_arc(&app.f, env, scope, snapshot)?;
-            let fn_ty_whnf = whnf_mvar_arc(&fn_ty, env, snapshot)?;
+            let fn_ty = infer_arc(&app.f, env, scope, snapshot)?;
+            let fn_ty_whnf = whnf_arc(&fn_ty, env, snapshot)?;
             let Expr::Pi(pi) = &*fn_ty_whnf else {
                 return Err(KernelError::NotAPi {
                     expr: (*app.f).clone(),
                     inferred_type: (*fn_ty_whnf).clone(),
                 });
             };
-            let arg_ty = infer_mvar_arc(&app.arg, env, scope, snapshot)?;
+            let arg_ty = infer_arc(&app.arg, env, scope, snapshot)?;
             let arg_ty_inst = instantiate_mvars_arc(&arg_ty, snapshot)?;
             let dom_inst = instantiate_mvars_arc(&pi.t, snapshot)?;
             if !is_def_eq_arc(Arc::clone(&arg_ty_inst), Arc::clone(&dom_inst), env) {
@@ -317,8 +309,8 @@ fn infer_mvar_arc(
             Ok(Arc::new(instantiate_bvar(&pi.body, &app.arg)))
         }
         Expr::Lam(lam) => {
-            let dom_ty = infer_mvar_arc(&lam.t, env, scope, snapshot)?;
-            let dom_ty_whnf = whnf_mvar_arc(&dom_ty, env, snapshot)?;
+            let dom_ty = infer_arc(&lam.t, env, scope, snapshot)?;
+            let dom_ty_whnf = whnf_arc(&dom_ty, env, snapshot)?;
             let Expr::Sort(_) = &*dom_ty_whnf else {
                 return Err(KernelError::NotASort {
                     expr: (*lam.t).clone(),
@@ -330,7 +322,7 @@ fn infer_mvar_arc(
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name.clone(), Arc::clone(&lam.t));
             let opened_body = Arc::new(instantiate_bvar(&lam.body, &fvar));
-            let body_ty = infer_mvar_arc(&opened_body, env, scope, snapshot);
+            let body_ty = infer_arc(&opened_body, env, scope, snapshot);
             scope.pop();
             let body_ty = body_ty?;
 
@@ -342,8 +334,8 @@ fn infer_mvar_arc(
             )))
         }
         Expr::Pi(pi) => {
-            let dom_ty = infer_mvar_arc(&pi.t, env, scope, snapshot)?;
-            let dom_ty_whnf = whnf_mvar_arc(&dom_ty, env, snapshot)?;
+            let dom_ty = infer_arc(&pi.t, env, scope, snapshot)?;
+            let dom_ty_whnf = whnf_arc(&dom_ty, env, snapshot)?;
             let Expr::Sort(u_sort) = &*dom_ty_whnf else {
                 return Err(KernelError::NotASort {
                     expr: (*pi.t).clone(),
@@ -355,10 +347,10 @@ fn infer_mvar_arc(
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name, Arc::clone(&pi.t));
             let opened_body = Arc::new(instantiate_bvar(&pi.body, &fvar));
-            let codom_ty = infer_mvar_arc(&opened_body, env, scope, snapshot);
+            let codom_ty = infer_arc(&opened_body, env, scope, snapshot);
             scope.pop();
             let codom_ty = codom_ty?;
-            let codom_ty_whnf = whnf_mvar_arc(&codom_ty, env, snapshot)?;
+            let codom_ty_whnf = whnf_arc(&codom_ty, env, snapshot)?;
             let Expr::Sort(v_sort) = &*codom_ty_whnf else {
                 return Err(KernelError::NotASort {
                     expr: (*opened_body).clone(),
@@ -373,8 +365,8 @@ fn infer_mvar_arc(
             Ok(Arc::new(Expr::sort(imax_level)))
         }
         Expr::Let(let_expr) => {
-            let decl_ty = infer_mvar_arc(&let_expr.t, env, scope, snapshot)?;
-            let decl_ty_whnf = whnf_mvar_arc(&decl_ty, env, snapshot)?;
+            let decl_ty = infer_arc(&let_expr.t, env, scope, snapshot)?;
+            let decl_ty_whnf = whnf_arc(&decl_ty, env, snapshot)?;
             let Expr::Sort(_) = &*decl_ty_whnf else {
                 return Err(KernelError::NotASort {
                     expr: (*let_expr.t).clone(),
@@ -382,7 +374,7 @@ fn infer_mvar_arc(
                 });
             };
 
-            let val_ty = infer_mvar_arc(&let_expr.value, env, scope, snapshot)?;
+            let val_ty = infer_arc(&let_expr.value, env, scope, snapshot)?;
             let val_ty_inst = instantiate_mvars_arc(&val_ty, snapshot)?;
             let decl_ty_inst = instantiate_mvars_arc(&let_expr.t, snapshot)?;
             if !is_def_eq_arc(Arc::clone(&val_ty_inst), Arc::clone(&decl_ty_inst), env) {
@@ -394,7 +386,7 @@ fn infer_mvar_arc(
             }
 
             let body_inst = Arc::new(instantiate_bvar(&let_expr.body, &let_expr.value));
-            infer_mvar_arc(&body_inst, env, scope, snapshot)
+            infer_arc(&body_inst, env, scope, snapshot)
         }
         Expr::Lit(lit) => match &lit.lit {
             Literal::Nat(_) => Ok(Arc::new(Expr::const_("Nat", vec![]))),
@@ -408,9 +400,9 @@ fn infer_mvar_arc(
                             message: "Cannot infer element type of empty array literal".to_string(),
                             expr: Some((**expr).clone()),
                         })?;
-                let elem_ty = infer_mvar_arc(&Arc::new(first.clone()), env, scope, snapshot)?;
+                let elem_ty = infer_arc(&Arc::new(first.clone()), env, scope, snapshot)?;
                 for item in rest {
-                    let item_ty = infer_mvar_arc(&Arc::new(item.clone()), env, scope, snapshot)?;
+                    let item_ty = infer_arc(&Arc::new(item.clone()), env, scope, snapshot)?;
                     if !is_def_eq_arc(Arc::clone(&item_ty), Arc::clone(&elem_ty), env) {
                         return Err(KernelError::TypeMismatch {
                             expected: (*elem_ty).clone(),
