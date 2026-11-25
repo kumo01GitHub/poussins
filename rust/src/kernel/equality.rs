@@ -7,10 +7,29 @@
 //!   2. Weak Head Normal Form (WHNF) reduction via `whnf_arc` (beta, zeta, delta, iota).
 //!   3. Structural head & binder comparison (`Sort`, `Const`, `FVar`, `BVar`, `Lit`, `MVar`, `App`, `Lam`, `Pi`, `Let`).
 //!
-//! Stage 2 hooks (to be added once `TypeChecker::infer` is in place):
+//! Stage 2 TODOs (to be added once `TypeChecker::infer` is in place):
 //! - Proof irrelevance (`is_prop` check on inferred types).
 //! - Eta-equivalence (`Lam` vs non-`Lam` when type reduces to `Pi`).
-//! - Nat literal vs `Nat.zero` / `Nat.succ` unfolding.
+//! - Nat literal vs `Nat.zero` / `Nat.succ` unfolding (paired with `reduction::iota` and `inference`).
+//!
+//! Stage 3 TODOs (review items — optimization, stack safety, and design evaluation):
+//! - [Binder opening] Evaluate replacing `Uuid::new_v4()` in `fresh_eq_fvar` with a monotonic counter
+//!   (`AtomicU64` / local ID `#eq.<id>`) to avoid RNG/allocation overhead on hot paths.
+//!   (Keep fresh `FVar` instantiation rather than direct `BVar` comparison to guarantee soundness
+//!   across nested/alternating binders.)
+//! - [Universe `IMax` & branching] At the leaves of `is_def_eq_univ_level_with_splits`, all parameters
+//!   are instantiated to `0` or `Succ(p)` (>= 1), so each `imax` right-hand side is determined;
+//!   consider simplifying `normalize_univ_level` to return a single `NUnivLevel` when called from splits
+//!   (while keeping standalone safety), and add a fast pre-split equality check to mitigate 2^N branching.
+//! - [Pre-WHNF structural check] Evaluate whether `*t == *s` before `whnf_arc` causes redundant tree
+//!   traversals on large terms that differ only at leaves; consider restricting the fast path to
+//!   `Arc::ptr_eq(&t, &s)` (or leaf nodes) unless structural hashing/size metadata is cached on `Expr`.
+//! - [Stack safety] Guard deep recursion in `is_def_eq_arc` / `is_def_eq_whnf` using `stacker`
+//!   (dynamic stack growth) or an explicit depth limit / iterative worklist to prevent stack overflow
+//!   when called from Python via PyO3 on deeply nested terms.
+//! - [Pre-delta heuristic] Before unfolding transparent `Const` definitions via `whnf_arc`,
+//!   try comparing arguments directly when both heads share the same `Const` name and universe levels
+//!   (falling back to WHNF/delta on mismatch so constant/projection definitions remain sound).
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
