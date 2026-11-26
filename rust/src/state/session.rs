@@ -1,3 +1,6 @@
+// TODO: Define the role separation and transaction boundaries between `Session` and `Manager`
+// (e.g., goal accumulation, rollback on failed tactics/unification, and undo history).
+
 use super::snapshot::Snapshot;
 
 /// Proof session that manages the history of proof snapshots.

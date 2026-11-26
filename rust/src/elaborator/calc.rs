@@ -1,13 +1,13 @@
 //! Metavariable-aware calculation facade for the poussins elaborator.
 //!
-//! Bridges `state::Snapshot` (metavariable declarations and assignments) and `kernel`
+//! Bridges `state::Snapshot` (goal/metavariable declarations and assignments) and `kernel`
 //! (pure reduction, type inference, and definitional equality):
 //! - `instantiate_mvars`: transitively unfold solved expression metavariables
 //!   with cycle protection and `Arc` sharing.
 //! - `whnf`: instantiate metavariables and reduce to Weak Head Normal Form.
 //! - `is_def_eq`: check definitional equality after metavariable instantiation.
 //! - `infer`: infer the type of expressions containing unassigned metavariables
-//!   by consulting `Snapshot::metavars`.
+//!   by consulting `Snapshot::goals`.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -50,12 +50,11 @@ fn instantiate_mvars_inner(
 ) -> Result<Arc<Expr>, KernelError> {
     match &**expr {
         Expr::BVar(_) | Expr::FVar(_) | Expr::Sort(_) | Expr::Const(_) => Ok(Arc::clone(expr)),
-
         Expr::MVar(m) => {
             if let Some(assigned) = snapshot
-                .metavars
+                .goals
                 .get(&m.id)
-                .and_then(|mv| mv.assignment.as_ref())
+                .and_then(|goal| goal.assignment.as_ref())
             {
                 if !visited.insert(m.id.clone()) {
                     return Err(KernelError::InvalidValue {
@@ -73,7 +72,6 @@ fn instantiate_mvars_inner(
                 Ok(Arc::clone(expr))
             }
         }
-
         Expr::App(app) => {
             let f = instantiate_mvars_inner(&app.f, snapshot, visited)?;
             let arg = instantiate_mvars_inner(&app.arg, snapshot, visited)?;
@@ -83,7 +81,6 @@ fn instantiate_mvars_inner(
                 Ok(Arc::new(Expr::app(f, arg)))
             }
         }
-
         Expr::Lam(lam) => {
             let t = instantiate_mvars_inner(&lam.t, snapshot, visited)?;
             let body = instantiate_mvars_inner(&lam.body, snapshot, visited)?;
@@ -93,7 +90,6 @@ fn instantiate_mvars_inner(
                 Ok(Arc::new(Expr::lam(lam.var.clone(), t, body)))
             }
         }
-
         Expr::Pi(pi) => {
             let t = instantiate_mvars_inner(&pi.t, snapshot, visited)?;
             let body = instantiate_mvars_inner(&pi.body, snapshot, visited)?;
@@ -103,7 +99,6 @@ fn instantiate_mvars_inner(
                 Ok(Arc::new(Expr::pi(pi.var.clone(), t, body)))
             }
         }
-
         Expr::Let(let_expr) => {
             let t = instantiate_mvars_inner(&let_expr.t, snapshot, visited)?;
             let value = instantiate_mvars_inner(&let_expr.value, snapshot, visited)?;
@@ -114,10 +109,14 @@ fn instantiate_mvars_inner(
             {
                 Ok(Arc::clone(expr))
             } else {
-                Ok(Arc::new(Expr::let_(let_expr.var.clone(), t, value, body)))
+                Ok(Arc::new(Expr::let_(
+                    let_expr.var.clone(),
+                    t,
+                    value,
+                    body,
+                )))
             }
         }
-
         Expr::Lit(lit) => match &lit.lit {
             Literal::Nat(_) | Literal::Float(_) | Literal::String(_) => Ok(Arc::clone(expr)),
             Literal::Array(items) => {
@@ -213,7 +212,7 @@ impl<'a> ElabScope<'a> {
 /// Infer the type of `expr` under `env`, `local_context`, and `snapshot`.
 ///
 /// Unlike `kernel::inference::infer`, unassigned `Expr::MVar(id)` nodes succeed by
-/// looking up `id`'s declared statement in `snapshot.metavars`.
+/// looking up `id`'s declared statement in `snapshot.goals`.
 pub fn infer(
     expr: &Expr,
     env: &Environment,
@@ -243,18 +242,18 @@ fn infer_arc(
             context_len: scope.outer.len() + scope.inner.len(),
         }),
         Expr::MVar(m) => {
-            let mvar = snapshot
-                .metavars
+            let goal = snapshot
+                .goals
                 .get(&m.id)
                 .ok_or_else(|| KernelError::InvalidValue {
-                    message: format!("Unknown metavariable '?{}'", m.id),
+                    message: format!("Unknown goal/metavariable '?{}'", m.id),
                     expr: Some((**expr).clone()),
                 })?;
-            if let Some(assigned) = &mvar.assignment {
+            if let Some(assigned) = &goal.assignment {
                 let inst = instantiate_mvars_arc(&Arc::new(assigned.clone()), snapshot)?;
                 return infer_arc(&inst, env, scope, snapshot);
             }
-            instantiate_mvars_arc(&Arc::new(mvar.statement.clone()), snapshot)
+            instantiate_mvars_arc(&Arc::new(goal.statement.clone()), snapshot)
         }
         Expr::FVar(v) => {
             let ty = scope
@@ -317,7 +316,6 @@ fn infer_arc(
                     inferred_type: (*dom_ty_whnf).clone(),
                 });
             };
-
             let fvar_name = format!("#elab.{}", uuid::Uuid::new_v4());
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name.clone(), Arc::clone(&lam.t));
@@ -325,7 +323,6 @@ fn infer_arc(
             let body_ty = infer_arc(&opened_body, env, scope, snapshot);
             scope.pop();
             let body_ty = body_ty?;
-
             let abstract_body_ty = Arc::new(bind(&body_ty, &fvar_name));
             Ok(Arc::new(Expr::pi(
                 lam.var.clone(),
@@ -342,7 +339,6 @@ fn infer_arc(
                     inferred_type: (*dom_ty_whnf).clone(),
                 });
             };
-
             let fvar_name = format!("#elab.{}", uuid::Uuid::new_v4());
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name, Arc::clone(&pi.t));
@@ -357,7 +353,6 @@ fn infer_arc(
                     inferred_type: (*codom_ty_whnf).clone(),
                 });
             };
-
             let imax_level = UnivLevel::imax(
                 Arc::new(u_sort.level.clone()),
                 Arc::new(v_sort.level.clone()),
@@ -373,7 +368,6 @@ fn infer_arc(
                     inferred_type: (*decl_ty_whnf).clone(),
                 });
             };
-
             let val_ty = infer_arc(&let_expr.value, env, scope, snapshot)?;
             let val_ty_inst = instantiate_mvars_arc(&val_ty, snapshot)?;
             let decl_ty_inst = instantiate_mvars_arc(&let_expr.t, snapshot)?;
@@ -384,7 +378,6 @@ fn infer_arc(
                     context_expr: Some((*let_expr.value).clone()),
                 });
             }
-
             let body_inst = Arc::new(instantiate_bvar(&let_expr.body, &let_expr.value));
             infer_arc(&body_inst, env, scope, snapshot)
         }
@@ -393,13 +386,12 @@ fn infer_arc(
             Literal::Float(_) => Ok(Arc::new(Expr::const_("Float", vec![]))),
             Literal::String(_) => Ok(Arc::new(Expr::const_("String", vec![]))),
             Literal::Array(items) => {
-                let (first, rest) =
-                    items
-                        .split_first()
-                        .ok_or_else(|| KernelError::InvalidValue {
-                            message: "Cannot infer element type of empty array literal".to_string(),
-                            expr: Some((**expr).clone()),
-                        })?;
+                let (first, rest) = items.split_first().ok_or_else(|| {
+                    KernelError::InvalidValue {
+                        message: "Cannot infer element type of empty array literal".to_string(),
+                        expr: Some((**expr).clone()),
+                    }
+                })?;
                 let elem_ty = infer_arc(&Arc::new(first.clone()), env, scope, snapshot)?;
                 for item in rest {
                     let item_ty = infer_arc(&Arc::new(item.clone()), env, scope, snapshot)?;
