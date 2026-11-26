@@ -15,7 +15,6 @@
 //! - `Lit(...)`         ==> `Nat`, `Float`, `String`, or homogeneous `Array T`
 //!
 //! Stage 2 / Stage 3 TODOs:
-//! - [Metavariables] Resolve `Expr::MVar(id)` types via metavariable / session context.
 //! - [Let-bound FVars] Support `let`-bound definitions in local context with context-aware WHNF unfolding.
 //! - [Binder opening] Evaluate replacing `Uuid::new_v4()` in `fresh_infer_fvar_name` with a monotonic
 //!   counter (`AtomicU64`) on hot paths.
@@ -75,7 +74,7 @@ impl<'a> InferScope<'a> {
 }
 
 // ---------------------------------------------------------------------------
-// Entry Point
+// Entry Points
 // ---------------------------------------------------------------------------
 
 /// Infer the type of `expr` under `env` and an ordered slice of local hypotheses `local_context`.
@@ -89,22 +88,32 @@ pub(crate) fn infer(
     Ok(Arc::try_unwrap(arc_ty).unwrap_or_else(|a| (*a).clone()))
 }
 
-// ---------------------------------------------------------------------------
-// Core Type Inference Engine
-// ---------------------------------------------------------------------------
-
-/// Create a collision-free fresh free variable name for opening binders during inference.
-#[inline]
-fn fresh_infer_fvar_name() -> String {
-    format!("#infer.{}", Uuid::new_v4())
-}
-
-/// Infer the type of an `Arc<Expr>` node.
+/// Infer the type of an `Arc<Expr>` node in the pure kernel (rejecting any `Expr::MVar`).
 pub(crate) fn infer_arc(
     expr: &Arc<Expr>,
     env: &Environment,
     scope: &mut InferScope<'_>,
 ) -> Result<Arc<Expr>, KernelError> {
+    infer_arc_with_mvar(expr, env, scope, &mut |mvar_id| {
+        Err(KernelError::InvalidValue {
+            message: format!(
+                "Cannot infer type of metavariable '?{mvar_id}' without a metavariable context"
+            ),
+            expr: Some((**expr).clone()),
+        })
+    })
+}
+
+/// Infer the type of an `Arc<Expr>` node, resolving unassigned metavariables via `resolve_mvar`.
+pub(crate) fn infer_arc_with_mvar<F>(
+    expr: &Arc<Expr>,
+    env: &Environment,
+    scope: &mut InferScope<'_>,
+    resolve_mvar: &mut F,
+) -> Result<Arc<Expr>, KernelError>
+where
+    F: FnMut(&str) -> Result<Arc<Expr>, KernelError>,
+{
     match &**expr {
         Expr::Sort(s) => {
             let next_level = UnivLevel::succ(Arc::new(s.level.clone()));
@@ -112,15 +121,9 @@ pub(crate) fn infer_arc(
         }
         Expr::BVar(b) => Err(KernelError::UnboundBVar {
             idx: b.idx,
-            context_len: 0,
+            context_len: scope.outer.len() + scope.inner.len(),
         }),
-        Expr::MVar(m) => Err(KernelError::InvalidValue {
-            message: format!(
-                "Cannot infer type of metavariable '?{}' without a metavariable context",
-                m.id
-            ),
-            expr: Some((**expr).clone()),
-        }),
+        Expr::MVar(m) => resolve_mvar(&m.id),
         Expr::FVar(v) => scope
             .lookup(&v.name)
             .ok_or_else(|| KernelError::UnknownFVar {
@@ -128,7 +131,7 @@ pub(crate) fn infer_arc(
             }),
         Expr::Const(c) => infer_const(&c.name, &c.levels, env),
         Expr::App(app) => {
-            let fn_ty = infer_arc(&app.f, env, scope)?;
+            let fn_ty = infer_arc_with_mvar(&app.f, env, scope, resolve_mvar)?;
             let fn_ty_whnf = whnf_arc(fn_ty, env);
             let Expr::Pi(pi) = &*fn_ty_whnf else {
                 return Err(KernelError::NotAPi {
@@ -136,7 +139,7 @@ pub(crate) fn infer_arc(
                     inferred_type: (*fn_ty_whnf).clone(),
                 });
             };
-            let arg_ty = infer_arc(&app.arg, env, scope)?;
+            let arg_ty = infer_arc_with_mvar(&app.arg, env, scope, resolve_mvar)?;
             if !is_def_eq_arc(Arc::clone(&arg_ty), Arc::clone(&pi.t), env) {
                 return Err(KernelError::TypeMismatch {
                     expected: (*pi.t).clone(),
@@ -148,7 +151,7 @@ pub(crate) fn infer_arc(
         }
         Expr::Lam(lam) => {
             // 1. Domain `lam.t` must be a well-formed type (reduces in WHNF to a `Sort`).
-            let dom_ty = infer_arc(&lam.t, env, scope)?;
+            let dom_ty = infer_arc_with_mvar(&lam.t, env, scope, resolve_mvar)?;
             let dom_ty_whnf = whnf_arc(dom_ty, env);
             let Expr::Sort(_) = &*dom_ty_whnf else {
                 return Err(KernelError::NotASort {
@@ -162,7 +165,7 @@ pub(crate) fn infer_arc(
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name.clone(), Arc::clone(&lam.t));
             let opened_body = Arc::new(instantiate_bvar(&lam.body, &fvar));
-            let body_ty = infer_arc(&opened_body, env, scope);
+            let body_ty = infer_arc_with_mvar(&opened_body, env, scope, resolve_mvar);
             scope.pop();
             let body_ty = body_ty?;
 
@@ -176,7 +179,7 @@ pub(crate) fn infer_arc(
         }
         Expr::Pi(pi) => {
             // 1. Domain `pi.t : Sort(u)`
-            let dom_ty = infer_arc(&pi.t, env, scope)?;
+            let dom_ty = infer_arc_with_mvar(&pi.t, env, scope, resolve_mvar)?;
             let dom_ty_whnf = whnf_arc(dom_ty, env);
             let Expr::Sort(u_sort) = &*dom_ty_whnf else {
                 return Err(KernelError::NotASort {
@@ -190,7 +193,7 @@ pub(crate) fn infer_arc(
             let fvar = Expr::fvar(fvar_name.clone());
             scope.push(fvar_name, Arc::clone(&pi.t));
             let opened_body = Arc::new(instantiate_bvar(&pi.body, &fvar));
-            let codom_ty = infer_arc(&opened_body, env, scope);
+            let codom_ty = infer_arc_with_mvar(&opened_body, env, scope, resolve_mvar);
             scope.pop();
             let codom_ty = codom_ty?;
             let codom_ty_whnf = whnf_arc(codom_ty, env);
@@ -210,7 +213,7 @@ pub(crate) fn infer_arc(
         }
         Expr::Let(let_expr) => {
             // 1. Declared type `let_expr.t` must be a valid `Sort`.
-            let decl_ty = infer_arc(&let_expr.t, env, scope)?;
+            let decl_ty = infer_arc_with_mvar(&let_expr.t, env, scope, resolve_mvar)?;
             let decl_ty_whnf = whnf_arc(decl_ty, env);
             let Expr::Sort(_) = &*decl_ty_whnf else {
                 return Err(KernelError::NotASort {
@@ -220,7 +223,7 @@ pub(crate) fn infer_arc(
             };
 
             // 2. Value must match the declared type `let_expr.t`.
-            let val_ty = infer_arc(&let_expr.value, env, scope)?;
+            let val_ty = infer_arc_with_mvar(&let_expr.value, env, scope, resolve_mvar)?;
             if !is_def_eq_arc(Arc::clone(&val_ty), Arc::clone(&let_expr.t), env) {
                 return Err(KernelError::TypeMismatch {
                     expected: (*let_expr.t).clone(),
@@ -231,10 +234,20 @@ pub(crate) fn infer_arc(
 
             // 3. Substitute `value` into `body` (zeta-style) and infer its type.
             let body_inst = Arc::new(instantiate_bvar(&let_expr.body, &let_expr.value));
-            infer_arc(&body_inst, env, scope)
+            infer_arc_with_mvar(&body_inst, env, scope, resolve_mvar)
         }
-        Expr::Lit(lit) => infer_literal(&lit.lit, expr, env, scope),
+        Expr::Lit(lit) => infer_literal(&lit.lit, expr, env, scope, resolve_mvar),
     }
+}
+
+// ---------------------------------------------------------------------------
+// Core Type Inference Engine Helpers
+// ---------------------------------------------------------------------------
+
+/// Create a collision-free fresh free variable name for opening binders during inference.
+#[inline]
+fn fresh_infer_fvar_name() -> String {
+    format!("#infer.{}", Uuid::new_v4())
 }
 
 // ---------------------------------------------------------------------------
@@ -242,11 +255,7 @@ pub(crate) fn infer_arc(
 // ---------------------------------------------------------------------------
 
 /// Look up a constant in `env` and instantiate its universe level parameters.
-fn infer_const(
-    name: &str,
-    levels: &[UnivLevel],
-    env: &Environment,
-) -> Result<Arc<Expr>, KernelError> {
+fn infer_const(name: &str, levels: &[UnivLevel], env: &Environment) -> Result<Arc<Expr>, KernelError> {
     let decl = env
         .get(name)
         .ok_or_else(|| KernelError::UnknownConstant {
@@ -271,24 +280,30 @@ fn infer_const(
 }
 
 /// Infer the type of a literal expression.
-fn infer_literal(
+fn infer_literal<F>(
     lit: &Literal,
     expr: &Arc<Expr>,
     env: &Environment,
     scope: &mut InferScope<'_>,
-) -> Result<Arc<Expr>, KernelError> {
+    resolve_mvar: &mut F,
+) -> Result<Arc<Expr>, KernelError>
+where
+    F: FnMut(&str) -> Result<Arc<Expr>, KernelError>,
+{
     match lit {
         Literal::Nat(_) => Ok(Arc::new(Expr::const_("Nat", vec![]))),
         Literal::Float(_) => Ok(Arc::new(Expr::const_("Float", vec![]))),
         Literal::String(_) => Ok(Arc::new(Expr::const_("String", vec![]))),
         Literal::Array(items) => {
-            let (first, rest) = items.split_first().ok_or_else(|| KernelError::InvalidValue {
-                message: "Cannot infer element type of empty array literal".to_string(),
-                expr: Some((**expr).clone()),
+            let (first, rest) = items.split_first().ok_or_else(|| {
+                KernelError::InvalidValue {
+                    message: "Cannot infer element type of empty array literal".to_string(),
+                    expr: Some((**expr).clone()),
+                }
             })?;
-            let elem_ty = infer_arc(&Arc::new(first.clone()), env, scope)?;
+            let elem_ty = infer_arc_with_mvar(&Arc::new(first.clone()), env, scope, resolve_mvar)?;
             for item in rest {
-                let item_ty = infer_arc(&Arc::new(item.clone()), env, scope)?;
+                let item_ty = infer_arc_with_mvar(&Arc::new(item.clone()), env, scope, resolve_mvar)?;
                 if !is_def_eq_arc(Arc::clone(&item_ty), Arc::clone(&elem_ty), env) {
                     return Err(KernelError::TypeMismatch {
                         expected: (*elem_ty).clone(),

@@ -6,19 +6,17 @@
 //!   with cycle protection and `Arc` sharing.
 //! - `whnf`: instantiate metavariables and reduce to Weak Head Normal Form.
 //! - `is_def_eq`: check definitional equality after metavariable instantiation.
-//! - `infer`: infer the type of expressions containing unassigned metavariables
-//!   by consulting `Snapshot::goals`.
+//! - `infer`: infer the type of expressions containing metavariables by unfolding
+//!   assigned goals and resolving open goal statements from `Snapshot::goals`.
 
 use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::ast::expr::{Expr, Literal};
-use crate::ast::ops::{bind, instantiate_bvar, instantiate_univ_level};
-use crate::ast::univ_level::UnivLevel;
-use crate::environment::declaration::Declaration;
 use crate::environment::environment::Environment;
 use crate::error::KernelError;
 use crate::kernel::equality::is_def_eq_arc;
+use crate::kernel::inference::{infer_arc_with_mvar, InferScope};
 use crate::kernel::reduction::whnf_arc as kernel_whnf_arc;
 use crate::state::snapshot::Snapshot;
 
@@ -176,43 +174,11 @@ pub fn is_def_eq(
 // Metavariable-Aware Type Inference
 // ---------------------------------------------------------------------------
 
-struct ElabScope<'a> {
-    outer: &'a [(String, Expr)],
-    inner: Vec<(String, Arc<Expr>)>,
-}
-
-impl<'a> ElabScope<'a> {
-    fn new(outer: &'a [(String, Expr)]) -> Self {
-        Self {
-            outer,
-            inner: Vec::new(),
-        }
-    }
-
-    fn push(&mut self, name: String, ty: Arc<Expr>) {
-        self.inner.push((name, ty));
-    }
-
-    fn pop(&mut self) {
-        self.inner.pop();
-    }
-
-    fn lookup(&self, name: &str) -> Option<Arc<Expr>> {
-        if let Some((_, ty)) = self.inner.iter().rev().find(|(n, _)| n == name) {
-            return Some(Arc::clone(ty));
-        }
-        self.outer
-            .iter()
-            .rev()
-            .find(|(n, _)| n == name)
-            .map(|(_, ty)| Arc::new(ty.clone()))
-    }
-}
-
 /// Infer the type of `expr` under `env`, `local_context`, and `snapshot`.
 ///
-/// Unlike `kernel::inference::infer`, unassigned `Expr::MVar(id)` nodes succeed by
-/// looking up `id`'s declared statement in `snapshot.goals`.
+/// Instantiates solved goals first, then delegates AST traversal to
+/// `kernel::inference::infer_arc_with_mvar`, resolving unassigned `?id` nodes
+/// from `snapshot.goals.get(id).statement`.
 pub fn infer(
     expr: &Expr,
     env: &Environment,
@@ -220,192 +186,18 @@ pub fn infer(
     snapshot: &Snapshot,
 ) -> Result<Expr, KernelError> {
     let inst = instantiate_mvars_arc(&Arc::new(expr.clone()), snapshot)?;
-    let mut scope = ElabScope::new(local_context);
-    let ty = infer_arc(&inst, env, &mut scope, snapshot)?;
+    let mut scope = InferScope::new(local_context);
+    let mut resolve_goal = |mvar_id: &str| -> Result<Arc<Expr>, KernelError> {
+        let goal = snapshot
+            .goals
+            .get(mvar_id)
+            .ok_or_else(|| KernelError::InvalidValue {
+                message: format!("Unknown goal/metavariable '?{mvar_id}'"),
+                expr: Some(Expr::mvar(mvar_id.to_string())),
+            })?;
+        instantiate_mvars_arc(&Arc::new(goal.statement.clone()), snapshot)
+    };
+    let ty = infer_arc_with_mvar(&inst, env, &mut scope, &mut resolve_goal)?;
     let ty_inst = instantiate_mvars_arc(&ty, snapshot)?;
     Ok(Arc::try_unwrap(ty_inst).unwrap_or_else(|a| (*a).clone()))
-}
-
-fn infer_arc(
-    expr: &Arc<Expr>,
-    env: &Environment,
-    scope: &mut ElabScope<'_>,
-    snapshot: &Snapshot,
-) -> Result<Arc<Expr>, KernelError> {
-    match &**expr {
-        Expr::Sort(s) => {
-            let next_level = UnivLevel::succ(Arc::new(s.level.clone()));
-            Ok(Arc::new(Expr::sort(next_level)))
-        }
-        Expr::BVar(b) => Err(KernelError::UnboundBVar {
-            idx: b.idx,
-            context_len: scope.outer.len() + scope.inner.len(),
-        }),
-        Expr::MVar(m) => {
-            let goal = snapshot
-                .goals
-                .get(&m.id)
-                .ok_or_else(|| KernelError::InvalidValue {
-                    message: format!("Unknown goal/metavariable '?{}'", m.id),
-                    expr: Some((**expr).clone()),
-                })?;
-            if let Some(assigned) = &goal.assignment {
-                let inst = instantiate_mvars_arc(&Arc::new(assigned.clone()), snapshot)?;
-                return infer_arc(&inst, env, scope, snapshot);
-            }
-            instantiate_mvars_arc(&Arc::new(goal.statement.clone()), snapshot)
-        }
-        Expr::FVar(v) => {
-            let ty = scope
-                .lookup(&v.name)
-                .ok_or_else(|| KernelError::UnknownFVar {
-                    name: v.name.clone(),
-                })?;
-            instantiate_mvars_arc(&ty, snapshot)
-        }
-        Expr::Const(c) => {
-            let decl = env
-                .get(&c.name)
-                .ok_or_else(|| KernelError::UnknownConstant {
-                    name: c.name.clone(),
-                })?;
-            let (decl_ty, level_params) = match decl {
-                Declaration::Definition(d) => (&d.ty, &d.level_params),
-                Declaration::Axiom(d) => (&d.ty, &d.level_params),
-                Declaration::Inductive(d) => (&d.ty, &d.level_params),
-                Declaration::Constructor(d) => (&d.ty, &d.level_params),
-                Declaration::Recursor(d) => (&d.ty, &d.level_params),
-            };
-            if level_params.len() != c.levels.len() {
-                return Err(KernelError::InvalidUniverseArity {
-                    name: c.name.clone(),
-                    expected: level_params.len(),
-                    actual: c.levels.len(),
-                });
-            }
-            let inst_ty = instantiate_univ_level(decl_ty, level_params, &c.levels);
-            Ok(Arc::new(inst_ty))
-        }
-        Expr::App(app) => {
-            let fn_ty = infer_arc(&app.f, env, scope, snapshot)?;
-            let fn_ty_whnf = whnf_arc(&fn_ty, env, snapshot)?;
-            let Expr::Pi(pi) = &*fn_ty_whnf else {
-                return Err(KernelError::NotAPi {
-                    expr: (*app.f).clone(),
-                    inferred_type: (*fn_ty_whnf).clone(),
-                });
-            };
-            let arg_ty = infer_arc(&app.arg, env, scope, snapshot)?;
-            let arg_ty_inst = instantiate_mvars_arc(&arg_ty, snapshot)?;
-            let dom_inst = instantiate_mvars_arc(&pi.t, snapshot)?;
-            if !is_def_eq_arc(Arc::clone(&arg_ty_inst), Arc::clone(&dom_inst), env) {
-                return Err(KernelError::TypeMismatch {
-                    expected: (*dom_inst).clone(),
-                    actual: (*arg_ty_inst).clone(),
-                    context_expr: Some((*app.arg).clone()),
-                });
-            }
-            Ok(Arc::new(instantiate_bvar(&pi.body, &app.arg)))
-        }
-        Expr::Lam(lam) => {
-            let dom_ty = infer_arc(&lam.t, env, scope, snapshot)?;
-            let dom_ty_whnf = whnf_arc(&dom_ty, env, snapshot)?;
-            let Expr::Sort(_) = &*dom_ty_whnf else {
-                return Err(KernelError::NotASort {
-                    expr: (*lam.t).clone(),
-                    inferred_type: (*dom_ty_whnf).clone(),
-                });
-            };
-            let fvar_name = format!("#elab.{}", uuid::Uuid::new_v4());
-            let fvar = Expr::fvar(fvar_name.clone());
-            scope.push(fvar_name.clone(), Arc::clone(&lam.t));
-            let opened_body = Arc::new(instantiate_bvar(&lam.body, &fvar));
-            let body_ty = infer_arc(&opened_body, env, scope, snapshot);
-            scope.pop();
-            let body_ty = body_ty?;
-            let abstract_body_ty = Arc::new(bind(&body_ty, &fvar_name));
-            Ok(Arc::new(Expr::pi(
-                lam.var.clone(),
-                Arc::clone(&lam.t),
-                abstract_body_ty,
-            )))
-        }
-        Expr::Pi(pi) => {
-            let dom_ty = infer_arc(&pi.t, env, scope, snapshot)?;
-            let dom_ty_whnf = whnf_arc(&dom_ty, env, snapshot)?;
-            let Expr::Sort(u_sort) = &*dom_ty_whnf else {
-                return Err(KernelError::NotASort {
-                    expr: (*pi.t).clone(),
-                    inferred_type: (*dom_ty_whnf).clone(),
-                });
-            };
-            let fvar_name = format!("#elab.{}", uuid::Uuid::new_v4());
-            let fvar = Expr::fvar(fvar_name.clone());
-            scope.push(fvar_name, Arc::clone(&pi.t));
-            let opened_body = Arc::new(instantiate_bvar(&pi.body, &fvar));
-            let codom_ty = infer_arc(&opened_body, env, scope, snapshot);
-            scope.pop();
-            let codom_ty = codom_ty?;
-            let codom_ty_whnf = whnf_arc(&codom_ty, env, snapshot)?;
-            let Expr::Sort(v_sort) = &*codom_ty_whnf else {
-                return Err(KernelError::NotASort {
-                    expr: (*opened_body).clone(),
-                    inferred_type: (*codom_ty_whnf).clone(),
-                });
-            };
-            let imax_level = UnivLevel::imax(
-                Arc::new(u_sort.level.clone()),
-                Arc::new(v_sort.level.clone()),
-            );
-            Ok(Arc::new(Expr::sort(imax_level)))
-        }
-        Expr::Let(let_expr) => {
-            let decl_ty = infer_arc(&let_expr.t, env, scope, snapshot)?;
-            let decl_ty_whnf = whnf_arc(&decl_ty, env, snapshot)?;
-            let Expr::Sort(_) = &*decl_ty_whnf else {
-                return Err(KernelError::NotASort {
-                    expr: (*let_expr.t).clone(),
-                    inferred_type: (*decl_ty_whnf).clone(),
-                });
-            };
-            let val_ty = infer_arc(&let_expr.value, env, scope, snapshot)?;
-            let val_ty_inst = instantiate_mvars_arc(&val_ty, snapshot)?;
-            let decl_ty_inst = instantiate_mvars_arc(&let_expr.t, snapshot)?;
-            if !is_def_eq_arc(Arc::clone(&val_ty_inst), Arc::clone(&decl_ty_inst), env) {
-                return Err(KernelError::TypeMismatch {
-                    expected: (*decl_ty_inst).clone(),
-                    actual: (*val_ty_inst).clone(),
-                    context_expr: Some((*let_expr.value).clone()),
-                });
-            }
-            let body_inst = Arc::new(instantiate_bvar(&let_expr.body, &let_expr.value));
-            infer_arc(&body_inst, env, scope, snapshot)
-        }
-        Expr::Lit(lit) => match &lit.lit {
-            Literal::Nat(_) => Ok(Arc::new(Expr::const_("Nat", vec![]))),
-            Literal::Float(_) => Ok(Arc::new(Expr::const_("Float", vec![]))),
-            Literal::String(_) => Ok(Arc::new(Expr::const_("String", vec![]))),
-            Literal::Array(items) => {
-                let (first, rest) = items.split_first().ok_or_else(|| {
-                    KernelError::InvalidValue {
-                        message: "Cannot infer element type of empty array literal".to_string(),
-                        expr: Some((**expr).clone()),
-                    }
-                })?;
-                let elem_ty = infer_arc(&Arc::new(first.clone()), env, scope, snapshot)?;
-                for item in rest {
-                    let item_ty = infer_arc(&Arc::new(item.clone()), env, scope, snapshot)?;
-                    if !is_def_eq_arc(Arc::clone(&item_ty), Arc::clone(&elem_ty), env) {
-                        return Err(KernelError::TypeMismatch {
-                            expected: (*elem_ty).clone(),
-                            actual: (*item_ty).clone(),
-                            context_expr: Some(item.clone()),
-                        });
-                    }
-                }
-                let array_const = Arc::new(Expr::const_("Array", vec![]));
-                Ok(Arc::new(Expr::app(array_const, elem_ty)))
-            }
-        },
-    }
 }
