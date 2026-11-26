@@ -1,7 +1,11 @@
+use pyo3::prelude::*;
+use pyo3::IntoPyObjectExt;
+
 use crate::ast::expr::Expr;
 
 /// A definition declaration in the environment.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct DefinitionDecl {
     pub name: String,
     pub ty: Expr,
@@ -12,7 +16,8 @@ pub struct DefinitionDecl {
 }
 
 /// An axiom declaration in the environment.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct AxiomDecl {
     pub name: String,
     pub ty: Expr,
@@ -20,7 +25,8 @@ pub struct AxiomDecl {
 }
 
 /// An inductive type declaration in the environment.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct InductiveDecl {
     pub name: String,
     pub ty: Expr,
@@ -31,7 +37,8 @@ pub struct InductiveDecl {
 }
 
 /// A constructor declaration in the environment.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct ConstructorDecl {
     pub name: String,
     pub ty: Expr,
@@ -40,7 +47,8 @@ pub struct ConstructorDecl {
 }
 
 /// A computation rule for a recursor applied to a specific constructor.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct RecursorRule {
     pub constructor_name: String,
     pub num_fields: usize,
@@ -48,7 +56,8 @@ pub struct RecursorRule {
 }
 
 /// A recursor declaration in the environment.
-#[derive(Clone)]
+#[pyclass(module = "poussins._core", frozen, get_all)]
+#[derive(Clone, Debug)]
 pub struct RecursorDecl {
     pub name: String,
     pub ty: Expr,
@@ -62,11 +71,37 @@ pub struct RecursorDecl {
 }
 
 /// Represents a declaration in the environment.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Declaration {
     Definition(DefinitionDecl),
     Axiom(AxiomDecl),
     Inductive(InductiveDecl),
     Constructor(ConstructorDecl),
     Recursor(RecursorDecl),
+}
+
+impl<'py> IntoPyObject<'py> for Declaration {
+    type Target = PyAny;
+    type Output = Bound<'py, PyAny>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self {
+            Declaration::Definition(d) => d.into_bound_py_any(py),
+            Declaration::Axiom(a) => a.into_bound_py_any(py),
+            Declaration::Inductive(i) => i.into_bound_py_any(py),
+            Declaration::Constructor(c) => c.into_bound_py_any(py),
+            Declaration::Recursor(r) => r.into_bound_py_any(py),
+        }
+    }
+}
+
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<DefinitionDecl>()?;
+    m.add_class::<AxiomDecl>()?;
+    m.add_class::<InductiveDecl>()?;
+    m.add_class::<ConstructorDecl>()?;
+    m.add_class::<RecursorRule>()?;
+    m.add_class::<RecursorDecl>()?;
+    Ok(())
 }

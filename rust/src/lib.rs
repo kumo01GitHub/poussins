@@ -12,6 +12,7 @@ pub mod state;
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ast::register(m)?;
     builders::register(m)?;
+    environment::register(m)?;
 
     Ok(())
 }
