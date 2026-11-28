@@ -5,6 +5,7 @@
 //! Python/PyO3 bindings (if exposed to Python) should live in outer boundary modules
 //! rather than inside `ops.rs`.
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::ast::expr::{EApp, EBVar, EFVar, ELet, ELit, ELam, EPi, Expr, Literal};
@@ -348,4 +349,91 @@ pub fn bind(expr: &Expr, name: &str) -> Expr {
         Expr::FVar(EFVar { name: n }) if n == name => Some(Expr::bvar(depth)),
         _ => None,
     })
+}
+
+// ---------------------------------------------------------------------------
+// Variable / Metavariable collection helpers
+// ---------------------------------------------------------------------------
+
+/// Collect all free variable (`Expr::FVar`) names occurring in `expr`.
+pub(crate) fn collect_fvar_names(expr: &Expr) -> HashSet<String> {
+    let mut names = HashSet::new();
+    let mut stack = vec![expr];
+    while let Some(cur) = stack.pop() {
+        match cur {
+            Expr::FVar(v) => {
+                names.insert(v.name.clone());
+            }
+            Expr::App(app) => {
+                stack.push(&app.arg);
+                stack.push(&app.f);
+            }
+            Expr::Lam(lam) => {
+                stack.push(&lam.body);
+                stack.push(&lam.t);
+            }
+            Expr::Pi(pi) => {
+                stack.push(&pi.body);
+                stack.push(&pi.t);
+            }
+            Expr::Let(let_expr) => {
+                stack.push(&let_expr.body);
+                stack.push(&let_expr.value);
+                stack.push(&let_expr.t);
+            }
+            Expr::Lit(ELit {
+                lit: Literal::Array(items),
+            }) => {
+                for item in items.iter().rev() {
+                    stack.push(item);
+                }
+            }
+            Expr::BVar(_) | Expr::Sort(_) | Expr::Const(_) | Expr::MVar(_) | Expr::Lit(_) => {}
+        }
+    }
+    names
+}
+
+/// Collect unique metavariable (`Expr::MVar`) IDs occurring in `expr`
+/// in left-to-right pre-order traversal.
+pub(crate) fn collect_mvar_ids(expr: &Expr) -> Vec<String> {
+    let mut ordered = Vec::new();
+    let mut seen = HashSet::new();
+    let mut stack = vec![expr];
+    while let Some(cur) = stack.pop() {
+        match cur {
+            Expr::MVar(m) => {
+                if seen.insert(m.id.clone()) {
+                    ordered.push(m.id.clone());
+                }
+            }
+            Expr::App(app) => {
+                // Push right child first so left child (`f`) is visited first.
+                stack.push(&app.arg);
+                stack.push(&app.f);
+            }
+            Expr::Lam(lam) => {
+                stack.push(&lam.body);
+                stack.push(&lam.t);
+            }
+            Expr::Pi(pi) => {
+                stack.push(&pi.body);
+                stack.push(&pi.t);
+            }
+            Expr::Let(let_expr) => {
+                stack.push(&let_expr.body);
+                stack.push(&let_expr.value);
+                stack.push(&let_expr.t);
+            }
+            Expr::Lit(ELit {
+                lit: Literal::Array(items),
+            }) => {
+                for item in items.iter().rev() {
+                    stack.push(item);
+                }
+            }
+            Expr::BVar(_) | Expr::FVar(_) | Expr::Sort(_) | Expr::Const(_) | Expr::Lit(_) => {}
+        }
+    }
+    ordered
 }

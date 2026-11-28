@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::ast::expr::{Expr, Literal};
-use crate::ast::ops::instantiate_bvar;
+use crate::ast::ops::{collect_fvar_names, instantiate_bvar};
 use crate::elaborator::calc::{instantiate_mvars_arc, whnf_arc};
 use crate::environment::environment::Environment;
 use crate::error::KernelError;
@@ -185,7 +185,10 @@ fn assign_goal(
         return Ok(false);
     }
 
-    if !is_in_goal_scope(&rhs_inst, &goal) {
+    if !collect_fvar_names(&rhs_inst)
+        .iter()
+        .all(|name| goal.has_local_hypothesis(name))
+    {
         return Ok(false);
     }
 
@@ -249,26 +252,6 @@ fn occurs_inner(
                 }
                 Ok(false)
             }
-        },
-    }
-}
-
-/// Return `true` if all free variables (`Expr::FVar`) in `expr` are present in `goal.local_context`.
-fn is_in_goal_scope(expr: &Expr, goal: &crate::state::goal::Goal) -> bool {
-    match expr {
-        Expr::BVar(_) | Expr::Sort(_) | Expr::Const(_) | Expr::MVar(_) => true,
-        Expr::FVar(v) => goal.has_local_hypothesis(&v.name),
-        Expr::App(app) => is_in_goal_scope(&app.f, goal) && is_in_goal_scope(&app.arg, goal),
-        Expr::Lam(lam) => is_in_goal_scope(&lam.t, goal) && is_in_goal_scope(&lam.body, goal),
-        Expr::Pi(pi) => is_in_goal_scope(&pi.t, goal) && is_in_goal_scope(&pi.body, goal),
-        Expr::Let(let_expr) => {
-            is_in_goal_scope(&let_expr.t, goal)
-                && is_in_goal_scope(&let_expr.value, goal)
-                && is_in_goal_scope(&let_expr.body, goal)
-        }
-        Expr::Lit(lit) => match &lit.lit {
-            Literal::Nat(_) | Literal::Float(_) | Literal::String(_) => true,
-            Literal::Array(items) => items.iter().all(|item| is_in_goal_scope(item, goal)),
         },
     }
 }

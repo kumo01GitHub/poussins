@@ -13,6 +13,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     ast::register(m)?;
     builders::register(m)?;
     environment::register(m)?;
+    elaborator::register(m)?;
 
     Ok(())
 }

@@ -1,7 +1,14 @@
-// TODO: Define the role separation and transaction boundaries between `Session` and `Manager`
-// (e.g., goal accumulation, rollback on failed tactics/unification, and undo history).
+//! Proof session managing the chronological history of immutable [`Snapshot`] states.
+//!
+//! Role separation with `ProofManager`:
+//! - `Session` is a pure Rust history container enforcing `history.len() >= 1`
+//!   (the initial snapshot is never popped).
+//! - `ProofManager` owns the transaction boundary: it runs `engine` transitions
+//!   against `Environment`, commits valid next snapshots via `update_snapshot`
+//!   (leaving `Session` untouched on failure), and exposes the PyO3 interface.
 
-use super::snapshot::Snapshot;
+use crate::error::KernelError;
+use crate::state::snapshot::Snapshot;
 
 /// Proof session that manages the history of proof snapshots.
 #[derive(Debug, Clone)]
@@ -27,7 +34,6 @@ impl Session {
     /// Check if the proof session is closed (i.e., no active goals remain).
     pub fn is_closed(&self) -> bool {
         self.current_snapshot().is_closed()
-        // TODO: Consider other factors
     }
 
     /// Update the proof session with a new snapshot, appending it to the history.
@@ -35,11 +41,22 @@ impl Session {
         self.history.push(next_snapshot);
     }
 
-    pub fn undo(&mut self) -> Result<Snapshot, &'static str> {
+    /// Revert to the previous snapshot, returning the popped snapshot.
+    ///
+    /// Fails if already at the initial proof state (`history.len() == 1`).
+    pub fn undo(&mut self) -> Result<Snapshot, KernelError> {
         if self.history.len() > 1 {
             Ok(self.history.pop().unwrap())
         } else {
-            Err("Cannot undo beyond the initial proof state.")
+            Err(KernelError::InvalidValue {
+                message: "Cannot undo beyond the initial proof state.".to_string(),
+                expr: None,
+            })
         }
+    }
+
+    /// Return the number of snapshots recorded in history (always `>= 1`).
+    pub fn len(&self) -> usize {
+        self.history.len()
     }
 }
