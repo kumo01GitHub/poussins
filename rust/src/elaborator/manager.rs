@@ -25,7 +25,7 @@ fn read_env(env: &Arc<RwLock<Environment>>) -> PyResult<std::sync::RwLockReadGua
 
 /// Interactive proof session manager owning [`Session`] history and driving
 /// validated state transitions via `engine` against a shared [`Environment`].
-#[pyclass(name = "ProofManager")]
+#[pyclass(name = "ProofManager", module = "poussins._core")]
 pub struct ProofManager {
     session: Session,
     env: Arc<RwLock<Environment>>,
